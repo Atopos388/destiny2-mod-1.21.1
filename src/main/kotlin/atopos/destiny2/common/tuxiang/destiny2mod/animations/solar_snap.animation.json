@@ -1,0 +1,42 @@
+{
+	"format_version": "1.8.0",
+	"animations": {
+		"snap": {
+			"animation_length": 0.5,
+			"bones": {
+				"root": {
+					"rotation": {
+						"vector": [0, 0, 0]
+					},
+					"position": {
+						"vector": [6, -22, 4]
+					}
+				},
+				"right_arm": {
+					"rotation": {
+						"0.0": {
+							"vector": [0, 0, 0]
+						},
+						"0.2": {
+							"vector": [0, 0, -17.5]
+						},
+						"0.45": {
+							"vector": [0, 0, 0]
+						}
+					},
+					"position": {
+						"0.0": {
+							"vector": [-4, 14, -6]
+						},
+						"0.2": {
+							"vector": [-12, 14, -6]
+						},
+						"0.45": {
+							"vector": [-4, 14, -6]
+						}
+					}
+				}
+			}
+		}
+	}
+}

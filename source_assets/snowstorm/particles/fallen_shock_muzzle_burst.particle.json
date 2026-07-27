@@ -1,0 +1,64 @@
+{
+  "format_version": "1.10.0",
+  "particle_effect": {
+    "description": {
+      "identifier": "destiny2_mod:fallen_shock_muzzle_burst",
+      "basic_render_parameters": {
+        "material": "particles_add",
+        "texture": "textures/particle/fallen_shock_muzzle"
+      }
+    },
+    "components": {
+      "minecraft:emitter_rate_instant": {
+        "num_particles": 15
+      },
+      "minecraft:emitter_lifetime_once": {
+        "active_time": 0.04
+      },
+      "minecraft:emitter_shape_sphere": {
+        "offset": [0, 0, 0],
+        "radius": 0.08,
+        "surface_only": false,
+        "direction": "outwards"
+      },
+      "minecraft:emitter_local_space": {
+        "position": true,
+        "rotation": true
+      },
+      "minecraft:particle_lifetime_expression": {
+        "max_lifetime": "math.random(0.18, 0.32)"
+      },
+      "minecraft:particle_initial_speed": "math.random(0.9, 2.2)",
+      "minecraft:particle_motion_dynamic": {
+        "linear_drag_coefficient": 2.8
+      },
+      "minecraft:particle_appearance_billboard": {
+        "size": [
+          "math.random(0.07, 0.17)",
+          "math.random(0.07, 0.17)"
+        ],
+        "facing_camera_mode": "emitter_transform_yz",
+        "uv": {
+          "texture_width": 64,
+          "texture_height": 512,
+          "flipbook": {
+            "base_UV": [0, 0],
+            "size_UV": [64, 64],
+            "step_UV": [0, 64],
+            "frames_per_second": 26.6667,
+            "max_frame": 7,
+            "stretch_to_lifetime": true
+          }
+        }
+      },
+      "minecraft:particle_appearance_tinting": {
+        "color": [
+          0.72,
+          0.94,
+          1.0,
+          "1.0 - variable.particle_age / variable.particle_lifetime"
+        ]
+      }
+    }
+  }
+}

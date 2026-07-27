@@ -1,0 +1,10 @@
+{
+  "id": "destiny2-mod:izanagis_burden",
+  "model": "destiny2-mod:geo/izanagis_burden.geo.json",
+  "texture": "destiny2-mod:textures/item/izanagis_burden.png",
+  "animation": "destiny2-mod:animations/izanagis_burden.animation.json",
+  "skin_bones": [
+    "lefthand_pos",
+    "righthand_pos"
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "format_version": "1.8.0",
+  "animations": {
+    "animation.destiny2.guardian_awakening": {
+      "animation_length": 6.0,
+      "bones": {
+        "camera": {
+          "position": {
+            "0.0": { "vector": [0, 40, 64] },
+            "1.5": { "vector": [-22, 36, 58] },
+            "3.0": { "vector": [-30, 32, 38] },
+            "4.5": { "vector": [18, 30, 42] },
+            "6.0": { "vector": [0, 28, 32] }
+          },
+          "rotation": {
+            "0.0": { "vector": [10, 180, 0] },
+            "1.5": { "vector": [7, 160, -2] },
+            "3.0": { "vector": [4, 135, 0] },
+            "4.5": { "vector": [5, 205, 2] },
+            "6.0": { "vector": [8, 180, 0] }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,104 @@
+{
+  "meta": {
+    "format_version": "5.0",
+    "model_format": "geckolib_model",
+    "box_uv": true
+  },
+  "name": "single_block",
+  "model_identifier": "geometry.single_block",
+  "visible_box": [1, 1, 0],
+  "variable_placeholders": "",
+  "variable_placeholder_buttons": [],
+  "timeline_setups": [],
+  "unhandled_root_fields": {},
+  "resolution": {
+    "width": 16,
+    "height": 16
+  },
+  "elements": [
+    {
+      "name": "base_block",
+      "box_uv": true,
+      "render_order": "default",
+      "locked": false,
+      "allow_mirror_modeling": true,
+      "from": [-8, 0, -8],
+      "to": [8, 16, 8],
+      "autouv": 1,
+      "color": 4,
+      "origin": [0, 0, 0],
+      "faces": {
+        "north": { "uv": [0, 0, 16, 16], "texture": 0 },
+        "east": { "uv": [0, 0, 16, 16], "texture": 0 },
+        "south": { "uv": [0, 0, 16, 16], "texture": 0 },
+        "west": { "uv": [0, 0, 16, 16], "texture": 0 },
+        "up": { "uv": [0, 0, 16, 16], "texture": 0 },
+        "down": { "uv": [0, 0, 16, 16], "texture": 0 }
+      },
+      "type": "cube",
+      "uuid": "11111111-1111-4111-8111-111111111111"
+    }
+  ],
+  "groups": [
+    {
+      "uuid": "22222222-2222-4222-8222-222222222222",
+      "export": true,
+      "locked": false,
+      "origin": [0, 0, 0],
+      "rotation": [0, 0, 0],
+      "color": 0,
+      "name": "root",
+      "children": [],
+      "reset": false,
+      "shade": false,
+      "mirror_uv": false,
+      "selected": false,
+      "visibility": true,
+      "autouv": 1,
+      "isOpen": true,
+      "primary_selected": false
+    }
+  ],
+  "outliner": [
+    {
+      "uuid": "22222222-2222-4222-8222-222222222222",
+      "isOpen": true,
+      "children": ["11111111-1111-4111-8111-111111111111"]
+    }
+  ],
+  "textures": [
+    {
+      "name": "single_block_flat_texture",
+      "path": "",
+      "folder": "",
+      "namespace": "",
+      "id": "0",
+      "group": "",
+      "width": 16,
+      "height": 16,
+      "uv_width": 16,
+      "uv_height": 16,
+      "particle": false,
+      "use_as_default": true,
+      "layers_enabled": false,
+      "sync_to_project": "",
+      "render_mode": "default",
+      "render_sides": "auto",
+      "pbr_channel": "color",
+      "frame_time": 1,
+      "frame_order_type": "loop",
+      "frame_order": "",
+      "frame_interpolate": false,
+      "downscale_target_width": 0,
+      "downscale_target_height": 0,
+      "downscale_filter": "",
+      "visible": true,
+      "internal": true,
+      "saved": true,
+      "uuid": "33333333-3333-4333-8333-333333333333",
+      "source": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAGElEQVR4AWP8z8Dwn4ECwESJ5lEDRgYAKuUBH1m8c3YAAAAASUVORK5CYII="
+    }
+  ],
+  "animations": [],
+  "geckolib_model_type": "Entity"
+}

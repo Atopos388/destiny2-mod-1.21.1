@@ -1,0 +1,58 @@
+{
+  "format_version": "1.12.0",
+  "minecraft:geometry": [
+    {
+      "description": {
+        "identifier": "geometry.solar_flare",
+        "texture_width": 64,
+        "texture_height": 64,
+        "visible_bounds_width": 7,
+        "visible_bounds_height": 4,
+        "visible_bounds_offset": [0, 1.5, 0]
+      },
+      "bones": [
+        {
+          "name": "root",
+          "pivot": [0, 0, 0]
+        },
+        {
+          "name": "ground_ring",
+          "parent": "root",
+          "pivot": [0, 0.03, 0],
+          "cubes": [
+            {"origin": [-0.05, 0.03, -3.05], "size": [0.1, 0.06, 0.82], "pivot": [0, 0, 0], "rotation": [0, 0, 0], "uv": [0, 0]},
+            {"origin": [-0.05, 0.03, -3.05], "size": [0.1, 0.06, 0.82], "pivot": [0, 0, 0], "rotation": [0, 45, 0], "uv": [0, 8]},
+            {"origin": [-0.05, 0.03, -3.05], "size": [0.1, 0.06, 0.82], "pivot": [0, 0, 0], "rotation": [0, 90, 0], "uv": [0, 16]},
+            {"origin": [-0.05, 0.03, -3.05], "size": [0.1, 0.06, 0.82], "pivot": [0, 0, 0], "rotation": [0, 135, 0], "uv": [0, 24]},
+            {"origin": [-0.05, 0.03, -3.05], "size": [0.1, 0.06, 0.82], "pivot": [0, 0, 0], "rotation": [0, 180, 0], "uv": [8, 0]},
+            {"origin": [-0.05, 0.03, -3.05], "size": [0.1, 0.06, 0.82], "pivot": [0, 0, 0], "rotation": [0, 225, 0], "uv": [8, 8]},
+            {"origin": [-0.05, 0.03, -3.05], "size": [0.1, 0.06, 0.82], "pivot": [0, 0, 0], "rotation": [0, 270, 0], "uv": [8, 16]},
+            {"origin": [-0.05, 0.03, -3.05], "size": [0.1, 0.06, 0.82], "pivot": [0, 0, 0], "rotation": [0, 315, 0], "uv": [8, 24]}
+          ]
+        },
+        {
+          "name": "flare_blades",
+          "parent": "root",
+          "pivot": [0, 0, 0],
+          "cubes": [
+            {"origin": [-0.08, 0.08, -2.15], "size": [0.16, 1.8, 0.38], "pivot": [0, 0, 0], "rotation": [12, 0, 0], "uv": [18, 0]},
+            {"origin": [-0.08, 0.08, -2.15], "size": [0.16, 1.55, 0.34], "pivot": [0, 0, 0], "rotation": [10, 60, 0], "uv": [18, 12]},
+            {"origin": [-0.08, 0.08, -2.15], "size": [0.16, 1.9, 0.38], "pivot": [0, 0, 0], "rotation": [14, 120, 0], "uv": [18, 24]},
+            {"origin": [-0.08, 0.08, -2.15], "size": [0.16, 1.45, 0.34], "pivot": [0, 0, 0], "rotation": [10, 180, 0], "uv": [28, 0]},
+            {"origin": [-0.08, 0.08, -2.15], "size": [0.16, 1.7, 0.36], "pivot": [0, 0, 0], "rotation": [12, 240, 0], "uv": [28, 12]},
+            {"origin": [-0.08, 0.08, -2.15], "size": [0.16, 1.6, 0.36], "pivot": [0, 0, 0], "rotation": [12, 300, 0], "uv": [28, 24]}
+          ]
+        },
+        {
+          "name": "center_pulse",
+          "parent": "root",
+          "pivot": [0, 0.8, 0],
+          "cubes": [
+            {"origin": [-0.22, 0.36, -0.22], "size": [0.44, 0.88, 0.44], "pivot": [0, 0.8, 0], "rotation": [0, 45, 0], "uv": [40, 0]},
+            {"origin": [-0.08, 1.2, -0.08], "size": [0.16, 0.42, 0.16], "pivot": [0, 0.8, 0], "rotation": [0, 45, 0], "uv": [40, 14]}
+          ]
+        }
+      ]
+    }
+  ]
+}

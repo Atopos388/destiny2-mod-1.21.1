@@ -1,0 +1,13 @@
+{
+  "id": "destiny2-mod:forgotten_name",
+  "model": "destiny2-mod:geo/forgotten_name.geo.json",
+  "texture": "destiny2-mod:textures/item/forgotten_name.png",
+  "animation": "destiny2-mod:animations/forgotten_name.animation.json",
+  "skin_bones": [
+    "lefthand_pos",
+    "righthand_pos"
+  ],
+  "first_person_only_bones": [
+    "bone7"
+  ]
+}

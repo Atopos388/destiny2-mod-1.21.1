@@ -1,0 +1,62 @@
+{
+	"schemaVersion": 1,
+	"id": "destiny2-mod",
+	"version": "${version}",
+	"name": "destiny2 MOD",
+	"description": "Destiny-inspired weapons, abilities, armor, loot, and custom model experiments for Minecraft.",
+	"authors": [
+		"Me!"
+	],
+	"contact": {
+		"homepage": "",
+		"sources": ""
+	},
+	"license": "GPL-3.0-only",
+	"icon": "assets/destiny2-mod/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			{
+				"value": "atopos.destiny2.Destiny2MOD",
+				"adapter": "kotlin"
+			}
+		],
+		"client": [
+			{
+				"value": "atopos.destiny2.Destiny2MODClient",
+				"adapter": "kotlin"
+			}
+		],
+		"fabric-datagen": [
+			{
+				"value": "atopos.destiny2.Destiny2MODDataGenerator",
+				"adapter": "kotlin"
+			}
+		]
+	},
+	"mixins": [
+		"destiny2-mod.mixins.json",
+		{
+			"config": "destiny2-mod.client.mixins.json",
+			"environment": "client"
+		}
+	],
+	"jars": [
+		{
+			"file": "META-INF/jars/ldlib-fabric-2.5-destinyfix-client.jar"
+		}
+	],
+	"depends": {
+		"fabricloader": ">=0.18.4",
+		"minecraft": "~1.21.1",
+		"java": ">=21",
+		"fabric-api": "*",
+		"fabric-language-kotlin": "*",
+		"architectury": ">=13.0.8",
+		"geckolib": ">=4.6.6",
+		"playeranimator": ">=1.0.2-rc1"
+	},
+	"recommends": {
+		"ldlib2": ">=2.5"
+	}
+}

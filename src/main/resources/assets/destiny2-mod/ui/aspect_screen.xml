@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ldlib2-ui xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/Low-Drag-MC/LDLib2/refs/heads/1.21/ldlib2-ui.xsd">
+    <stylesheet location="ldlib2:lss/mc.lss"/>
+    <style>
+        #aspect_root { width: 920; height: 540; padding: 16; gap: 10; flex-direction: column; }
+        #aspect_body { width: 100%; flex: 1; gap: 10; flex-direction: row; }
+        .panel { height: 100%; padding: 10; gap: 8; flex-direction: column; }
+        .card { width: 100%; height: 48; }
+        .heading { width: 100%; height: 28; }
+        .copy { width: 100%; height: 42; }
+    </style>
+    <root id="aspect_root" class="panel_bg">
+        <text id="screen_title" class="heading">星象配置</text>
+        <text id="screen_subtitle" class="heading">子职业</text>
+        <element id="aspect_body">
+            <element id="available_panel" class="panel panel_bg" style="width: 300">
+                <text class="heading">可用星象</text>
+                <button id="aspect_option_0" class="card" text="星象 1"/>
+                <button id="aspect_option_1" class="card" text="星象 2"/>
+            </element>
+            <element id="detail_panel" class="panel panel_bg" style="width: 350">
+                <text class="heading">星象说明</text>
+                <text id="aspect_detail_0" class="copy">星象说明</text>
+                <text id="aspect_detail_1" class="copy">星象说明</text>
+            </element>
+            <element id="equipped_panel" class="panel panel_bg" style="width: 208">
+                <text class="heading">已装备</text>
+                <text id="aspect_slot_1" class="copy">星象 1：未装备</text>
+                <text id="aspect_slot_2" class="copy">星象 2：未装备</text>
+                <text id="fragment_capacity" class="copy">碎片槽：0 / --</text>
+                <text class="copy">点击左侧星象可装备或卸下。</text>
+            </element>
+        </element>
+    </root>
+</ldlib2-ui>

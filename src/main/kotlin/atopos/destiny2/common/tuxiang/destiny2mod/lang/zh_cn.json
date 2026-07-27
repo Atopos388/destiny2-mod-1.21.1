@@ -1,0 +1,27 @@
+{
+  "item.destiny2mod.glimmer": "微光",
+  "item.destiny2mod.exotic_engram": "异域记忆水晶",
+  "item.destiny2mod.perfect_retrograde": "完美逆行",
+  "item.destiny2mod.perfect_retrograde_ammo": "虚空弹丸",
+  "item.destiny2mod.ghost_general": "通用机灵外壳",
+  "item.destiny2mod.solar_grenade": "烈日手雷",
+  "item.destiny2mod.sunfire_chestplate": "炎阳护甲",
+  "item.destiny2mod.ignition_leggings": "爆燃护腿",
+
+  "entity.destiny2mod.perfect_retrograde_projectile": "虚空弹丸",
+  "entity.destiny2mod.solar_grenade_projectile": "烈日手雷",
+  "entity.destiny2mod.solar_flare_entity": "烈日耀斑",
+  "entity.destiny2mod.solar_snap_projectile": "烈日响指",
+
+  "creativetab.destiny_tab": "命运2",
+
+  "gui.destiny2mod.ghost_title": "机灵系统",
+  "gui.destiny2mod.button.nav": "术士",
+  "gui.destiny2mod.button.quest": "猎人",
+  "gui.destiny2mod.button.vehicle": "泰坦",
+  "gui.destiny2mod.subclass.warlock_solar": "炎阳术士 - 技能配置",
+
+  "key.destiny2mod.category": "命运2模组",
+  "key.destiny2mod.grenade_ability": "投掷手雷技能",
+  "key.destiny2mod.melee_ability": "近战技能"
+}

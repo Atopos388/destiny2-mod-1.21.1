@@ -1,0 +1,174 @@
+{
+  "forgotten_name_fire": {
+    "subtitle": "subtitles.destiny2-mod.forgotten_name_fire",
+    "sounds": [
+      "destiny2-mod:weapons/forgotten_name_fire_01"
+    ]
+  },
+  "forgotten_name_reload": {
+    "subtitle": "subtitles.destiny2-mod.forgotten_name_reload",
+    "sounds": [
+      "destiny2-mod:weapons/forgotten_name_reload_full"
+    ]
+  },
+  "forgotten_name_reload_close": {
+    "sounds": [
+      "destiny2-mod:weapons/forgotten_name_ready_full"
+    ]
+  },
+  "forgotten_name_reload_insert": {
+    "sounds": [
+      "destiny2-mod:weapons/forgotten_name_reload_insert_01",
+      "destiny2-mod:weapons/forgotten_name_reload_insert_02",
+      "destiny2-mod:weapons/forgotten_name_reload_insert_03"
+    ]
+  },
+  "forgotten_name_draw": {
+    "sounds": [
+      "destiny2-mod:weapons/forgotten_name_ready_full"
+    ]
+  },
+  "forgotten_name_inspect": {
+    "sounds": [
+      "destiny2-mod:weapons/forgotten_name_inspect_01",
+      "destiny2-mod:weapons/forgotten_name_inspect_02",
+      "destiny2-mod:weapons/forgotten_name_inspect_03"
+    ]
+  },
+  "forgotten_name_ready": {
+    "sounds": [
+      "destiny2-mod:weapons/forgotten_name_ready_full"
+    ]
+  },
+  "fallen_shock_rifle_fire": {
+    "subtitle": "subtitles.destiny2-mod.fallen_shock_rifle_fire",
+    "sounds": [
+      "destiny2-mod:fallen/shock_rifle_fire_01",
+      "destiny2-mod:fallen/shock_rifle_fire_02",
+      "destiny2-mod:fallen/shock_rifle_fire_03",
+      "destiny2-mod:fallen/shock_rifle_fire_04",
+      "destiny2-mod:fallen/shock_rifle_fire_05",
+      "destiny2-mod:fallen/shock_rifle_fire_06"
+    ]
+  },
+  "fallen_captain_roar": {
+    "sounds": [
+      "destiny2-mod:fallen/captain_roar_01",
+      "destiny2-mod:fallen/captain_roar_02",
+      "destiny2-mod:fallen/captain_roar_03",
+      "destiny2-mod:fallen/captain_roar_04"
+    ]
+  },
+  "fallen_captain_melee_swing": {
+    "sounds": [
+      "destiny2-mod:fallen/captain_melee_swing_01",
+      "destiny2-mod:fallen/captain_melee_swing_02",
+      "destiny2-mod:fallen/captain_melee_swing_03",
+      "destiny2-mod:fallen/captain_melee_swing_04",
+      "destiny2-mod:fallen/captain_melee_swing_05"
+    ]
+  },
+  "void_grenade_cast": {
+    "sounds": [
+      "destiny2-mod:abilities/void_hunter/vortex_grenade_cast_01",
+      "destiny2-mod:abilities/void_hunter/vortex_grenade_cast_02",
+      "destiny2-mod:abilities/void_hunter/vortex_grenade_cast_03",
+      "destiny2-mod:abilities/void_hunter/vortex_grenade_cast_04"
+    ]
+  },
+  "void_grenade_impact": {
+    "sounds": [
+      "destiny2-mod:abilities/void_hunter/vortex_grenade_impact_01",
+      "destiny2-mod:abilities/void_hunter/vortex_grenade_impact_02",
+      "destiny2-mod:abilities/void_hunter/vortex_grenade_impact_03"
+    ]
+  },
+  "snare_bomb_cast": {
+    "sounds": [
+      "destiny2-mod:abilities/void_hunter/snare_cast_01",
+      "destiny2-mod:abilities/void_hunter/snare_cast_02",
+      "destiny2-mod:abilities/void_hunter/snare_cast_03"
+    ]
+  },
+  "snare_bomb_impact": {
+    "sounds": [
+      "destiny2-mod:abilities/void_hunter/snare_impact_01",
+      "destiny2-mod:abilities/void_hunter/snare_impact_02",
+      "destiny2-mod:abilities/void_hunter/snare_impact_03",
+      "destiny2-mod:abilities/void_hunter/snare_impact_04"
+    ]
+  },
+  "shadowshot_cast": {
+    "sounds": [
+      "destiny2-mod:abilities/void_hunter/shadowshot_cast_01",
+      "destiny2-mod:abilities/void_hunter/shadowshot_cast_02",
+      "destiny2-mod:abilities/void_hunter/shadowshot_cast_03",
+      "destiny2-mod:abilities/void_hunter/shadowshot_cast_04"
+    ]
+  },
+  "shadowshot_impact": {
+    "sounds": [
+      "destiny2-mod:abilities/void_hunter/shadowshot_impact_01",
+      "destiny2-mod:abilities/void_hunter/shadowshot_impact_02",
+      "destiny2-mod:abilities/void_hunter/shadowshot_impact_03"
+    ]
+  },
+  "gambler_dodge": {
+    "sounds": [
+      "destiny2-mod:abilities/void_hunter/dodge_foley"
+    ]
+  },
+  "void_invisibility": {
+    "sounds": [
+      "destiny2-mod:abilities/void_hunter/invisibility_full_01",
+      "destiny2-mod:abilities/void_hunter/invisibility_full_02",
+      "destiny2-mod:abilities/void_hunter/invisibility_full_03"
+    ]
+  },
+  "solar_grenade_cast": {
+    "sounds": [
+      "destiny2-mod:abilities/solar_warlock/grenade_cast_exact_01",
+      "destiny2-mod:abilities/solar_warlock/grenade_cast_exact_02",
+      "destiny2-mod:abilities/solar_warlock/grenade_cast_exact_03"
+    ]
+  },
+  "solar_grenade_impact": {
+    "sounds": [
+      "destiny2-mod:abilities/solar_warlock/grenade_impact_exact_01",
+      "destiny2-mod:abilities/solar_warlock/grenade_impact_exact_02",
+      "destiny2-mod:abilities/solar_warlock/grenade_impact_exact_03"
+    ]
+  },
+  "incinerator_snap": {
+    "sounds": [
+      "destiny2-mod:abilities/solar_warlock/incinerator_snap_exact"
+    ]
+  },
+  "healing_rift_cast": {
+    "sounds": [
+      "destiny2-mod:abilities/solar_warlock/healing_rift_exact"
+    ]
+  },
+  "well_of_radiance_cast": {
+    "sounds": [
+      "destiny2-mod:abilities/solar_warlock/well_cast_exact"
+    ]
+  },
+  "well_of_radiance_impact": {
+    "sounds": [
+      "destiny2-mod:abilities/solar_warlock/well_impact_exact"
+    ]
+  },
+  "heat_rises_activate": {
+    "sounds": [
+      "destiny2-mod:abilities/solar_warlock/heat_rises_01",
+      "destiny2-mod:abilities/solar_warlock/heat_rises_02",
+      "destiny2-mod:abilities/solar_warlock/heat_rises_03"
+    ]
+  },
+  "guardian_awakening": {
+    "sounds": [
+      "destiny2-mod:cinematic/guardian_awakening"
+    ]
+  }
+}

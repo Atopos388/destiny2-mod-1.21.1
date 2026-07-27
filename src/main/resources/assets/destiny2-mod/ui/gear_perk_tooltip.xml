@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ldlib2-ui xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/Low-Drag-MC/LDLib2/refs/heads/1.21/ldlib2-ui.xsd">
+    <style>
+        #perk_tooltip_root {
+            width: 372; height: 142; padding: 6; gap-all: 0; flex-direction: row;
+            background: sdf(#F20A0F15, 1, 1, #D58B9AA7);
+        }
+        #equipment_panel { width: 190; height: 130; padding: 5; gap-all: 4; flex-direction: column; }
+        #detail_panel { width: 166; height: 130; padding: 5; gap-all: 4; flex-direction: column; }
+        #panel_divider { width: 1; height: 130; background: #D58B9AA7; }
+        #rarity_bar { width: 100%; height: 21; padding-horizontal: 6; flex-direction: row; justify-content: space-between; background: #73528F; }
+        #detail_header { width: 100%; height: 21; padding-horizontal: 6; background: #C073528F; }
+        #gear_name { width: 76%; height: 21; font-size: 11; text-color: #F8FAFB; text-shadow: false; }
+        #gear_power { width: 22%; height: 21; font-size: 10; text-color: #FFFFFF; text-shadow: false; text-align-horizontal: right; }
+        #detail_title { width: 100%; height: 21; font-size: 10; text-color: #F8FAFB; text-shadow: false; }
+        #gear_meta { width: 100%; height: 20; font-size: 8; text-color: #A6B1BC; text-shadow: false; }
+        #gear_divider, #detail_divider { width: 100%; height: 1; background: #718B9AA7; }
+        #perk_row { width: 100%; height: 32; gap-all: 7; flex-direction: row; }
+        #roll_status, #detail_hint { width: 100%; height: 10; font-size: 8; text-color: #A6B1BC; text-shadow: false; }
+        #weapon_stats { width: 100%; height: 22; gap-all: 2; flex-direction: column; }
+        .weapon_stat { width: 100%; height: 10; font-size: 8; text-color: #F4F7F9; text-shadow: false; }
+        #perk_slot { width: 100%; height: 10; font-size: 8; text-color: #CEAE59; text-shadow: false; }
+        #perk_name { width: 100%; height: 11; font-size: 10; text-color: #F4F7F9; text-shadow: false; }
+        #perk_description { width: 100%; height: 36; font-size: 8; text-color: #C7CED5; text-shadow: false; }
+        #catalyst_selector { width: 72; height: 13; padding-horizontal: 5; font-size: 8; text-color: #CEAE59; text-shadow: false; background: sdf(#0016202A, 1, 1, #C0CEAE59); }
+        #catalyst_action { width: 100%; height: 14; font-size: 8; text-color: #FFFFFF; text-shadow: false; text-align-horizontal: center; background: #C8CEAE59; }
+        .preview_perk { width: 24; height: 24; background: sdf(#F016202A, 1, 1, #D58B9AA7); }
+        .selected_perk { background: sdf(#F016202A, 1, 2, #FFCEAE59); }
+        .catalyst_slot { background: sdf(#8016202A, 1, 1, #70CEAE59); }
+        .theme-token { display: none; width: 1; height: 1; }
+        #theme_background { background: #F20A0F15; }
+        #theme_surface { background: #F016202A; }
+        #theme_border { background: #D58B9AA7; }
+        #theme_muted { background: #FFA6B1BC; }
+        #theme_description { background: #FFC7CED5; }
+    </style>
+    <root id="perk_tooltip_root">
+        <element id="equipment_panel">
+            <element id="rarity_bar">
+                <text id="gear_name">装备名称</text>
+                <text id="gear_power">1810</text>
+            </element>
+            <text id="gear_meta">传说 / 武器&#10;武器框架</text>
+            <element id="gear_divider"/>
+            <element id="perk_row">
+                <element class="preview_perk selected_perk"/>
+                <element class="preview_perk"/>
+                <element class="preview_perk catalyst_slot"/>
+            </element>
+            <text id="roll_status">ACTIVE ROLL // 04</text>
+            <element id="weapon_stats">
+                <text class="weapon_stat">伤害                         6.60</text>
+                <text class="weapon_stat">射速                         3.33/秒</text>
+            </element>
+        </element>
+        <element id="panel_divider"/>
+        <element id="detail_panel">
+            <element id="detail_header"><text id="detail_title">特性详情</text></element>
+            <text id="catalyst_selector">选择催化</text>
+            <element id="detail_divider"/>
+            <text id="perk_name">遗忘催化原型</text>
+            <text id="perk_description">催化信息默认显示在这里；点击上方选择框后才展开候选列表。</text>
+            <text id="catalyst_action">卸载催化</text>
+            <text id="detail_hint">点击选择框 · SHIFT 关闭</text>
+        </element>
+        <element id="theme_background" class="theme-token"/>
+        <element id="theme_surface" class="theme-token"/>
+        <element id="theme_border" class="theme-token"/>
+        <element id="theme_muted" class="theme-token"/>
+        <element id="theme_description" class="theme-token"/>
+    </root>
+</ldlib2-ui>

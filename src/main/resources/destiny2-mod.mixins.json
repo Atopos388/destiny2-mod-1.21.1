@@ -1,0 +1,19 @@
+{
+	"required": true,
+	"package": "atopos.destiny2.common.mixin",
+	"compatibilityLevel": "JAVA_21",
+	"mixins": [
+		"MixinLivingEntity",
+		"MixinPlayer",
+		"MixinProjectile",
+		"MixinServerPlayerDestinyData",
+		"InventoryMenuClassItemMixin"
+		,"ItemEntityArmorModMixin"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	},
+	"overwrites": {
+		"requireAnnotations": true
+	}
+}

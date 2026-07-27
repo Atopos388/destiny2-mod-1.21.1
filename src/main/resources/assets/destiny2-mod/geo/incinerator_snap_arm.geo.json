@@ -1,0 +1,48 @@
+{
+	"format_version": "1.12.0",
+	"minecraft:geometry": [
+		{
+			"description": {
+				"identifier": "geometry.incinerator_snap_arm",
+				"texture_width": 64,
+				"texture_height": 64,
+				"visible_bounds_width": 3,
+				"visible_bounds_height": 3,
+				"visible_bounds_offset": [0, 1, 0]
+			},
+			"bones": [
+				{
+					"name": "root",
+					"pivot": [0, 7.9, 5.8]
+				},
+				{
+					"name": "mag_and_lefthand",
+					"parent": "root",
+					"pivot": [0, 5.8, 0]
+				},
+				{
+					"name": "lefthand",
+					"parent": "mag_and_lefthand",
+					"pivot": [-1.93152, 8.51437, 2.03266]
+				},
+				{
+					"name": "lefthand_pos",
+					"parent": "lefthand",
+					"pivot": [0.58348, 8.31904, 7.79669],
+					"cubes": [
+						{
+							"origin": [-6.41652, 8.31904, 5.79669],
+							"size": [3, 12, 4],
+							"uv": [32, 48]
+						}
+					]
+				},
+				{
+					"name": "camera",
+					"parent": "root",
+					"pivot": [2.75, 14.2875, 14]
+				}
+			]
+		}
+	]
+}

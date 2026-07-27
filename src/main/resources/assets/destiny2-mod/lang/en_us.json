@@ -1,0 +1,32 @@
+{
+  "item.destiny2-mod.ghost_core": "Ghost Core",
+  "item.destiny2-mod.izanagis_burden": "Izanagi's Burden",
+  "journey.destiny2-mod.awakening.title": "Guardian",
+  "journey.destiny2-mod.awakening.subtitle": "Eyes up. The Light is answering you.",
+  "journey.destiny2-mod.awakening.message": "A Ghost found you and brought you back from death.",
+  "journey.destiny2-mod.awakening.next_objective": "New objective: keep the Ghost Core and gather copper, redstone, iron, and amethyst."
+  ,"subtitles.destiny2-mod.fallen_shock_rifle_fire": "Fallen Shock Rifle fires"
+  ,"entity.destiny2-mod.fallen_captain": "Fallen Captain"
+  ,"entity.destiny2-mod.fallen_captain_pellet": "Fallen Shotgun Pellet"
+  ,"item.destiny2-mod.fallen_captain_spawn_egg": "Fallen Captain Spawn Egg"
+  ,"navigation.destiny2-mod.title": "NAV MODE"
+  ,"navigation.destiny2-mod.dimension.overworld": "Overworld"
+  ,"navigation.destiny2-mod.dimension.nether": "Nether"
+  ,"navigation.destiny2-mod.dimension.end": "The End"
+  ,"navigation.destiny2-mod.location.unknown": "Unknown region"
+  ,"navigation.destiny2-mod.objective.label": "CURRENT OBJECTIVE"
+  ,"navigation.destiny2-mod.objective.mortal.title": "SIGNAL LOST"
+  ,"navigation.destiny2-mod.objective.mortal.description": "No Ghost connection has been established. The Light is waiting for an answer."
+  ,"navigation.destiny2-mod.objective.awakened.title": "NEW GUARDIAN"
+  ,"navigation.destiny2-mod.objective.awakened.description": "Keep the Ghost Core and gather materials for your first equipment network."
+  ,"navigation.destiny2-mod.fireteam": "FIRETEAM"
+  ,"navigation.destiny2-mod.weapon.empty": "No weapon equipped"
+  ,"navigation.destiny2-mod.footer": "TAP TAB: PIN NAV   //   HOLD TAB: OPEN DIRECTOR   //   /destinynav edit: EDIT TEMPLATE"
+  ,"navigation.destiny2-mod.director.title": "DIRECTOR"
+  ,"navigation.destiny2-mod.director.overview": "OVERVIEW"
+  ,"navigation.destiny2-mod.director.objectives": "OBJECTIVES"
+  ,"navigation.destiny2-mod.director.fireteam": "FIRETEAM"
+  ,"navigation.destiny2-mod.director.journey": "GUARDIAN JOURNEY"
+  ,"navigation.destiny2-mod.director.footer": "SELECT A SECTION FOR DETAILS   //   WORLD REMAINS ACTIVE"
+  ,"navigation.destiny2-mod.director.close": "TAB / ESC CLOSE"
+}

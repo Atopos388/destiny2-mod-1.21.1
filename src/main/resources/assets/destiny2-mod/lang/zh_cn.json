@@ -1,0 +1,103 @@
+{
+  "item.destiny2-mod.glimmer": "微光",
+  "item.destiny2-mod.izanagis_burden": "伊邪那岐的重担",
+  "item.destiny2-mod.ghost_core": "机灵核心",
+  "journey.destiny2-mod.awakening.title": "守护者",
+  "journey.destiny2-mod.awakening.subtitle": "睁开眼睛。光能正在回应你。",
+  "journey.destiny2-mod.awakening.message": "机灵找到了你，并将你从死亡中带回。",
+  "journey.destiny2-mod.awakening.next_objective": "新目标：保存机灵核心，收集铜、红石、铁和紫水晶。",
+  "item.destiny2-mod.strange_coin": "奇异硬币",
+  "item.destiny2-mod.rigid_synthcord": "刚性合成线",
+  "item.destiny2-mod.synthweave_plate": "合成纤维板片",
+  "item.destiny2-mod.sleek_synthcord": "光滑合成线",
+  "item.destiny2-mod.legendary_shard": "传说碎片",
+  "item.destiny2-mod.exotic_engram": "异域记忆水晶",
+  "block.destiny2-mod.shimmering_crystal_ore": "微光水晶矿簇",
+  "block.destiny2-mod.sphere_model_block": "球形模型方块",
+  "item.destiny2-mod.perfect_retrograde": "完美逆行",
+  "item.destiny2-mod.forgotten_name": "被遗忘之名",
+  "entity.destiny2-mod.forgotten_name_bullet": "被遗忘之名子弹",
+  "subtitles.destiny2-mod.forgotten_name_fire": "被遗忘之名开火",
+  "item.destiny2-mod.micro_missile_test": "微型导弹测试枪",
+  "item.destiny2-mod.perfect_retrograde_ammo": "虚空弹药",
+  "item.destiny2-mod.ghost_general": "通用机灵外壳",
+  "item.destiny2-mod.solar_grenade": "烈日手雷",
+  "item.destiny2-mod.sunfire_chestplate": "炎阳护甲",
+  "item.destiny2-mod.ignition_leggings": "爆燃护腿",
+  "item.destiny2-mod.overload_helmet": "超载头盔",
+  "item.destiny2-mod.yanyang_chestplate": "炎阳胸甲",
+  "item.destiny2-mod.baoran_leggings": "爆燃护腿",
+  "entity.destiny2-mod.perfect_retrograde_projectile": "虚空弹药",
+  "entity.destiny2-mod.solar_grenade_projectile": "烈日手雷",
+  "entity.destiny2-mod.solar_flare_entity": "烈日耀斑",
+  "entity.destiny2-mod.solar_snap_projectile": "烈日响指",
+  "entity.destiny2-mod.incinerator_snap_projectile": "焚烧响指",
+  "entity.destiny2-mod.void_grenade": "虚空手雷",
+  "entity.destiny2-mod.void_vortex": "虚空漩涡",
+  "entity.destiny2-mod.snare_bomb": "陷阱炸弹",
+  "entity.destiny2-mod.shadowshot_anchor": "暗影陷阱锚点",
+  "entity.destiny2-mod.void_tether": "虚空锚点",
+  "entity.destiny2-mod.healing_rift": "治疗裂隙",
+  "entity.destiny2-mod.well_of_radiance": "光焰之井",
+  "entity.destiny2-mod.micro_missile_projectile": "微型导弹",
+  "itemGroup.destiny2-mod.general": "命运 2 模组",
+  "creativetab.destiny_tab": "命运 2",
+  "effect.destiny2-mod.void_invisibility": "隐身",
+  "effect.destiny2-mod.devour": "吞噬",
+  "effect.destiny2-mod.void_overshield": "虚空护盾",
+  "effect.destiny2-mod.weaken": "虚弱",
+  "effect.destiny2-mod.suppression": "压制",
+  "effect.destiny2-mod.volatile": "不稳定",
+  "effect.destiny2-mod.scorch": "灼烧",
+  "effect.destiny2-mod.radiant": "焕光",
+  "effect.destiny2-mod.restoration": "恢复",
+  "effect.destiny2-mod.amplified": "增幅",
+  "effect.destiny2-mod.speed_booster": "速度推进",
+  "gui.destiny2-mod.ghost_title": "机灵系统",
+  "gui.destiny2-mod.button.nav": "术士",
+  "gui.destiny2-mod.button.quest": "猎人",
+  "gui.destiny2-mod.button.vehicle": "泰坦",
+  "gui.destiny2-mod.subclass.warlock_solar": "炎阳术士 - 技能配置",
+  "category.destiny2-mod.controls": "命运 2 模组",
+  "key.destiny2-mod.grenade_ability": "投掷手雷技能",
+  "key.destiny2-mod.melee_ability": "近战技能",
+  "key.destiny2-mod.class_ability": "职业技能",
+  "key.destiny2-mod.super_ability": "终极技能",
+  "key.destiny2-mod.hud_editor": "打开 HUD 编辑器",
+  "key.destiny2-mod.ldlib_editor": "打开 LDLib UI 编辑器",
+  "key.destiny2-mod.reload_weapon": "武器换弹",
+  "key.destiny2-mod.inspect_weapon": "检视武器",
+  "key.destiny2-mod.fire_mode": "切换射击模式",
+  "item.destiny2-mod.primary_ammo": "白弹弹药砖",
+  "item.destiny2-mod.special_ammo": "特殊弹药砖",
+  "item.destiny2-mod.heavy_ammo": "重型弹药砖",
+  "entity.destiny2-mod.forgotten_remnant": "遗忘",
+  "item.destiny2-mod.hunter_cloak": "猎人披风",
+  "item.destiny2-mod.warlock_bond": "术士臂环",
+  "item.destiny2-mod.titan_mark": "泰坦印记"
+  ,"item.destiny2-mod.orb_of_power": "能量球"
+  ,"navigation.destiny2-mod.title": "导航模式"
+  ,"navigation.destiny2-mod.dimension.overworld": "主世界"
+  ,"navigation.destiny2-mod.dimension.nether": "下界"
+  ,"navigation.destiny2-mod.dimension.end": "末地"
+  ,"navigation.destiny2-mod.location.unknown": "未知区域"
+  ,"navigation.destiny2-mod.objective.label": "当前目标"
+  ,"navigation.destiny2-mod.objective.mortal.title": "信号中断"
+  ,"navigation.destiny2-mod.objective.mortal.description": "尚未建立机灵连接。光能正在等待回应。"
+  ,"navigation.destiny2-mod.objective.awakened.title": "新生守护者"
+  ,"navigation.destiny2-mod.objective.awakened.description": "保存机灵核心，并收集用于建立第一套装备网络的材料。"
+  ,"navigation.destiny2-mod.fireteam": "火力战队"
+  ,"navigation.destiny2-mod.weapon.empty": "未装备武器"
+  ,"navigation.destiny2-mod.footer": "轻按 TAB：保持导航   //   长按 TAB：打开导航总览   //   /destinynav edit：编辑模板"
+  ,"navigation.destiny2-mod.director.title": "导航总览"
+  ,"navigation.destiny2-mod.director.overview": "总览"
+  ,"navigation.destiny2-mod.director.objectives": "目标"
+  ,"navigation.destiny2-mod.director.fireteam": "火力战队"
+  ,"navigation.destiny2-mod.director.journey": "守护者旅程"
+  ,"navigation.destiny2-mod.director.footer": "选择栏目查看详细资料   //   世界仍在继续"
+  ,"navigation.destiny2-mod.director.close": "TAB / ESC 关闭"
+  ,"subtitles.destiny2-mod.fallen_shock_rifle_fire": "堕落者震荡步枪开火"
+  ,"entity.destiny2-mod.fallen_captain": "堕落者 队长"
+  ,"entity.destiny2-mod.fallen_captain_pellet": "堕落者霰弹"
+  ,"item.destiny2-mod.fallen_captain_spawn_egg": "堕落者 队长刷怪蛋"
+}

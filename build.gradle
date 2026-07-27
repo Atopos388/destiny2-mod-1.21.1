@@ -1,0 +1,285 @@
+plugins {
+	id 'net.fabricmc.fabric-loom-remap' version "${loom_version}"
+	id 'maven-publish'
+	id "org.jetbrains.kotlin.jvm" version "2.3.0"
+}
+
+version = project.mod_version
+group = project.maven_group
+
+base {
+	archivesName = project.archives_base_name
+}
+
+repositories {
+	// Add repositories to retrieve artifacts from in here.
+	// You should only use this when depending on other mods because
+	// Loom adds the essential maven repositories to download Minecraft and libraries from automatically.
+	// See https://docs.gradle.org/current/userguide/declaring_repositories.html
+	// for more information about repositories.
+
+    // GeckoLib
+    maven { url 'https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/' }
+
+    // PlayerAnimator
+    maven { url 'https://maven.kosmx.dev/' }
+
+    maven { url 'https://api.modrinth.com/maven' }
+
+    // MoLang compiler used by the client-side Bedrock/Snowstorm particle runtime.
+    maven { url 'https://maven.blamejared.com' }
+
+    
+    // JitPack (often needed for transitive dependencies)
+    maven { url 'https://jitpack.io' }
+}
+
+loom {
+	splitEnvironmentSourceSets()
+
+	runs {
+		server {
+			runDir "run-server"
+			programArgs "nogui"
+		}
+	}
+
+	mods {
+		"destiny2-mod" {
+			sourceSet sourceSets.main
+			sourceSet sourceSets.client
+		}
+	}
+
+}
+
+fabricApi {
+	configureDataGeneration {
+		client = true
+	}
+}
+
+dependencies {
+	// To change the versions see the gradle.properties file
+	minecraft "com.mojang:minecraft:${project.minecraft_version}"
+	mappings loom.officialMojangMappings()
+	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+
+	// Core Fabric Kotlin stack for this mod template.
+	// Ship the public runtime as Fabric Jar-in-Jar so players only install this mod jar.
+	modImplementation include("net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}")
+	modImplementation include("net.fabricmc:fabric-language-kotlin:${project.fabric_kotlin_version}")
+
+    // Runtime animation libraries used by the existing models, renderers, and player actions.
+    modImplementation include("software.bernie.geckolib:geckolib-fabric-1.21.1:${project.geckolib_version}")
+    modImplementation include("dev.kosmx.player-anim:player-animation-lib-fabric:${project.player_animator_version}")
+    // LDLib2 registers an accessor for dev.architectury.fluid.FluidStack during startup.
+    modImplementation include("maven.modrinth:architectury-api:${project.architectury_api_version}")
+    modImplementation files("libs/ldlib-fabric-2.5-destinyfix-client.jar")
+    compileOnly files("run/mods/taffy-1.1.4.jar", "run/mods/yoga-1.0.0.jar")
+
+    // Sandstorm-compatible particle expressions. Fabric Loader already supplies ASM.
+    implementation include("gg.moonflower:molang-compiler:3.1.0.18") {
+        exclude group: "org.ow2.asm", module: "asm-tree"
+    }
+
+    testImplementation "org.junit.jupiter:junit-jupiter:5.11.4"
+    testRuntimeOnly "org.junit.platform:junit-platform-launcher"
+
+    // Optional libraries such as Mod Menu, Cloth Config, Cardinal Components,
+    // LibGui, REI, and EMI should be added only when a feature requires them.
+}
+
+tasks.named("test") {
+    useJUnitPlatform()
+}
+
+def codeGraphSourceRoots = [
+	file("src/main/kotlin"),
+	file("src/main/java"),
+	file("src/client/kotlin"),
+	file("src/client/java")
+]
+
+tasks.register("codeGraph") {
+	group = "documentation"
+	description = "Generates a lightweight source import graph for Kotlin and Java code."
+
+	def outputDir = layout.buildDirectory.dir("reports/code-graph")
+	outputs.dir(outputDir)
+
+	doLast {
+		def sourceFiles = codeGraphSourceRoots
+			.findAll { it.exists() }
+			.collectMany { root ->
+				fileTree(root) {
+					include "**/*.kt"
+					include "**/*.java"
+				}.files
+			}
+			.sort { a, b -> a.path <=> b.path }
+
+		def nodes = sourceFiles.collect { sourceFile ->
+			def text = sourceFile.getText("UTF-8")
+			def packageMatch = text =~ /(?m)^\s*package\s+([A-Za-z_][\w.]*)/
+			def packageName = packageMatch.find() ? packageMatch.group(1) : ""
+			def typeMatch = text =~ /(?m)^\s*(?:public\s+|private\s+|protected\s+|internal\s+|abstract\s+|final\s+|sealed\s+|data\s+|enum\s+|open\s+|object\s+)*?(class|interface|enum\s+class|object|record)\s+([A-Za-z_]\w*)/
+			def typeName = typeMatch.find() ? typeMatch.group(2) : sourceFile.name.replaceFirst(/\.(kt|java)$/, "")
+			def imports = []
+			(text =~ /(?m)^\s*import\s+([A-Za-z_][\w.]*)(?:\.\*)?\s*;?/).each { match ->
+				imports << match[1]
+			}
+
+			[
+				id      : packageName ? "${packageName}.${typeName}" : typeName,
+				package : packageName,
+				type    : typeName,
+				path    : projectDir.toPath().relativize(sourceFile.toPath()).toString().replace("\\", "/"),
+				imports : imports.unique().sort()
+			]
+		}
+
+		def projectPackages = nodes.collect { it.package }.findAll { it }.unique().sort()
+		def localEdges = []
+		nodes.each { node ->
+			node.imports.each { imported ->
+				def matchingPackage = projectPackages.find { imported == it || imported.startsWith("${it}.") }
+				if (matchingPackage) {
+					localEdges << [from: node.id, to: imported, package: matchingPackage]
+				}
+			}
+		}
+
+		def jsonFile = outputDir.get().file("code-graph.json").asFile
+		def markdownFile = outputDir.get().file("CODE_GRAPH.md").asFile
+		jsonFile.parentFile.mkdirs()
+
+		def json = groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson([
+			generatedAt: new Date().format("yyyy-MM-dd'T'HH:mm:ssZ"),
+			project    : project.name,
+			nodes      : nodes,
+			edges      : localEdges
+		]))
+		jsonFile.setText(json, "UTF-8")
+
+		def markdown = new StringBuilder()
+		markdown << "# Code Graph\n\n"
+		markdown << "Generated from Kotlin and Java sources.\n\n"
+		markdown << "- Source files: ${nodes.size()}\n"
+		markdown << "- Local import edges: ${localEdges.size()}\n"
+		markdown << "- JSON: `code-graph.json`\n\n"
+		markdown << "## Packages\n\n"
+		projectPackages.each { packageName ->
+			def packageNodes = nodes.findAll { it.package == packageName }
+			markdown << "### `${packageName}`\n\n"
+			packageNodes.each { node ->
+				def localImports = localEdges.findAll { it.from == node.id }.collect { it.to }.unique().sort()
+				markdown << "- `${node.type}`: `${node.path}`"
+				if (!localImports.isEmpty()) {
+					markdown << " imports ${localImports.collect { "`$it`" }.join(", ")}"
+				}
+				markdown << "\n"
+			}
+			markdown << "\n"
+		}
+		markdownFile.setText(markdown.toString(), "UTF-8")
+
+		logger.lifecycle("Code graph written to ${markdownFile} and ${jsonFile}")
+	}
+}
+
+tasks.register("code-graph") {
+	group = "documentation"
+	description = "Alias for codeGraph."
+	dependsOn tasks.named("codeGraph")
+}
+
+tasks.register("installDirectorFontTools", Exec) {
+	group = "assets"
+	description = "Installs disposable fontTools and Pillow under build/fonttools."
+	onlyIf { !file("build/fonttools/fontTools").exists() || !file("build/fonttools/PIL").exists() }
+	workingDir projectDir
+	commandLine "python", "-m", "pip", "install", "--disable-pip-version-check", "--target", "build/fonttools", "fonttools", "pillow"
+}
+
+tasks.register("generateDirectorFontSubset", Exec) {
+	group = "assets"
+	description = "Regenerates the safe Source Han Sans subset after UI copy changes."
+	dependsOn tasks.named("installDirectorFontTools")
+	workingDir projectDir
+	commandLine "python", "tools/fonts/build_director_font_subset.py"
+}
+
+tasks.register("generateDirectorBitmapFont", Exec) {
+	group = "assets"
+	description = "Generates the runtime-safe Source Han Sans bitmap font atlases."
+	dependsOn tasks.named("installDirectorFontTools")
+	workingDir projectDir
+	commandLine "python", "tools/fonts/build_director_bitmap_font.py"
+}
+
+processResources {
+	inputs.property "version", project.version
+
+	filesMatching("fabric.mod.json") {
+		expand "version": inputs.properties.version
+	}
+}
+
+tasks.withType(JavaCompile).configureEach {
+	it.options.release = 21
+}
+
+tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
+	kotlinOptions {
+		jvmTarget = 21
+	}
+}
+
+java {
+	// Loom will automatically attach sourcesJar to a RemapSourcesJar task and to the "build" task
+	// if it is present.
+	// If you remove this line, sources will not be generated.
+	withSourcesJar()
+
+	sourceCompatibility = JavaVersion.VERSION_21
+	targetCompatibility = JavaVersion.VERSION_21
+}
+
+jar {
+	inputs.property "archivesName", project.base.archivesName
+
+	// The project-specific LDLib build is a local artifact, so embed it manually as a Fabric nested jar.
+	from("libs/ldlib-fabric-2.5-destinyfix-client.jar") {
+		into "META-INF/jars"
+	}
+
+	from("LICENSE") {
+		rename { "${it}_${inputs.properties.archivesName}"}
+	}
+	from("NOTICE.md") {
+		rename { "NOTICE_${inputs.properties.archivesName}.md" }
+	}
+	from("third_party/source-han-sans/LICENSE.txt") {
+		into "META-INF/licenses"
+		rename { "source-han-sans-OFL-1.1.txt" }
+	}
+}
+
+// configure the maven publication
+publishing {
+	publications {
+		create("mavenJava", MavenPublication) {
+			artifactId = project.archives_base_name
+			from components.java
+		}
+	}
+
+	// See https://docs.gradle.org/current/userguide/publishing_maven.html for information on how to set up publishing.
+	repositories {
+		// Add repositories to publish to here.
+		// Notice: This block does NOT have the same function as the block in the top level.
+		// The repositories here will be used for publishing your artifact, not for
+		// retrieving dependencies.
+	}
+}

@@ -1,0 +1,43 @@
+{
+  "ammo_type": "PRIMARY",
+  "damage": 10.0,
+  "head_shot": 1.7,
+  "magazine_size": 8,
+  "reload_ticks": 34,
+  "empty_reload_bonus_ticks": 0,
+  "reload_feed_fraction": 0.72,
+  "fire_mode": "SEMI",
+  "supported_fire_modes": ["SEMI"],
+  "rounds_per_minute": 80,
+  "bolt_ticks": 0,
+  "recoil": {
+    "pitch_min": 2.4,
+    "pitch_max": 3.0,
+    "yaw_min": -0.38,
+    "yaw_max": 0.38,
+    "kick_ms": 70,
+    "recover_ms": 310,
+    "aimed_multiplier": 0.68
+  },
+  "crosshair": {
+    "base_gap": 5.0,
+    "moving_penalty": 4.0,
+    "airborne_penalty": 7.0,
+    "shot_penalty": 5.0,
+    "shot_decay_per_tick": 0.55,
+    "hide_aim_progress": 0.92
+  },
+  "ballistics": {
+    "range": 128.0,
+    "entity_tolerance": 0.08,
+    "bullet_impact": true,
+    "speed": 8.0,
+    "gravity": 0.0,
+    "friction": 0.01,
+    "life_ticks": 40,
+    "pierce": 1,
+    "distance_damage": [
+      {"distance": 128.0, "damage": 10.0}
+    ]
+  }
+}

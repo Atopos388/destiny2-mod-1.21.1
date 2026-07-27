@@ -1,0 +1,40 @@
+{
+	"format_version": "1.8.0",
+	"animations": {
+		"animation.well_of_radiance.idle": {
+			"loop": true,
+			"animation_length": 30,
+			"bones": {
+				"group2": {
+					"position": {
+						"0.1667": {
+							"vector": [0, 12.9375, 0]
+						},
+						"0.2083": [0, 10.36632, 0],
+						"0.25": [0, -9.44194, 0],
+						"0.2917": {
+							"vector": [0, -12.01312, 0]
+						}
+					},
+					"scale": {
+						"0.0": {
+							"post": {
+								"vector": [1, -0.06406, -0.00469]
+							},
+							"lerp_mode": "catmullrom"
+						},
+						"0.0417": [1, 0.46797, 0.49766],
+						"0.0833": {
+							"vector": [1, 1, 1]
+						}
+					}
+				}
+			},
+			"particle_effects": {
+				"0.2917": {
+					"effect": "particles"
+				}
+			}
+		}
+	}
+}

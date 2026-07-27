@@ -1,0 +1,75 @@
+# gradle
+
+.gradle/
+build/
+out/
+classes/
+
+# eclipse
+
+*.launch
+
+# idea
+
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# vscode
+
+.settings/
+.vscode/
+bin/
+.classpath
+.project
+
+# macos
+
+*.DS_Store
+
+# fabric
+
+run/
+
+# java
+
+hs_err_*.log
+replay_*.log
+*.hprof
+*.jfr
+
+# local Kotlin tooling
+
+.kotlin/
+
+# Codex-generated notes, visualizations, and project documents
+
+.codex/
+docs/
+outputs/
+*.docx
+*.xlsx
+
+# local runtime, test servers, logs, and release artifacts
+
+logs/
+release/
+run-server/
+testing/
+tmp/
+work/
+
+# downloaded reference software and bundled authoring applications
+
+software/
+source_assets/tools/
+
+# local screenshots and unrelated npm stub
+
+hud_current_screen*.png
+/package.json
+
+# generated interpreter caches
+
+**/__pycache__/

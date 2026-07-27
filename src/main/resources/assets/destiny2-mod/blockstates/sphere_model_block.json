@@ -1,0 +1,7 @@
+{
+  "variants": {
+    "": {
+      "model": "destiny2-mod:block/sphere_model_block"
+    }
+  }
+}
