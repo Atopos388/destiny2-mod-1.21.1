@@ -63,7 +63,6 @@ object Destiny2MODClient : ClientModInitializer {
         AmplifiedPlayerAuraClient.register()
         AmplifiedSpeedLinesOverlay.register()
         ArcTitanBarricadeWorldRenderer.register()
-        ThunderclapBlastRenderer.register()
         ThunderclapGroundLiftRenderer.register()
         HealingRiftWorldRenderer.register()
         HealingRiftScreenOverlay.register()
@@ -104,6 +103,9 @@ object Destiny2MODClient : ClientModInitializer {
         HudRenderCallback.EVENT.register(DestinyHUDOverlay())
         HudRenderCallback.EVENT.register(DestinyWeaponHUDOverlay())
         HudRenderCallback.EVENT.register(DestinyNavigationOverlay)
+        // Register Thunderclap last so its one-frame exposure cuts are not
+        // painted over by ordinary HUD elements.
+        ThunderclapBlastRenderer.register()
         DestinyHUDClientCommands.register()
 
         ClientNetworking.register()

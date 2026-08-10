@@ -25,6 +25,7 @@ import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sqrt
 import kotlin.math.sin
+import kotlin.random.Random
 
 /** Open-top Arc energy chamber erected from Thunderclap's compressed hand core. */
 object ThunderclapBlastRenderer : HudRenderCallback {
@@ -36,6 +37,7 @@ object ThunderclapBlastRenderer : HudRenderCallback {
     private const val CUP_VERTICAL_SEGMENTS = 9
     private const val CUP_RADIAL_SEGMENTS = 40
     private const val MAX_EFFECTS = 8
+    private const val MONOCHROME_FLASH_CHANCE = 0.125f
     private val UP = Vec3(0.0, 1.0, 0.0)
 
     @Volatile private var volumeShader: ShaderInstance? = null
@@ -48,7 +50,8 @@ object ThunderclapBlastRenderer : HudRenderCallback {
         val core: Vec3,
         val forward: Vec3,
         val right: Vec3,
-        val groundY: Double
+        val groundY: Double,
+        val monochromeImpact: Boolean
     )
 
     private data class Frame(
@@ -97,7 +100,16 @@ object ThunderclapBlastRenderer : HudRenderCallback {
         // begin a newly received blast near age 1.0 and skip the flash peak.
         val gameTime = level.gameTime + client.timer.getGameTimeDeltaPartialTick(false).toDouble()
         while (active.size >= MAX_EFFECTS) active.removeFirst()
-        active.addLast(Blast(gameTime, handCore, forward, right, origin.y + 0.035))
+        active.addLast(
+            Blast(
+                gameTime,
+                handCore,
+                forward,
+                right,
+                origin.y + 0.035,
+                Random.nextFloat() < MONOCHROME_FLASH_CHANCE
+            )
+        )
     }
 
     override fun onHudRender(graphics: GuiGraphics, tickCounter: DeltaTracker) {
@@ -108,6 +120,8 @@ object ThunderclapBlastRenderer : HudRenderCallback {
         val now = level.gameTime + tickCounter.getGameTimeDeltaPartialTick(true).toDouble()
         var strength = 0.0f
         var flashStrength = 0.0f
+        var monochromeBlack = 0.0f
+        var monochromeWhite = 0.0f
         active.forEach { blast ->
             val age = (now - blast.startGameTime).toFloat()
             if (age !in 0.0f..LIFETIME_TICKS) return@forEach
@@ -122,8 +136,26 @@ object ThunderclapBlastRenderer : HudRenderCallback {
                 (1.0f - smoothstep(5.8f, 7.2f, age)) * 0.15f
             strength = maxOf(strength, maxOf(releaseGlow, chamberLight, impactAfterglow) * distanceFade)
             flashStrength = maxOf(flashStrength, (impactFlash * 1.18f * distanceFade).coerceAtMost(1.0f))
+            if (blast.monochromeImpact) {
+                // Rare impact variant: a short contrast crush followed by a
+                // hard white exposure frame, then an immediate return to Arc
+                // colour. Each phase is wide enough to survive 30-60 FPS.
+                monochromeBlack = maxOf(
+                    monochromeBlack,
+                    pulse(age, -0.18f, 0.16f, 0.72f) * distanceFade
+                )
+                monochromeWhite = maxOf(
+                    monochromeWhite,
+                    pulse(age, 0.52f, 0.82f, 1.62f) * distanceFade
+                )
+            }
         }
-        if (strength <= 0.002f && flashStrength <= 0.002f) return
+        if (
+            strength <= 0.002f &&
+            flashStrength <= 0.002f &&
+            monochromeBlack <= 0.002f &&
+            monochromeWhite <= 0.002f
+        ) return
 
         val width = graphics.guiWidth().toFloat()
         val height = graphics.guiHeight().toFloat()
@@ -168,6 +200,24 @@ object ThunderclapBlastRenderer : HudRenderCallback {
                 width.toInt(),
                 height.toInt(),
                 (exposureAlpha shl 24) or 0x00EAF8FF
+            )
+        }
+
+        // Render the rare black/white cut last so it also punches through the
+        // normal blue exposure. This is deliberately two frames of contrast,
+        // not a prolonged flashing overlay.
+        val blackAlpha = (monochromeBlack * 226.0f).toInt().coerceIn(0, 226)
+        if (blackAlpha > 0) {
+            graphics.fill(0, 0, width.toInt(), height.toInt(), blackAlpha shl 24)
+        }
+        val whiteAlpha = (monochromeWhite * 238.0f).toInt().coerceIn(0, 238)
+        if (whiteAlpha > 0) {
+            graphics.fill(
+                0,
+                0,
+                width.toInt(),
+                height.toInt(),
+                (whiteAlpha shl 24) or 0x00F7FCFF
             )
         }
     }
