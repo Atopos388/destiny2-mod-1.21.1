@@ -37,12 +37,13 @@ object ThunderclapBlastRenderer : HudRenderCallback {
     private const val CUP_VERTICAL_SEGMENTS = 9
     private const val CUP_RADIAL_SEGMENTS = 40
     private const val MAX_EFFECTS = 8
-    private const val MONOCHROME_FLASH_CHANCE = 0.125f
+    private const val HAND_DRAWN_IMPACT_CHANCE = 0.125f
     private val UP = Vec3(0.0, 1.0, 0.0)
 
     @Volatile private var volumeShader: ShaderInstance? = null
     @Volatile private var cloudShader: ShaderInstance? = null
     @Volatile private var screenShader: ShaderInstance? = null
+    @Volatile private var inkImpactShader: ShaderInstance? = null
     @Volatile private var groundShader: ShaderInstance? = null
 
     private data class Blast(
@@ -51,7 +52,8 @@ object ThunderclapBlastRenderer : HudRenderCallback {
         val forward: Vec3,
         val right: Vec3,
         val groundY: Double,
-        val monochromeImpact: Boolean
+        val handDrawnImpact: Boolean,
+        val inkSeed: Float
     )
 
     private data class Frame(
@@ -80,6 +82,10 @@ object ThunderclapBlastRenderer : HudRenderCallback {
                 DefaultVertexFormat.POSITION_TEX
             ) { screenShader = it }
             context.register(
+                ResourceLocation.fromNamespaceAndPath("destiny2-mod", "thunderclap_impact_ink"),
+                DefaultVertexFormat.POSITION_TEX
+            ) { inkImpactShader = it }
+            context.register(
                 ResourceLocation.fromNamespaceAndPath("destiny2-mod", "thunderclap_blast_ground"),
                 DefaultVertexFormat.POSITION_TEX_COLOR
             ) { groundShader = it }
@@ -107,7 +113,8 @@ object ThunderclapBlastRenderer : HudRenderCallback {
                 forward,
                 right,
                 origin.y + 0.035,
-                Random.nextFloat() < MONOCHROME_FLASH_CHANCE
+                Random.nextFloat() < HAND_DRAWN_IMPACT_CHANCE,
+                Random.nextFloat() * 4096.0f
             )
         )
     }
@@ -120,8 +127,8 @@ object ThunderclapBlastRenderer : HudRenderCallback {
         val now = level.gameTime + tickCounter.getGameTimeDeltaPartialTick(true).toDouble()
         var strength = 0.0f
         var flashStrength = 0.0f
-        var monochromeBlack = 0.0f
-        var monochromeWhite = 0.0f
+        var inkImpact = 0.0f
+        var inkSeed = 0.0f
         active.forEach { blast ->
             val age = (now - blast.startGameTime).toFloat()
             if (age !in 0.0f..LIFETIME_TICKS) return@forEach
@@ -136,25 +143,23 @@ object ThunderclapBlastRenderer : HudRenderCallback {
                 (1.0f - smoothstep(5.8f, 7.2f, age)) * 0.15f
             strength = maxOf(strength, maxOf(releaseGlow, chamberLight, impactAfterglow) * distanceFade)
             flashStrength = maxOf(flashStrength, (impactFlash * 1.18f * distanceFade).coerceAtMost(1.0f))
-            if (blast.monochromeImpact) {
-                // Rare impact variant: a short contrast crush followed by a
-                // hard white exposure frame, then an immediate return to Arc
-                // colour. Each phase is wide enough to survive 30-60 FPS.
-                monochromeBlack = maxOf(
-                    monochromeBlack,
-                    pulse(age, -0.18f, 0.16f, 0.72f) * distanceFade
-                )
-                monochromeWhite = maxOf(
-                    monochromeWhite,
-                    pulse(age, 0.52f, 0.82f, 1.62f) * distanceFade
-                )
+            if (blast.handDrawnImpact) {
+                // Rare animation-style impact drawing. It lands as one hard
+                // ink frame and a shorter torn-paper echo, never as alternating
+                // black and white fullscreen fills.
+                val primaryInk = pulse(age, 0.28f, 0.62f, 1.08f)
+                val echoInk = pulse(age, 1.08f, 1.28f, 1.62f) * 0.42f
+                val candidate = maxOf(primaryInk, echoInk) * distanceFade
+                if (candidate > inkImpact) {
+                    inkImpact = candidate
+                    inkSeed = blast.inkSeed
+                }
             }
         }
         if (
             strength <= 0.002f &&
             flashStrength <= 0.002f &&
-            monochromeBlack <= 0.002f &&
-            monochromeWhite <= 0.002f
+            inkImpact <= 0.002f
         ) return
 
         val width = graphics.guiWidth().toFloat()
@@ -203,22 +208,32 @@ object ThunderclapBlastRenderer : HudRenderCallback {
             )
         }
 
-        // Render the rare black/white cut last so it also punches through the
-        // normal blue exposure. This is deliberately two frames of contrast,
-        // not a prolonged flashing overlay.
-        val blackAlpha = (monochromeBlack * 226.0f).toInt().coerceIn(0, 226)
-        if (blackAlpha > 0) {
-            graphics.fill(0, 0, width.toInt(), height.toInt(), blackAlpha shl 24)
-        }
-        val whiteAlpha = (monochromeWhite * 238.0f).toInt().coerceIn(0, 238)
-        if (whiteAlpha > 0) {
-            graphics.fill(
-                0,
-                0,
-                width.toInt(),
-                height.toInt(),
-                (whiteAlpha shl 24) or 0x00F7FCFF
-            )
+        if (inkImpact > 0.002f) {
+            inkImpactShader?.let { shader ->
+                shader.getUniform("Strength")?.set(inkImpact)
+                shader.getUniform("Seed")?.set(inkSeed)
+                shader.getUniform("Aspect")?.set(width / height)
+                RenderSystem.enableBlend()
+                RenderSystem.defaultBlendFunc()
+                RenderSystem.disableDepthTest()
+                RenderSystem.depthMask(false)
+                val buffer = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX)
+                buffer.addVertex(0f, height, 0f).setUv(0f, 1f)
+                buffer.addVertex(width, height, 0f).setUv(1f, 1f)
+                buffer.addVertex(width, 0f, 0f).setUv(1f, 0f)
+                buffer.addVertex(0f, 0f, 0f).setUv(0f, 0f)
+                RenderSystem.setShader { shader }
+                BufferUploader.drawWithShader(buffer.buildOrThrow())
+                RenderSystem.depthMask(true)
+                RenderSystem.enableDepthTest()
+                RenderSystem.disableBlend()
+            } ?: run {
+                // Shader reload fallback: a paper-white strike is preferable
+                // to silently losing the rare event, but never inserts a black
+                // fullscreen frame.
+                val alpha = (inkImpact * 210.0f).toInt().coerceIn(0, 210)
+                graphics.fill(0, 0, width.toInt(), height.toInt(), (alpha shl 24) or 0x00F3F1E8)
+            }
         }
     }
 
