@@ -104,7 +104,6 @@ object ThunderclapBlastRenderer : HudRenderCallback {
         val client = Minecraft.getInstance()
         val level = client.level ?: return
         if (active.isEmpty() || client.screen != null) return
-        val shader = screenShader ?: return
         val camera = client.gameRenderer.mainCamera.position
         val now = level.gameTime + tickCounter.getGameTimeDeltaPartialTick(true).toDouble()
         var strength = 0.0f
@@ -114,9 +113,10 @@ object ThunderclapBlastRenderer : HudRenderCallback {
             if (age !in 0.0f..LIFETIME_TICKS) return@forEach
             val distanceFade = (1.0 - camera.distanceTo(blast.core) / 14.0).coerceIn(0.0, 1.0).toFloat()
             val releaseGlow = pulse(age, 0.0f, 0.30f, 0.70f) * 0.42f
-            // Peaks as the horizontal chamber snaps into existence. The narrow
-            // window reads as an impact flash instead of a persistent blue filter.
-            val impactFlash = pulse(age, 0.52f, 0.82f, 1.55f)
+            // Start early enough that a low/uneven frame rate cannot skip the
+            // exposure strike. It still falls away in roughly a tenth of a
+            // second, before the chamber's internal structure needs to read.
+            val impactFlash = pulse(age, 0.08f, 0.55f, 2.20f)
             val impactAfterglow = pulse(age, 0.72f, 1.30f, 2.80f) * 0.22f
             val chamberLight = smoothstep(0.76f, 0.96f, age) *
                 (1.0f - smoothstep(5.8f, 7.2f, age)) * 0.15f
@@ -128,30 +128,48 @@ object ThunderclapBlastRenderer : HudRenderCallback {
         val width = graphics.guiWidth().toFloat()
         val height = graphics.guiHeight().toFloat()
         if (width <= 0.0f || height <= 0.0f) return
-        shader.getUniform("Strength")?.set(strength)
-        shader.getUniform("FlashStrength")?.set(flashStrength)
-        shader.getUniform("Time")?.set(now.toFloat() * 0.05f)
+        screenShader?.let { shader ->
+            shader.getUniform("Strength")?.set(strength)
+            shader.getUniform("FlashStrength")?.set(flashStrength)
+            shader.getUniform("Time")?.set(now.toFloat() * 0.05f)
 
-        RenderSystem.enableBlend()
-        RenderSystem.blendFuncSeparate(
-            GlStateManager.SourceFactor.SRC_ALPHA,
-            GlStateManager.DestFactor.ONE,
-            GlStateManager.SourceFactor.ONE,
-            GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA
-        )
-        RenderSystem.disableDepthTest()
-        RenderSystem.depthMask(false)
-        val buffer = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX)
-        buffer.addVertex(0f, height, 0f).setUv(0f, 1f)
-        buffer.addVertex(width, height, 0f).setUv(1f, 1f)
-        buffer.addVertex(width, 0f, 0f).setUv(1f, 0f)
-        buffer.addVertex(0f, 0f, 0f).setUv(0f, 0f)
-        RenderSystem.setShader { shader }
-        BufferUploader.drawWithShader(buffer.buildOrThrow())
-        RenderSystem.depthMask(true)
-        RenderSystem.enableDepthTest()
-        RenderSystem.defaultBlendFunc()
-        RenderSystem.disableBlend()
+            RenderSystem.enableBlend()
+            RenderSystem.blendFuncSeparate(
+                GlStateManager.SourceFactor.SRC_ALPHA,
+                GlStateManager.DestFactor.ONE,
+                GlStateManager.SourceFactor.ONE,
+                GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA
+            )
+            RenderSystem.disableDepthTest()
+            RenderSystem.depthMask(false)
+            val buffer = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX)
+            buffer.addVertex(0f, height, 0f).setUv(0f, 1f)
+            buffer.addVertex(width, height, 0f).setUv(1f, 1f)
+            buffer.addVertex(width, 0f, 0f).setUv(1f, 0f)
+            buffer.addVertex(0f, 0f, 0f).setUv(0f, 0f)
+            RenderSystem.setShader { shader }
+            BufferUploader.drawWithShader(buffer.buildOrThrow())
+            RenderSystem.depthMask(true)
+            RenderSystem.enableDepthTest()
+            RenderSystem.defaultBlendFunc()
+            RenderSystem.disableBlend()
+        }
+
+        // Guaranteed exposure strike. Unlike the shaped shader above this uses
+        // Minecraft's built-in GUI path, so shader registration, resource-pack
+        // reload timing, or a missed narrow frame can no longer erase the flash.
+        val exposureAlpha = (flashStrength * 178.0f + strength * 18.0f)
+            .toInt()
+            .coerceIn(0, 196)
+        if (exposureAlpha > 0) {
+            graphics.fill(
+                0,
+                0,
+                width.toInt(),
+                height.toInt(),
+                (exposureAlpha shl 24) or 0x00EAF8FF
+            )
+        }
     }
 
     private fun render(context: WorldRenderContext) {
@@ -641,7 +659,7 @@ object ThunderclapBlastRenderer : HudRenderCallback {
         val fieldScale = 0.90 + establish * 0.10 + overshoot * 0.10
         val topActivity = fieldAlpha * (0.64f + pulse(age, 0.86f, 1.45f, 3.6f) * 0.36f)
         val coreAlpha = maxOf(initialCore, fieldAlpha * 0.72f) * fade
-        val impact = pulse(age, 0.52f, 0.82f, 1.65f)
+        val impact = pulse(age, 0.08f, 0.55f, 2.20f)
         return Frame(age, coreAlpha, fieldAlpha, fieldScale, topActivity, impact)
     }
 
