@@ -21,6 +21,8 @@ import net.minecraft.client.renderer.GameRenderer
 import net.minecraft.client.renderer.ShaderInstance
 import net.minecraft.resources.ResourceLocation
 import net.minecraft.world.phys.Vec3
+import org.ladysnake.satin.api.event.ShaderEffectRenderCallback
+import org.ladysnake.satin.api.managed.ShaderEffectManager
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sqrt
@@ -43,8 +45,13 @@ object ThunderclapBlastRenderer : HudRenderCallback {
     @Volatile private var volumeShader: ShaderInstance? = null
     @Volatile private var cloudShader: ShaderInstance? = null
     @Volatile private var screenShader: ShaderInstance? = null
-    @Volatile private var inkImpactShader: ShaderInstance? = null
     @Volatile private var groundShader: ShaderInstance? = null
+
+    private val worldInkEffect by lazy {
+        ShaderEffectManager.getInstance().manage(
+            ResourceLocation.fromNamespaceAndPath("destiny2-mod", "shaders/post/thunderclap_world_ink.json")
+        )
+    }
 
     private data class Blast(
         val startGameTime: Double,
@@ -52,8 +59,7 @@ object ThunderclapBlastRenderer : HudRenderCallback {
         val forward: Vec3,
         val right: Vec3,
         val groundY: Double,
-        val handDrawnImpact: Boolean,
-        val inkSeed: Float
+        val handDrawnImpact: Boolean
     )
 
     private data class Frame(
@@ -82,15 +88,12 @@ object ThunderclapBlastRenderer : HudRenderCallback {
                 DefaultVertexFormat.POSITION_TEX
             ) { screenShader = it }
             context.register(
-                ResourceLocation.fromNamespaceAndPath("destiny2-mod", "thunderclap_impact_ink"),
-                DefaultVertexFormat.POSITION_TEX
-            ) { inkImpactShader = it }
-            context.register(
                 ResourceLocation.fromNamespaceAndPath("destiny2-mod", "thunderclap_blast_ground"),
                 DefaultVertexFormat.POSITION_TEX_COLOR
             ) { groundShader = it }
         }
         WorldRenderEvents.AFTER_TRANSLUCENT.register(::render)
+        ShaderEffectRenderCallback.EVENT.register(::renderWorldInk)
         HudRenderCallback.EVENT.register(this)
         ClientPlayConnectionEvents.DISCONNECT.register { _, _ -> active.clear() }
     }
@@ -113,8 +116,7 @@ object ThunderclapBlastRenderer : HudRenderCallback {
                 forward,
                 right,
                 origin.y + 0.035,
-                Random.nextFloat() < HAND_DRAWN_IMPACT_CHANCE,
-                Random.nextFloat() * 4096.0f
+                Random.nextFloat() < HAND_DRAWN_IMPACT_CHANCE
             )
         )
     }
@@ -128,7 +130,6 @@ object ThunderclapBlastRenderer : HudRenderCallback {
         var strength = 0.0f
         var flashStrength = 0.0f
         var inkImpact = 0.0f
-        var inkSeed = 0.0f
         active.forEach { blast ->
             val age = (now - blast.startGameTime).toFloat()
             if (age !in 0.0f..LIFETIME_TICKS) return@forEach
@@ -144,16 +145,10 @@ object ThunderclapBlastRenderer : HudRenderCallback {
             strength = maxOf(strength, maxOf(releaseGlow, chamberLight, impactAfterglow) * distanceFade)
             flashStrength = maxOf(flashStrength, (impactFlash * 1.18f * distanceFade).coerceAtMost(1.0f))
             if (blast.handDrawnImpact) {
-                // Rare animation-style impact drawing. It lands as one hard
-                // ink frame and a shorter torn-paper echo, never as alternating
-                // black and white fullscreen fills.
-                val primaryInk = pulse(age, 0.28f, 0.62f, 1.08f)
-                val echoInk = pulse(age, 1.08f, 1.28f, 1.62f) * 0.42f
-                val candidate = maxOf(primaryInk, echoInk) * distanceFade
-                if (candidate > inkImpact) {
-                    inkImpact = candidate
-                    inkSeed = blast.inkSeed
-                }
+                // Suppress the later blue HUD exposure while the completed
+                // world framebuffer is being converted to inked monochrome.
+                val candidate = inkPulse(age) * distanceFade
+                inkImpact = maxOf(inkImpact, candidate)
             }
         }
         if (
@@ -161,6 +156,10 @@ object ThunderclapBlastRenderer : HudRenderCallback {
             flashStrength <= 0.002f &&
             inkImpact <= 0.002f
         ) return
+
+        // The rare frame has already post-processed the actual world color
+        // buffer. Do not paint the normal blue HUD exposure over it afterwards.
+        if (inkImpact > 0.002f) return
 
         val width = graphics.guiWidth().toFloat()
         val height = graphics.guiHeight().toFloat()
@@ -208,34 +207,36 @@ object ThunderclapBlastRenderer : HudRenderCallback {
             )
         }
 
-        if (inkImpact > 0.002f) {
-            inkImpactShader?.let { shader ->
-                shader.getUniform("Strength")?.set(inkImpact)
-                shader.getUniform("Seed")?.set(inkSeed)
-                shader.getUniform("Aspect")?.set(width / height)
-                RenderSystem.enableBlend()
-                RenderSystem.defaultBlendFunc()
-                RenderSystem.disableDepthTest()
-                RenderSystem.depthMask(false)
-                val buffer = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX)
-                buffer.addVertex(0f, height, 0f).setUv(0f, 1f)
-                buffer.addVertex(width, height, 0f).setUv(1f, 1f)
-                buffer.addVertex(width, 0f, 0f).setUv(1f, 0f)
-                buffer.addVertex(0f, 0f, 0f).setUv(0f, 0f)
-                RenderSystem.setShader { shader }
-                BufferUploader.drawWithShader(buffer.buildOrThrow())
-                RenderSystem.depthMask(true)
-                RenderSystem.enableDepthTest()
-                RenderSystem.disableBlend()
-            } ?: run {
-                // Shader reload fallback: a paper-white strike is preferable
-                // to silently losing the rare event, but never inserts a black
-                // fullscreen frame.
-                val alpha = (inkImpact * 210.0f).toInt().coerceIn(0, 210)
-                graphics.fill(0, 0, width.toInt(), height.toInt(), (alpha shl 24) or 0x00F3F1E8)
+    }
+
+    private fun renderWorldInk(tickDelta: Float) {
+        val client = Minecraft.getInstance()
+        val level = client.level ?: return
+        if (active.isEmpty() || client.screen != null) return
+        val now = level.gameTime + tickDelta.toDouble()
+        val camera = client.gameRenderer.mainCamera.position
+        var strength = 0.0f
+        var seed = 0.0f
+        active.forEach { blast ->
+            if (!blast.handDrawnImpact) return@forEach
+            val age = (now - blast.startGameTime).toFloat()
+            if (age !in 0.0f..2.0f) return@forEach
+            val distanceFade = (1.0 - camera.distanceTo(blast.core) / 14.0).coerceIn(0.0, 1.0).toFloat()
+            // Roughly two to four displayed frames at normal frame rates, with
+            // a broad enough peak that an uneven frame cannot skip the event.
+            val candidate = inkPulse(age) * distanceFade
+            if (candidate > strength) {
+                strength = candidate
+                seed = (blast.startGameTime % 1024.0).toFloat()
             }
         }
+        if (strength <= 0.002f) return
+        worldInkEffect.setUniformValue("Strength", strength)
+        worldInkEffect.setUniformValue("Seed", seed)
+        worldInkEffect.render(tickDelta)
     }
+
+    private fun inkPulse(age: Float): Float = pulse(age, 0.24f, 0.58f, 1.42f)
 
     private fun render(context: WorldRenderContext) {
         if (active.isEmpty()) return

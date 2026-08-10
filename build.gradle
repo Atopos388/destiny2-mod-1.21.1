@@ -29,6 +29,9 @@ repositories {
     // MoLang compiler used by the client-side Bedrock/Snowstorm particle runtime.
     maven { url 'https://maven.blamejared.com' }
 
+    // Lightweight managed framebuffer post-processing for impact frames.
+    maven { url 'https://maven.ladysnake.org/releases' }
+
     
     // JitPack (often needed for transitive dependencies)
     maven { url 'https://jitpack.io' }
@@ -85,6 +88,9 @@ dependencies {
     implementation include("gg.moonflower:molang-compiler:3.1.0.18") {
         exclude group: "org.ow2.asm", module: "asm-tree"
     }
+
+    // Render the completed world framebuffer before Minecraft draws the HUD.
+    modImplementation include("maven.modrinth:satin-api:${project.satin_version}")
 
     testImplementation "org.junit.jupiter:junit-jupiter:5.11.4"
     testRuntimeOnly "org.junit.platform:junit-platform-launcher"

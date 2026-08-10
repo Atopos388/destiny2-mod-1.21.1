@@ -1,0 +1,21 @@
+{
+  "targets": ["ink_swap"],
+  "passes": [
+    {
+      "name": "destiny2-mod:thunderclap_world_ink",
+      "intarget": "minecraft:main",
+      "outtarget": "ink_swap",
+      "uniforms": [
+        {"name": "CopyOnly", "values": [0]}
+      ]
+    },
+    {
+      "name": "destiny2-mod:thunderclap_world_ink",
+      "intarget": "ink_swap",
+      "outtarget": "minecraft:main",
+      "uniforms": [
+        {"name": "CopyOnly", "values": [1]}
+      ]
+    }
+  ]
+}
