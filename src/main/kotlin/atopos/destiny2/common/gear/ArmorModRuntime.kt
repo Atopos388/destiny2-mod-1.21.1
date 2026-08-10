@@ -1,5 +1,10 @@
 package atopos.destiny2.common.gear
 
+import atopos.destiny2.common.aspect.VoidHunterAspectRuntime
+import atopos.destiny2.common.aspect.ArcTitanFragmentRuntime
+import atopos.destiny2.common.aspect.ArcBoltChargeRuntime
+import atopos.destiny2.common.aspect.SolarWarlockFragmentRuntime
+import atopos.destiny2.common.aspect.SolarReviveRuntime
 import atopos.destiny2.common.item.DestinyClassItem
 import atopos.destiny2.common.item.DestinyItems
 import atopos.destiny2.common.network.DestinyNetworking
@@ -87,8 +92,25 @@ object ArmorModRuntime {
 
     /** Returns true when the item was consumed without entering inventory. */
     fun onItemPickup(player: ServerPlayer, entity: ItemEntity): Boolean {
+        if (entity.item.`is`(DestinyItems.IONIC_TRACE)) {
+            return ArcBoltChargeRuntime.handleIonicTracePickup(player, entity)
+        }
+        if (entity.item.`is`(DestinyItems.REVIVE_GHOST)) {
+            return SolarReviveRuntime.handlePickup(player, entity)
+        }
+        if (entity.item.`is`(DestinyItems.VOID_BREACH)) {
+            entity.discard()
+            VoidHunterAspectRuntime.onVoidBreachPickup(player)
+            return true
+        }
+        if (entity.item.`is`(DestinyItems.FIRESPRITE)) {
+            entity.discard()
+            SolarWarlockFragmentRuntime.onFirespritePickup(player)
+            return true
+        }
         if (!entity.item.`is`(DestinyItems.ORB_OF_POWER)) {
             val isAmmo = entity.item.`is`(DestinyItems.SPECIAL_AMMO) || entity.item.`is`(DestinyItems.HEAVY_AMMO)
+            if (isAmmo) ArcTitanFragmentRuntime.onAmmoPickup(player, entity)
             val key = player.uuid to entity.uuid
             if (isAmmo && scavengedEntities.add(key)) {
                 val copies = count(player, ArmorModEffect.SCAVENGER)
@@ -98,6 +120,7 @@ object ArmorModRuntime {
             return false
         }
         entity.discard()
+        VoidHunterAspectRuntime.onOrbPickup(player)
         val data = PlayerDestinyDataApi.get(player)
         addArmorCharge(player, if (count(player, ArmorModEffect.STACKS_ON_STACKS) > 0) 2 else 1)
         if (count(player, ArmorModEffect.ORB_HEAL) > 0) {
@@ -235,11 +258,17 @@ object ArmorModRuntime {
         val ready = count(player, ArmorModEffect.READY_SPEED)
         val loaderMultiplier = if (copies > 0) 0.85f else 1.0f
         val readyMultiplier = (1.0 - 0.04 * diminishing(ready)).toFloat()
-        return (loaderMultiplier * readyMultiplier).coerceAtLeast(0.60f)
+        return (
+            loaderMultiplier * readyMultiplier *
+                VoidHunterAspectRuntime.reloadMultiplier(player) *
+                ArcTitanFragmentRuntime.reloadMultiplier(player)
+            ).coerceAtLeast(0.45f)
     }
 
     fun projectileInaccuracyMultiplier(player: ServerPlayer): Float =
-        if (count(player, ArmorModEffect.TARGETING) > 0) 0.90f else 1.0f
+        (if (count(player, ArmorModEffect.TARGETING) > 0) 0.90f else 1.0f) *
+            VoidHunterAspectRuntime.stabilityMultiplier(player) *
+            ArcTitanFragmentRuntime.stabilityMultiplier(player)
 
     fun statBonuses(player: ServerPlayer): DestinyStats {
         if (PlayerDestinyDataApi.get(player).combatState.armorCharge <= 0) return DestinyStats(0, 0, 0, 0, 0, 0)

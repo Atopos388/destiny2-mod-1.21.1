@@ -46,8 +46,10 @@ replay_*.log
 # Codex-generated notes, visualizations, and project documents
 
 .codex/
+.agents/
 docs/
 outputs/
+exports/
 *.docx
 *.xlsx
 
@@ -63,7 +65,15 @@ work/
 # downloaded reference software and bundled authoring applications
 
 software/
+art/
+source_assets/
 source_assets/tools/
+tools/
+skills-lock.json
+
+# local optional libraries not used by the checked-in Gradle build
+
+libs/simplebedrockmodel-fabric-*.jar
 
 # local screenshots and unrelated npm stub
 

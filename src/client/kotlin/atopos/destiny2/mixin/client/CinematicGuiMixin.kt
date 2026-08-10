@@ -13,6 +13,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo
 abstract class CinematicGuiMixin {
     @Inject(method = ["render"], at = [At("HEAD")], cancellable = true)
     private fun hideHudDuringCinematic(graphics: GuiGraphics, deltaTracker: DeltaTracker, ci: CallbackInfo) {
-        if (CinematicCameraClient.shouldHideHud()) ci.cancel()
+        if (!CinematicCameraClient.shouldHideHud()) return
+        CinematicCameraClient.renderOverlay(graphics, deltaTracker)
+        ci.cancel()
     }
 }

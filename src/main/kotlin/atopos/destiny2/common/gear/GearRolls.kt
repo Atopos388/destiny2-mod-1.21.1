@@ -40,6 +40,7 @@ object GearRolls {
         val needsArmorStatsUpgrade = existingRoll != null &&
             definition.category == GearCategory.ARMOR && existingRoll.armorStats == null
         val needsPowerUpgrade = existingRoll != null && existingRoll.power <= 0
+        val needsDefinitionMigration = existingRoll != null && existingRoll.definitionId != definition.id
         val expectedPerkCount = if (definition.rarity == GearRarity.EXOTIC) {
             definition.fixedPerks.size
         } else {
@@ -49,12 +50,13 @@ object GearRolls {
             !needsWeaponLayoutUpgrade &&
             !needsArmorStatsUpgrade &&
             !needsPowerUpgrade &&
+            !needsDefinitionMigration &&
             existingRoll.perkIds.size == expectedPerkCount
         ) {
             return false
         }
         if (existingRoll != null && needsPowerUpgrade &&
-            !needsWeaponLayoutUpgrade && !needsArmorStatsUpgrade &&
+            !needsWeaponLayoutUpgrade && !needsArmorStatsUpgrade && !needsDefinitionMigration &&
             existingRoll.perkIds.size == expectedPerkCount
         ) {
             write(stack, existingRoll.copy(version = VERSION, power = powerOverride ?: defaultPower(definition)))

@@ -2,6 +2,7 @@ package atopos.destiny2.common.weapon
 
 import atopos.destiny2.common.network.DestinyNetworking
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking
+import net.minecraft.world.damagesource.DamageSource
 import net.minecraft.server.level.ServerPlayer
 import net.minecraft.world.entity.LivingEntity
 import org.slf4j.LoggerFactory
@@ -45,6 +46,21 @@ object DamageNumberRuntime {
     }
 
     fun contextFor(target: LivingEntity): HitContext? = activeHit.get()?.takeIf { it.targetId == target.id }
+
+    /**
+     * Called from the common LivingEntity damage return hook, which also sees
+     * vanilla melee and indirect ability damage. Fabric AFTER_DAMAGE did not
+     * cover every active hurt path in this runtime, while explicit gun hits
+     * only appeared to work because withHit had its own fallback.
+     */
+    fun afterDamage(target: LivingEntity, source: DamageSource, actualLoss: Float) {
+        val context = contextFor(target)
+        if (context?.delivered == true) return
+        val attacker = source.entity as? ServerPlayer ?: return
+        if (attacker === target) return
+        val amount = context?.amount ?: actualLoss
+        deliver(attacker, target, amount, context?.precision == true)
+    }
 
     fun deliver(attacker: ServerPlayer, target: LivingEntity, amount: Float, precision: Boolean) {
         if (amount <= 0.0f || !amount.isFinite()) return

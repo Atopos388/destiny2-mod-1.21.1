@@ -36,4 +36,16 @@ class CinematicSessionTrackerTest {
         tracker.clear(player)
         assertFalse(tracker.isActive(player))
     }
+
+    @Test
+    fun `phase requests only belong to the current session`() {
+        val tracker = CinematicSessionTracker()
+        val player = UUID.randomUUID()
+        val current = UUID.randomUUID()
+
+        tracker.start(player, current, 20)
+
+        assertTrue(tracker.owns(player, current))
+        assertFalse(tracker.owns(player, UUID.randomUUID()))
+    }
 }

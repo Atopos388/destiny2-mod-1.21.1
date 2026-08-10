@@ -61,16 +61,16 @@ void main() {
 
     vec3 viewDirection = normalize(CameraPos - surface);
     float fresnel = pow(1.0 - clamp(abs(dot(surface, viewDirection)), 0.0, 1.0), 1.65);
-    float alpha = 0.012 + flowingFlame * 0.052 + detail * 0.018;
-    alpha += fresnel * (0.047 + flowingFlame * 0.055);
-    alpha *= (1.0 - brokenVeins * 0.42) * Opacity;
+    float alpha = 0.025 + flowingFlame * 0.092 + detail * 0.026;
+    alpha += fresnel * (0.072 + flowingFlame * 0.078);
+    alpha *= (1.0 - brokenVeins * 0.34) * Opacity;
     if (alpha < 0.004) discard;
 
-    vec3 amberGold = vec3(1.0, 0.48, 0.055);
-    vec3 solarGold = vec3(1.0, 0.77, 0.23);
-    vec3 paleGold = vec3(1.0, 0.965, 0.74);
+    vec3 amberGold = vec3(1.0, 0.22, 0.012);
+    vec3 solarGold = vec3(1.0, 0.56, 0.075);
+    vec3 paleGold = vec3(1.0, 0.88, 0.42);
     vec3 color = mix(amberGold, solarGold, broad);
     color = mix(color, paleGold, clamp(flowingFlame * 0.64 + fresnel * 0.30, 0.0, 0.76));
     color *= 1.02 + flowingFlame * 0.28;
-    fragColor = vec4(color * vertexColor.rgb, clamp(alpha * vertexColor.a, 0.0, 0.17));
+    fragColor = vec4(color * vertexColor.rgb, clamp(alpha * vertexColor.a, 0.0, 0.30));
 }

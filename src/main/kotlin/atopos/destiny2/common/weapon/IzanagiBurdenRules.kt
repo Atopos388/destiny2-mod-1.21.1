@@ -2,8 +2,8 @@ package atopos.destiny2.common.weapon
 
 object IzanagiBurdenRules {
     const val MAGAZINE_SIZE = 4
-    const val BASE_DAMAGE = 20.0f
-    const val PRECISION_MULTIPLIER = 1.5f
+    const val BASE_DAMAGE = 25.0f
+    const val PRECISION_MULTIPLIER = 1.7f
     const val MAX_HONED_EDGE_ROUNDS = 4
 
     fun honedRounds(magazine: Int): Int =

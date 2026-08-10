@@ -2,6 +2,7 @@ package atopos.destiny2.client.renderer
 
 import atopos.destiny2.common.entity.VoidGrenadeEntity
 import atopos.destiny2.common.entity.VoidVortexEntity
+import atopos.destiny2.client.combat.HunterMeleeFirstPersonClient
 import com.mojang.blaze3d.platform.GlStateManager
 import com.mojang.blaze3d.systems.RenderSystem
 import com.mojang.blaze3d.vertex.BufferBuilder
@@ -12,6 +13,7 @@ import com.mojang.blaze3d.vertex.VertexFormat
 import net.fabricmc.fabric.api.client.rendering.v1.CoreShaderRegistrationCallback
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderContext
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents
+import net.minecraft.client.Minecraft
 import net.minecraft.client.renderer.GameRenderer
 import net.minecraft.client.renderer.ShaderInstance
 import net.minecraft.resources.ResourceLocation
@@ -90,7 +92,10 @@ object VoidGrenadeWorldRenderer {
             VoidVortexEntity::class.java,
             bounds
         ) { it.isAlive }
-        if (grenades.isEmpty() && vortices.isEmpty()) return
+        val heldGrenade = Minecraft.getInstance().player?.let { player ->
+            HunterMeleeFirstPersonClient.heldGrenadePosition(player, partialTick)
+        }
+        if (grenades.isEmpty() && vortices.isEmpty() && heldGrenade == null) return
 
         RenderSystem.enableBlend()
         RenderSystem.enableDepthTest()
@@ -113,6 +118,11 @@ object VoidGrenadeWorldRenderer {
             GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA
         )
         grenades.forEach { renderProjectile(it, camera, partialTick, worldTime, modelView, worldPose, shader) }
+        heldGrenade?.let { center ->
+            val pulse = 0.96f + sin(worldTime * 0.72f) * 0.04f
+            renderSphere(shader, center, camera, 0.16f * pulse, 3f, 1.0f, worldTime, modelView, worldPose)
+            renderSphere(shader, center, camera, 0.27f * pulse, 2f, 0.30f, worldTime + 2.1f, modelView, worldPose)
+        }
         vortices.forEach { renderVortexLight(it, camera, partialTick, worldTime, modelView, worldPose, shader) }
 
         RenderSystem.enableCull()

@@ -13,9 +13,27 @@ data class WeaponCombatProfile(
     val roundsPerMinute: Int = 80,
     val boltTicks: Int = 0,
     val recoil: WeaponRecoilProfile = WeaponRecoilProfile(),
+    val accuracy: WeaponAccuracyProfile = WeaponAccuracyProfile(),
     val crosshair: WeaponCrosshairProfile = WeaponCrosshairProfile(),
-    val ballistics: WeaponBallisticsProfile = WeaponBallisticsProfile()
+    val ballistics: WeaponBallisticsProfile = WeaponBallisticsProfile(),
+    val projectilesPerShot: Int = 1,
+    val projectileSpreadDegrees: Float = 0.0f,
+    val damageElement: DestinyDamageElement = DestinyDamageElement.KINETIC
 )
+
+enum class DestinyDamageElement {
+    KINETIC,
+    ARC,
+    SOLAR,
+    VOID,
+    STASIS,
+    STRAND;
+
+    companion object {
+        fun fromSerializedName(value: String?): DestinyDamageElement =
+            entries.firstOrNull { it.name.equals(value, ignoreCase = true) } ?: KINETIC
+    }
+}
 
 enum class WeaponFireMode(val displayName: String) {
     SEMI("半自动"),
@@ -28,9 +46,23 @@ data class WeaponRecoilProfile(
     val pitchMax: Float = 3.0f,
     val yawMin: Float = -0.38f,
     val yawMax: Float = 0.38f,
+    val yawPattern: List<Float> = emptyList(),
     val kickDurationMs: Int = 70,
     val recoverDurationMs: Int = 310,
-    val aimedMultiplier: Float = 0.68f
+    val aimedMultiplier: Float = 0.68f,
+    val stability: Float = 60.0f,
+    val recoilDirection: Float = 70.0f
+)
+
+data class WeaponAccuracyProfile(
+    val hipBaseDegrees: Float = 0.45f,
+    val aimedBaseDegrees: Float = 0.04f,
+    val movingPenaltyDegrees: Float = 0.15f,
+    val airbornePenaltyDegrees: Float = 1.25f,
+    val bloomPerShotDegrees: Float = 0.08f,
+    val maxBloomDegrees: Float = 0.5f,
+    val settleDelayTicks: Int = 3,
+    val bloomDecayPerTick: Float = 0.06f
 )
 
 data class WeaponCrosshairProfile(

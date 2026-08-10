@@ -2,15 +2,25 @@ package atopos.destiny2.common.network
 
 import atopos.destiny2.common.ability.DestinyAbilityContext
 import atopos.destiny2.common.ability.DestinyAbilityRegistry
+import atopos.destiny2.common.ability.ArcTitanAbilities
+import atopos.destiny2.common.aspect.ArcTitanAspectRuntime
+import atopos.destiny2.common.ability.VoidHunterAbilities
 import atopos.destiny2.common.action.DestinyActionRegistry
 import atopos.destiny2.common.aspect.DestinyAspectRuntime
+import atopos.destiny2.common.aspect.SolarWarlockAspectRuntime
+import atopos.destiny2.common.aspect.DaybreakRuntime
+import atopos.destiny2.common.aspect.VoidHunterAspectRuntime
+import atopos.destiny2.common.combat.QuickMeleeRuntime
 import atopos.destiny2.common.effect.DestinyEffects
+import atopos.destiny2.common.effect.DestinyStatusRules
 import atopos.destiny2.common.item.MicroMissileBurstWeaponItem
 import atopos.destiny2.common.item.ForgottenNameItem
 import atopos.destiny2.common.item.IzanagiBurdenItem
+import atopos.destiny2.common.item.GenericGunPackItem
 import atopos.destiny2.common.weapon.DestinyAmmoType
 import atopos.destiny2.common.weapon.DestinyRangedWeapon
 import atopos.destiny2.common.weapon.WeaponHudStatus
+import atopos.destiny2.common.weapon.WeaponAimRuntime
 import atopos.destiny2.common.weapon.WeaponFireMode
 import atopos.destiny2.common.weapon.WeaponReloadPhase
 import atopos.destiny2.common.weapon.WeaponCrosshairProfile
@@ -22,12 +32,14 @@ import atopos.destiny2.common.gear.ArmorModRuntime
 import atopos.destiny2.common.item.DestinyClassItem
 import atopos.destiny2.common.player.AbilitySlot
 import atopos.destiny2.common.player.DestinyClassType
+import atopos.destiny2.common.player.ClassResonanceRuntime
 import atopos.destiny2.common.player.DestinyStatFormulas
 import atopos.destiny2.common.player.DestinyCombatRuntime
 import atopos.destiny2.common.player.DestinyStatsResolver
 import atopos.destiny2.common.player.DestinySubclassConfigRegistry
 import atopos.destiny2.common.player.DestinySubclassType
 import atopos.destiny2.common.player.GuardianAwakeningRuntime
+import atopos.destiny2.common.player.GuardianJumpRuntime
 import atopos.destiny2.common.player.GuardianPowerRuntime
 import atopos.destiny2.common.player.GuardianPowerSnapshot
 import atopos.destiny2.common.player.PlayerDestinyDataApi
@@ -36,6 +48,7 @@ import net.fabricmc.fabric.api.networking.v1.PlayerLookup
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking
 import net.minecraft.network.FriendlyByteBuf
+import net.minecraft.network.chat.Component
 import net.minecraft.network.codec.StreamCodec
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload
 import net.minecraft.resources.ResourceLocation
@@ -77,6 +90,20 @@ object DestinyNetworking {
         override fun type(): CustomPacketPayload.Type<CastAbilityPayload> = ID
     }
 
+    class ReleaseArcTitanThunderclapPayload : CustomPacketPayload {
+        companion object {
+            val ID = CustomPacketPayload.Type<ReleaseArcTitanThunderclapPayload>(
+                ResourceLocation.fromNamespaceAndPath("destiny2-mod", "release_arc_titan_thunderclap")
+            )
+            val CODEC: StreamCodec<FriendlyByteBuf, ReleaseArcTitanThunderclapPayload> = CustomPacketPayload.codec(
+                { _, _ -> },
+                { ReleaseArcTitanThunderclapPayload() }
+            )
+        }
+
+        override fun type(): CustomPacketPayload.Type<ReleaseArcTitanThunderclapPayload> = ID
+    }
+
     class EagerEdgeJumpPayload : CustomPacketPayload {
         companion object {
             val ID = CustomPacketPayload.Type<EagerEdgeJumpPayload>(
@@ -109,18 +136,166 @@ object DestinyNetworking {
         override fun type(): CustomPacketPayload.Type<HeatRisesMovementPayload> = ID
     }
 
-    class ConsumeGrenadeForHeatRisesPayload : CustomPacketPayload {
+    data class GuardianJumpPayload(
+        val action: Int,
+        val inputX: Float = 0.0f,
+        val inputZ: Float = 0.0f
+    ) : CustomPacketPayload {
         companion object {
+            const val PRESS = 0
+            const val HOLD = 1
+            const val RELEASE = 2
+            const val ARM = 3
+
+            val ID = CustomPacketPayload.Type<GuardianJumpPayload>(
+                ResourceLocation.fromNamespaceAndPath("destiny2-mod", "guardian_jump")
+            )
+            val CODEC: StreamCodec<FriendlyByteBuf, GuardianJumpPayload> = CustomPacketPayload.codec(
+                { payload, buf ->
+                    buf.writeInt(payload.action)
+                    buf.writeFloat(payload.inputX)
+                    buf.writeFloat(payload.inputZ)
+                },
+                { buf -> GuardianJumpPayload(buf.readInt(), buf.readFloat(), buf.readFloat()) }
+            )
+        }
+
+        override fun type(): CustomPacketPayload.Type<GuardianJumpPayload> = ID
+    }
+
+    data class ConsumeGrenadeForHeatRisesPayload(val action: Int) : CustomPacketPayload {
+        companion object {
+            const val START = 0
+            const val COMPLETE = 1
+            const val RELEASE = 2
             val ID = CustomPacketPayload.Type<ConsumeGrenadeForHeatRisesPayload>(
                 ResourceLocation.fromNamespaceAndPath("destiny2-mod", "consume_grenade_for_heat_rises")
             )
             val CODEC: StreamCodec<FriendlyByteBuf, ConsumeGrenadeForHeatRisesPayload> = CustomPacketPayload.codec(
-                { _, _ -> },
-                { ConsumeGrenadeForHeatRisesPayload() }
+                { payload, buf -> buf.writeInt(payload.action) },
+                { buf -> ConsumeGrenadeForHeatRisesPayload(buf.readInt()) }
             )
         }
 
         override fun type(): CustomPacketPayload.Type<ConsumeGrenadeForHeatRisesPayload> = ID
+    }
+
+    data class IcarusDashPayload(val direction: Int) : CustomPacketPayload {
+        companion object {
+            val ID = CustomPacketPayload.Type<IcarusDashPayload>(
+                ResourceLocation.fromNamespaceAndPath("destiny2-mod", "icarus_dash")
+            )
+            val CODEC: StreamCodec<FriendlyByteBuf, IcarusDashPayload> = CustomPacketPayload.codec(
+                { payload, buf -> buf.writeInt(payload.direction) },
+                { buf -> IcarusDashPayload(buf.readInt()) }
+            )
+        }
+
+        override fun type(): CustomPacketPayload.Type<IcarusDashPayload> = ID
+    }
+
+    data class DaybreakFirePayload(val x: Double, val y: Double, val z: Double) : CustomPacketPayload {
+        companion object {
+            val ID = CustomPacketPayload.Type<DaybreakFirePayload>(
+                ResourceLocation.fromNamespaceAndPath("destiny2-mod", "daybreak_fire")
+            )
+            val CODEC: StreamCodec<FriendlyByteBuf, DaybreakFirePayload> = CustomPacketPayload.codec(
+                { payload, buf ->
+                    buf.writeDouble(payload.x)
+                    buf.writeDouble(payload.y)
+                    buf.writeDouble(payload.z)
+                },
+                { buf -> DaybreakFirePayload(buf.readDouble(), buf.readDouble(), buf.readDouble()) }
+            )
+        }
+
+        override fun type(): CustomPacketPayload.Type<DaybreakFirePayload> = ID
+    }
+
+    class PlayHunterGrenadeThrowPayload : CustomPacketPayload {
+        companion object {
+            val ID = CustomPacketPayload.Type<PlayHunterGrenadeThrowPayload>(
+                ResourceLocation.fromNamespaceAndPath("destiny2-mod", "play_hunter_grenade_throw")
+            )
+            val CODEC: StreamCodec<FriendlyByteBuf, PlayHunterGrenadeThrowPayload> = CustomPacketPayload.codec(
+                { _, _ -> },
+                { PlayHunterGrenadeThrowPayload() }
+            )
+        }
+
+        override fun type(): CustomPacketPayload.Type<PlayHunterGrenadeThrowPayload> = ID
+    }
+
+    class PlayHunterChargedMeleePayload : CustomPacketPayload {
+        companion object {
+            val ID = CustomPacketPayload.Type<PlayHunterChargedMeleePayload>(
+                ResourceLocation.fromNamespaceAndPath("destiny2-mod", "play_hunter_charged_melee")
+            )
+            val CODEC: StreamCodec<FriendlyByteBuf, PlayHunterChargedMeleePayload> = CustomPacketPayload.codec(
+                { _, _ -> },
+                { PlayHunterChargedMeleePayload() }
+            )
+        }
+
+        override fun type(): CustomPacketPayload.Type<PlayHunterChargedMeleePayload> = ID
+    }
+
+    data class ReleaseHunterGrenadePayload(
+        val x: Double,
+        val y: Double,
+        val z: Double
+    ) : CustomPacketPayload {
+        companion object {
+            val ID = CustomPacketPayload.Type<ReleaseHunterGrenadePayload>(
+                ResourceLocation.fromNamespaceAndPath("destiny2-mod", "release_hunter_grenade")
+            )
+            val CODEC: StreamCodec<FriendlyByteBuf, ReleaseHunterGrenadePayload> = CustomPacketPayload.codec(
+                { payload, buf ->
+                    buf.writeDouble(payload.x)
+                    buf.writeDouble(payload.y)
+                    buf.writeDouble(payload.z)
+                },
+                { buf -> ReleaseHunterGrenadePayload(buf.readDouble(), buf.readDouble(), buf.readDouble()) }
+            )
+        }
+
+        override fun type(): CustomPacketPayload.Type<ReleaseHunterGrenadePayload> = ID
+    }
+
+    data class ReleaseHunterChargedMeleePayload(
+        val x: Double,
+        val y: Double,
+        val z: Double
+    ) : CustomPacketPayload {
+        companion object {
+            val ID = CustomPacketPayload.Type<ReleaseHunterChargedMeleePayload>(
+                ResourceLocation.fromNamespaceAndPath("destiny2-mod", "release_hunter_charged_melee")
+            )
+            val CODEC: StreamCodec<FriendlyByteBuf, ReleaseHunterChargedMeleePayload> = CustomPacketPayload.codec(
+                { payload, buf ->
+                    buf.writeDouble(payload.x)
+                    buf.writeDouble(payload.y)
+                    buf.writeDouble(payload.z)
+                },
+                { buf -> ReleaseHunterChargedMeleePayload(buf.readDouble(), buf.readDouble(), buf.readDouble()) }
+            )
+        }
+
+        override fun type(): CustomPacketPayload.Type<ReleaseHunterChargedMeleePayload> = ID
+    }
+
+    class TrappersAmbushPayload : CustomPacketPayload {
+        companion object {
+            val ID = CustomPacketPayload.Type<TrappersAmbushPayload>(
+                ResourceLocation.fromNamespaceAndPath("destiny2-mod", "trappers_ambush")
+            )
+            val CODEC: StreamCodec<FriendlyByteBuf, TrappersAmbushPayload> = CustomPacketPayload.codec(
+                { _, _ -> },
+                { TrappersAmbushPayload() }
+            )
+        }
+
+        override fun type(): CustomPacketPayload.Type<TrappersAmbushPayload> = ID
     }
 
     class EagerEdgeActivatePayload : CustomPacketPayload {
@@ -178,6 +353,26 @@ object DestinyNetworking {
         override fun type(): CustomPacketPayload.Type<SyncCooldownPayload> = ID
     }
 
+    data class QuickMeleeAssistPayload(
+        val targetEntityId: Int,
+        val hunterMelee: Boolean
+    ) : CustomPacketPayload {
+        companion object {
+            val ID = CustomPacketPayload.Type<QuickMeleeAssistPayload>(
+                ResourceLocation.fromNamespaceAndPath("destiny2-mod", "quick_melee_assist")
+            )
+            val CODEC: StreamCodec<FriendlyByteBuf, QuickMeleeAssistPayload> = CustomPacketPayload.codec(
+                { payload, buf ->
+                    buf.writeVarInt(payload.targetEntityId)
+                    buf.writeBoolean(payload.hunterMelee)
+                },
+                { buf -> QuickMeleeAssistPayload(buf.readVarInt(), buf.readBoolean()) }
+            )
+        }
+
+        override fun type(): CustomPacketPayload.Type<QuickMeleeAssistPayload> = ID
+    }
+
     /** 服务器确认 Perk 已触发后，发送给持有者的右侧 HUD 状态条。 */
     data class SyncPerkBuffPayload(
         val id: String,
@@ -223,6 +418,26 @@ object DestinyNetworking {
         }
 
         override fun type(): CustomPacketPayload.Type<PlayDestinyActionPayload> = ID
+    }
+
+    data class VoidHunterSuperAuraPayload(
+        val playerId: UUID,
+        val durationTicks: Int
+    ) : CustomPacketPayload {
+        companion object {
+            val ID = CustomPacketPayload.Type<VoidHunterSuperAuraPayload>(
+                ResourceLocation.fromNamespaceAndPath("destiny2-mod", "void_hunter_super_aura")
+            )
+            val CODEC: StreamCodec<FriendlyByteBuf, VoidHunterSuperAuraPayload> = CustomPacketPayload.codec(
+                { payload, buf ->
+                    buf.writeUUID(payload.playerId)
+                    buf.writeVarInt(payload.durationTicks)
+                },
+                { buf -> VoidHunterSuperAuraPayload(buf.readUUID(), buf.readVarInt()) }
+            )
+        }
+
+        override fun type(): CustomPacketPayload.Type<VoidHunterSuperAuraPayload> = ID
     }
 
     /**
@@ -278,7 +493,8 @@ object DestinyNetworking {
         val anchorX: Double,
         val anchorY: Double,
         val anchorZ: Double,
-        val anchorYaw: Float
+        val anchorYaw: Float,
+        val actorEntityId: Int
     ) : CustomPacketPayload {
         companion object {
             val ID = CustomPacketPayload.Type<StartCinematicPayload>(
@@ -292,6 +508,7 @@ object DestinyNetworking {
                     buf.writeDouble(payload.anchorY)
                     buf.writeDouble(payload.anchorZ)
                     buf.writeFloat(payload.anchorYaw)
+                    buf.writeVarInt(payload.actorEntityId)
                 },
                 { buf ->
                     StartCinematicPayload(
@@ -300,13 +517,30 @@ object DestinyNetworking {
                         buf.readDouble(),
                         buf.readDouble(),
                         buf.readDouble(),
-                        buf.readFloat()
+                        buf.readFloat(),
+                        buf.readVarInt()
                     )
                 }
             )
         }
 
         override fun type(): CustomPacketPayload.Type<StartCinematicPayload> = ID
+    }
+
+    /** Requests the server-synced Ghost actor when the preceding film has ended. */
+    data class BeginCinematicAnimationPayload(val sessionId: UUID) : CustomPacketPayload {
+        companion object {
+            val ID = CustomPacketPayload.Type<BeginCinematicAnimationPayload>(
+                ResourceLocation.fromNamespaceAndPath("destiny2-mod", "begin_cinematic_animation")
+            )
+            val CODEC: StreamCodec<FriendlyByteBuf, BeginCinematicAnimationPayload> =
+                CustomPacketPayload.codec(
+                    { payload, buf -> buf.writeUUID(payload.sessionId) },
+                    { buf -> BeginCinematicAnimationPayload(buf.readUUID()) }
+                )
+        }
+
+        override fun type(): CustomPacketPayload.Type<BeginCinematicAnimationPayload> = ID
     }
 
     /** Idempotent client acknowledgement for a naturally completed cinematic. */
@@ -325,6 +559,7 @@ object DestinyNetworking {
     }
 
     data class SyncPlayerDataPayload(
+        val classId: String,
         val className: String,
         val subclassName: String,
         val grenadeName: String,
@@ -335,6 +570,7 @@ object DestinyNetworking {
         val meleeId: String,
         val classAbilityId: String,
         val superId: String,
+        val movementId: String,
         val aspectIds: String,
         val fragmentIds: String
     ) : CustomPacketPayload {
@@ -344,6 +580,7 @@ object DestinyNetworking {
             )
             val CODEC: StreamCodec<FriendlyByteBuf, SyncPlayerDataPayload> = CustomPacketPayload.codec(
                 { payload, buf ->
+                    buf.writeUtf(payload.classId)
                     buf.writeUtf(payload.className)
                     buf.writeUtf(payload.subclassName)
                     buf.writeUtf(payload.grenadeName)
@@ -354,11 +591,14 @@ object DestinyNetworking {
                     buf.writeUtf(payload.meleeId)
                     buf.writeUtf(payload.classAbilityId)
                     buf.writeUtf(payload.superId)
+                    buf.writeUtf(payload.movementId)
                     buf.writeUtf(payload.aspectIds)
                     buf.writeUtf(payload.fragmentIds)
                 },
                 { buf ->
                     SyncPlayerDataPayload(
+                        buf.readUtf(),
+                        buf.readUtf(),
                         buf.readUtf(),
                         buf.readUtf(),
                         buf.readUtf(),
@@ -934,10 +1174,22 @@ object DestinyNetworking {
     }
 
     fun register() {
+        WeaponAimRuntime.register()
+        QuickMeleeRuntime.register()
         PayloadTypeRegistry.playC2S().register(CastAbilityPayload.ID, CastAbilityPayload.CODEC)
+        PayloadTypeRegistry.playC2S().register(
+            ReleaseArcTitanThunderclapPayload.ID,
+            ReleaseArcTitanThunderclapPayload.CODEC
+        )
         PayloadTypeRegistry.playC2S().register(EagerEdgeJumpPayload.ID, EagerEdgeJumpPayload.CODEC)
         PayloadTypeRegistry.playC2S().register(HeatRisesMovementPayload.ID, HeatRisesMovementPayload.CODEC)
+        PayloadTypeRegistry.playC2S().register(GuardianJumpPayload.ID, GuardianJumpPayload.CODEC)
         PayloadTypeRegistry.playC2S().register(ConsumeGrenadeForHeatRisesPayload.ID, ConsumeGrenadeForHeatRisesPayload.CODEC)
+        PayloadTypeRegistry.playC2S().register(IcarusDashPayload.ID, IcarusDashPayload.CODEC)
+        PayloadTypeRegistry.playC2S().register(DaybreakFirePayload.ID, DaybreakFirePayload.CODEC)
+        PayloadTypeRegistry.playC2S().register(ReleaseHunterGrenadePayload.ID, ReleaseHunterGrenadePayload.CODEC)
+        PayloadTypeRegistry.playC2S().register(ReleaseHunterChargedMeleePayload.ID, ReleaseHunterChargedMeleePayload.CODEC)
+        PayloadTypeRegistry.playC2S().register(TrappersAmbushPayload.ID, TrappersAmbushPayload.CODEC)
         PayloadTypeRegistry.playC2S().register(EagerEdgeActivatePayload.ID, EagerEdgeActivatePayload.CODEC)
         PayloadTypeRegistry.playC2S().register(SetLoadoutPayload.ID, SetLoadoutPayload.CODEC)
         PayloadTypeRegistry.playC2S().register(ConfigureSubclassPayload.ID, ConfigureSubclassPayload.CODEC)
@@ -951,11 +1203,19 @@ object DestinyNetworking {
         PayloadTypeRegistry.playC2S().register(ConfigureArmorModPayload.ID, ConfigureArmorModPayload.CODEC)
         PayloadTypeRegistry.playC2S().register(ConfigureGearPerkPayload.ID, ConfigureGearPerkPayload.CODEC)
         PayloadTypeRegistry.playC2S().register(EquipDirectorItemPayload.ID, EquipDirectorItemPayload.CODEC)
+        PayloadTypeRegistry.playC2S().register(
+            BeginCinematicAnimationPayload.ID,
+            BeginCinematicAnimationPayload.CODEC
+        )
         PayloadTypeRegistry.playC2S().register(FinishCinematicPayload.ID, FinishCinematicPayload.CODEC)
         PayloadTypeRegistry.playS2C().register(SyncCooldownPayload.ID, SyncCooldownPayload.CODEC)
+        PayloadTypeRegistry.playS2C().register(QuickMeleeAssistPayload.ID, QuickMeleeAssistPayload.CODEC)
         PayloadTypeRegistry.playS2C().register(SyncPerkBuffPayload.ID, SyncPerkBuffPayload.CODEC)
         PayloadTypeRegistry.playS2C().register(EagerEdgeDashPayload.ID, EagerEdgeDashPayload.CODEC)
         PayloadTypeRegistry.playS2C().register(PlayDestinyActionPayload.ID, PlayDestinyActionPayload.CODEC)
+        PayloadTypeRegistry.playS2C().register(VoidHunterSuperAuraPayload.ID, VoidHunterSuperAuraPayload.CODEC)
+        PayloadTypeRegistry.playS2C().register(PlayHunterGrenadeThrowPayload.ID, PlayHunterGrenadeThrowPayload.CODEC)
+        PayloadTypeRegistry.playS2C().register(PlayHunterChargedMeleePayload.ID, PlayHunterChargedMeleePayload.CODEC)
         PayloadTypeRegistry.playS2C().register(PlayWorldVfxPayload.ID, PlayWorldVfxPayload.CODEC)
         PayloadTypeRegistry.playS2C().register(StartCinematicPayload.ID, StartCinematicPayload.CODEC)
         PayloadTypeRegistry.playS2C().register(SyncPlayerDataPayload.ID, SyncPlayerDataPayload.CODEC)
@@ -974,7 +1234,18 @@ object DestinyNetworking {
         ServerPlayNetworking.registerGlobalReceiver(CastAbilityPayload.ID) { payload, context ->
             val player = context.player()
             context.server().execute {
-                handleCastAbility(player, payload.abilityType, payload.extraData)
+                if (payload.abilityType == ABILITY_MELEE) {
+                    handleMeleeInput(player, payload.extraData)
+                } else {
+                    handleCastAbility(player, payload.abilityType, payload.extraData)
+                }
+            }
+        }
+
+        ServerPlayNetworking.registerGlobalReceiver(ReleaseArcTitanThunderclapPayload.ID) { _, context ->
+            val player = context.player()
+            context.server().execute {
+                ArcTitanAbilities.requestThunderclapRelease(player)
             }
         }
 
@@ -982,6 +1253,13 @@ object DestinyNetworking {
             val player = context.player()
             context.server().execute {
                 GuardianAwakeningRuntime.finishCinematic(player, payload.sessionId)
+            }
+        }
+
+        ServerPlayNetworking.registerGlobalReceiver(BeginCinematicAnimationPayload.ID) { payload, context ->
+            val player = context.player()
+            context.server().execute {
+                GuardianAwakeningRuntime.beginAnimation(player, payload.sessionId)
             }
         }
 
@@ -999,10 +1277,58 @@ object DestinyNetworking {
             }
         }
 
-        ServerPlayNetworking.registerGlobalReceiver(ConsumeGrenadeForHeatRisesPayload.ID) { _, context ->
+        ServerPlayNetworking.registerGlobalReceiver(GuardianJumpPayload.ID) { payload, context ->
             val player = context.player()
             context.server().execute {
-                DestinyAspectRuntime.tryConsumeGrenadeForHeatRises(player)
+                GuardianJumpRuntime.handleMovement(player, payload.action, payload.inputX, payload.inputZ)
+            }
+        }
+
+        ServerPlayNetworking.registerGlobalReceiver(ConsumeGrenadeForHeatRisesPayload.ID) { payload, context ->
+            val player = context.player()
+            context.server().execute {
+                DestinyAspectRuntime.handleHeatRisesGrenadeHold(player, payload.action)
+            }
+        }
+
+        ServerPlayNetworking.registerGlobalReceiver(IcarusDashPayload.ID) { payload, context ->
+            val player = context.player()
+            context.server().execute {
+                DestinyAspectRuntime.tryIcarusDash(player, payload.direction)
+            }
+        }
+
+        ServerPlayNetworking.registerGlobalReceiver(DaybreakFirePayload.ID) { payload, context ->
+            val player = context.player()
+            context.server().execute {
+                DaybreakRuntime.tryFire(player, Vec3(payload.x, payload.y, payload.z))
+            }
+        }
+
+        ServerPlayNetworking.registerGlobalReceiver(ReleaseHunterGrenadePayload.ID) { payload, context ->
+            val player = context.player()
+            context.server().execute {
+                VoidHunterAbilities.releaseGrenadeFromAnimatedHand(
+                    player,
+                    Vec3(payload.x, payload.y, payload.z)
+                )
+            }
+        }
+
+        ServerPlayNetworking.registerGlobalReceiver(ReleaseHunterChargedMeleePayload.ID) { payload, context ->
+            val player = context.player()
+            context.server().execute {
+                VoidHunterAbilities.releaseChargedMeleeFromAnimatedHand(
+                    player,
+                    Vec3(payload.x, payload.y, payload.z)
+                )
+            }
+        }
+
+        ServerPlayNetworking.registerGlobalReceiver(TrappersAmbushPayload.ID) { _, context ->
+            val player = context.player()
+            context.server().execute {
+                VoidHunterAspectRuntime.tryStartTrappersAmbush(player)
             }
         }
 
@@ -1065,10 +1391,7 @@ object DestinyNetworking {
         ServerPlayNetworking.registerGlobalReceiver(SetWeaponAimPayload.ID) { payload, context ->
             val player = context.player()
             context.server().execute {
-                val aiming = payload.aiming &&
-                    (player.mainHandItem.item as? DestinyRangedWeapon)
-                        ?.aimProfile(player.mainHandItem)
-                        ?.enabled == true
+                val aiming = WeaponAimRuntime.setAiming(player, payload.aiming)
                 val state = WeaponAimStatePayload(player.uuid, aiming)
                 ServerPlayNetworking.send(player, state)
                 PlayerLookup.tracking(player).forEach { trackingPlayer ->
@@ -1092,6 +1415,13 @@ object DestinyNetworking {
                         net.minecraft.world.phys.Vec3(payload.directionX, payload.directionY, payload.directionZ)
                     )
                 } else if (item is IzanagiBurdenItem) {
+                    item.requestFire(
+                        player.level(),
+                        player,
+                        payload.hand,
+                        net.minecraft.world.phys.Vec3(payload.directionX, payload.directionY, payload.directionZ)
+                    )
+                } else if (item is GenericGunPackItem) {
                     item.requestFire(
                         player.level(),
                         player,
@@ -1210,19 +1540,23 @@ object DestinyNetworking {
         val data = PlayerDestinyDataApi.get(player)
         val config = DestinySubclassConfigRegistry.normalize(data.subclass, data.subclassConfig)
         data.subclassConfig = config
+        data.restrictCurrentSubclassConfig()
+        val hasActiveClass = data.isClassUnlocked(data.destinyClass)
         val payload = SyncPlayerDataPayload(
-            className = data.destinyClass.displayName,
-            subclassName = data.subclass.displayName,
-            grenadeName = abilityName(data.subclass, AbilitySlot.GRENADE),
-            meleeName = abilityName(data.subclass, AbilitySlot.MELEE),
-            classAbilityName = abilityName(data.subclass, AbilitySlot.CLASS_ABILITY),
-            superName = abilityName(data.subclass, AbilitySlot.SUPER),
-            grenadeId = abilityId(data.subclass, config.selectedAbilities[AbilitySlot.GRENADE], AbilitySlot.GRENADE),
-            meleeId = abilityId(data.subclass, config.selectedAbilities[AbilitySlot.MELEE], AbilitySlot.MELEE),
-            classAbilityId = abilityId(data.subclass, config.selectedAbilities[AbilitySlot.CLASS_ABILITY], AbilitySlot.CLASS_ABILITY),
-            superId = abilityId(data.subclass, config.selectedAbilities[AbilitySlot.SUPER], AbilitySlot.SUPER),
-            aspectIds = config.selectedAspects.joinToString(","),
-            fragmentIds = config.selectedFragments.joinToString(",")
+            classId = data.destinyClass.id.takeIf { hasActiveClass }.orEmpty(),
+            className = data.destinyClass.displayName.takeIf { hasActiveClass }.orEmpty(),
+            subclassName = data.subclass.displayName.takeIf { hasActiveClass }.orEmpty(),
+            grenadeName = abilityName(data, AbilitySlot.GRENADE),
+            meleeName = abilityName(data, AbilitySlot.MELEE),
+            classAbilityName = abilityName(data, AbilitySlot.CLASS_ABILITY),
+            superName = abilityName(data, AbilitySlot.SUPER),
+            grenadeId = abilityId(data, config.selectedAbilities[AbilitySlot.GRENADE], AbilitySlot.GRENADE),
+            meleeId = abilityId(data, config.selectedAbilities[AbilitySlot.MELEE], AbilitySlot.MELEE),
+            classAbilityId = abilityId(data, config.selectedAbilities[AbilitySlot.CLASS_ABILITY], AbilitySlot.CLASS_ABILITY),
+            superId = abilityId(data, config.selectedAbilities[AbilitySlot.SUPER], AbilitySlot.SUPER),
+            movementId = config.selectedMovementId.takeIf(data::isSubclassOptionUnlocked).orEmpty(),
+            aspectIds = config.selectedAspects.filter(data::isSubclassOptionUnlocked).joinToString(","),
+            fragmentIds = config.selectedFragments.filter(data::isSubclassOptionUnlocked).joinToString(",")
         )
         ServerPlayNetworking.send(player, payload)
         syncNavigationState(player, GuardianPowerRuntime.refresh(player))
@@ -1264,6 +1598,14 @@ object DestinyNetworking {
             durationTicks.coerceIn(1, 20 * 30),
             player.level().gameTime
         )
+        ServerPlayNetworking.send(player, payload)
+        PlayerLookup.tracking(player).forEach { trackingPlayer ->
+            ServerPlayNetworking.send(trackingPlayer, payload)
+        }
+    }
+
+    fun broadcastVoidHunterSuperAura(player: ServerPlayer, durationTicks: Int) {
+        val payload = VoidHunterSuperAuraPayload(player.uuid, durationTicks.coerceIn(1, 20 * 10))
         ServerPlayNetworking.send(player, payload)
         PlayerLookup.tracking(player).forEach { trackingPlayer ->
             ServerPlayNetworking.send(trackingPlayer, payload)
@@ -1367,7 +1709,11 @@ object DestinyNetworking {
             "class_item" -> {
                 val item = stack.item as? DestinyClassItem
                 val data = PlayerDestinyDataApi.get(player)
-                if (item == null || item.requiredClass != data.destinyClass) {
+                if (
+                    item == null ||
+                    item.requiredClass != data.destinyClass ||
+                    !data.isClassUnlocked(item.requiredClass)
+                ) {
                     false
                 } else {
                     val previous = data.classItem
@@ -1391,8 +1737,12 @@ object DestinyNetworking {
         val requestedSubclass = DestinySubclassType.findById(subclassId)
 
         if (requestedSubclass != null) {
-            if (data.destinyClass != requestedSubclass.requiredClass) {
-                data.setClass(requestedSubclass.requiredClass)
+            if (player.isCreative) {
+                ClassResonanceRuntime.unlockAllOptions(data, requestedSubclass.requiredClass)
+            }
+            if (!ClassResonanceRuntime.switchClass(player, requestedSubclass.requiredClass)) {
+                player.displayClientMessage(Component.translatable("message.destiny2-mod.class_switch.denied"), true)
+                return
             }
             data.setSubclass(requestedSubclass)
             syncPlayerData(player)
@@ -1400,7 +1750,13 @@ object DestinyNetworking {
         }
 
         if (requestedClass != null) {
-            data.setClass(requestedClass)
+            if (player.isCreative) {
+                ClassResonanceRuntime.unlockAllOptions(data, requestedClass)
+            }
+            if (!ClassResonanceRuntime.switchClass(player, requestedClass)) {
+                player.displayClientMessage(Component.translatable("message.destiny2-mod.class_switch.denied"), true)
+                return
+            }
             syncPlayerData(player)
         }
     }
@@ -1408,11 +1764,31 @@ object DestinyNetworking {
     private fun handleConfigureSubclass(player: ServerPlayer, action: String, slotKey: String, optionId: String) {
         val data = PlayerDestinyDataApi.get(player)
         val config = data.subclassConfig
+        val definition = DestinySubclassConfigRegistry.definitionFor(data.subclass)
+        val optionExists = when (action) {
+            "ability" -> AbilitySlot.fromKey(slotKey)?.let { slot ->
+                definition.abilityOptions[slot].orEmpty().any { it.id == optionId }
+            } == true
+            "movement" -> definition.movementOptions.any { it.id == optionId }
+            "aspect" -> definition.aspectOptions.any { it.id == optionId }
+            "fragment" -> definition.fragmentOptions.any { it.id == optionId }
+            else -> false
+        }
+        if (!optionExists) return
+        if (!data.isSubclassOptionUnlocked(optionId)) {
+            if (player.isCreative) {
+                data.unlockedSubclassOptions += optionId
+            } else {
+                player.displayClientMessage(Component.translatable("message.destiny2-mod.subclass_option.locked"), true)
+                return
+            }
+        }
         val changed = when (action) {
             "ability" -> {
                 val slot = AbilitySlot.fromKey(slotKey) ?: return
                 DestinySubclassConfigRegistry.setAbility(data.subclass, config, slot, optionId)
             }
+            "movement" -> DestinySubclassConfigRegistry.setMovement(data.subclass, config, optionId)
             "aspect" -> DestinySubclassConfigRegistry.toggleAspect(data.subclass, config, optionId)
             "fragment" -> DestinySubclassConfigRegistry.toggleFragment(data.subclass, config, optionId)
             else -> false
@@ -1420,6 +1796,7 @@ object DestinyNetworking {
 
         if (changed) {
             data.subclassConfig = DestinySubclassConfigRegistry.normalize(data.subclass, config)
+            data.restrictCurrentSubclassConfig()
             syncPlayerData(player)
         }
     }
@@ -1449,13 +1826,17 @@ object DestinyNetworking {
         }
 
         val ability = DestinyAbilityRegistry.abilityFor(playerData, slot) ?: return
-        player.removeEffect(DestinyEffects.VOID_INVISIBILITY)
+        DestinyStatusRules.removeVoidInvisibility(player)
         val cast = ability.cast(DestinyAbilityContext(player, slot, extraData))
         if (!cast) {
             return
         }
 
         broadcastAbilityAction(player, ability.id)
+
+        if (slot == AbilitySlot.CLASS_ABILITY) {
+            SolarWarlockAspectRuntime.onClassAbilityCast(player)
+        }
 
         if (slot == AbilitySlot.SUPER) {
             DestinyCombatRuntime.consumeSuper(player)
@@ -1468,31 +1849,66 @@ object DestinyNetworking {
         val cooldownTicks = DestinyStatFormulas.cooldownTicks(ability.baseCooldownTicks, slot, DestinyStatsResolver.resolve(player))
         playerData.cooldowns.setCooldown(slot, currentTime, cooldownTicks)
         ArmorModRuntime.onAbilityCast(player, slot)
-        ServerPlayNetworking.send(player, SyncCooldownPayload(slot.legacyNetworkId, cooldownTicks, cooldownTicks))
+        val restoredArcBonusCharge = ArcTitanAspectRuntime.onAbilityCast(player, slot)
+        if (!restoredArcBonusCharge) {
+            ServerPlayNetworking.send(player, SyncCooldownPayload(slot.legacyNetworkId, cooldownTicks, cooldownTicks))
+        }
         if (slot == AbilitySlot.CLASS_ABILITY) {
             val duration = if (playerData.destinyClass == DestinyClassType.HUNTER) 5 * 20 else 10 * 20
             DestinyCombatRuntime.grantClassOvershield(player, duration)
         }
     }
 
+    /**
+     * C is one contextual melee input: a ready melee charge always wins;
+     * otherwise the request falls back to the ordinary close-range attack.
+     */
+    private fun handleMeleeInput(player: ServerPlayer, extraData: Int) {
+        val data = PlayerDestinyDataApi.get(player)
+        val chargedMeleeReady =
+            !player.hasEffect(DestinyEffects.SUPPRESSION) &&
+                data.cooldowns.isReady(AbilitySlot.MELEE, player.serverLevel().gameTime) &&
+                DestinyAbilityRegistry.abilityFor(data, AbilitySlot.MELEE) != null
+
+        if (chargedMeleeReady) {
+            handleCastAbility(player, ABILITY_MELEE, extraData)
+        } else {
+            QuickMeleeRuntime.tryAttack(player)?.let { result ->
+                ServerPlayNetworking.send(
+                    player,
+                    QuickMeleeAssistPayload(result.targetEntityId ?: -1, result.hunterMelee)
+                )
+            }
+        }
+    }
+
     private fun broadcastAbilityAction(player: ServerPlayer, abilityId: ResourceLocation) {
         val action = DestinyActionRegistry.definitionForAbility(abilityId) ?: return
-        val payload = PlayDestinyActionPayload(player.uuid, action.id.toString())
+        broadcastDestinyAction(player, action.id)
+    }
+
+    fun broadcastDestinyAction(player: ServerPlayer, actionId: ResourceLocation) {
+        if (DestinyActionRegistry.definition(actionId) == null) return
+        val payload = PlayDestinyActionPayload(player.uuid, actionId.toString())
         ServerPlayNetworking.send(player, payload)
         PlayerLookup.tracking(player).forEach { trackingPlayer ->
             ServerPlayNetworking.send(trackingPlayer, payload)
         }
     }
 
-    private fun abilityName(subclass: DestinySubclassType, slot: AbilitySlot): String {
-        return DestinyAbilityRegistry.abilityFor(subclass, slot)?.displayName.orEmpty()
+    private fun abilityName(data: atopos.destiny2.common.player.PlayerDestinyData, slot: AbilitySlot): String {
+        return DestinyAbilityRegistry.abilityFor(data, slot)?.displayName.orEmpty()
     }
 
-    private fun abilityId(subclass: DestinySubclassType, selectedId: String?, slot: AbilitySlot): String {
-        if (!selectedId.isNullOrBlank()) {
+    private fun abilityId(
+        data: atopos.destiny2.common.player.PlayerDestinyData,
+        selectedId: String?,
+        slot: AbilitySlot
+    ): String {
+        if (!selectedId.isNullOrBlank() && data.isSubclassOptionUnlocked(selectedId)) {
             return selectedId
         }
-        return DestinyAbilityRegistry.abilityFor(subclass, slot)?.id?.toString().orEmpty()
+        return DestinyAbilityRegistry.abilityFor(data, slot)?.id?.toString().orEmpty()
     }
 
 }

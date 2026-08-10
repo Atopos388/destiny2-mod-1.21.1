@@ -2,6 +2,8 @@ package atopos.destiny2.common.gear
 
 import atopos.destiny2.common.item.DestinyItems
 import atopos.destiny2.common.weapon.DestinyAmmoType
+import atopos.destiny2.common.weapon.DestinyDamageElement
+import atopos.destiny2.common.weapon.gunPackIdOrNull
 import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.resources.ResourceLocation
 import net.minecraft.world.item.Item
@@ -42,7 +44,27 @@ object GearRegistry {
         projectileSpeed = 10.0f,
         cooldownTicks = 14,
         magazineSize = 4,
-        reloadTicks = 64
+        reloadTicks = 52
+    )
+
+    val MONTE_CARLO_FRAME = WeaponFrameDefinition(
+        id = id("monte_carlo_exotic"),
+        displayName = "异域自动步枪框架",
+        description = "蒙特卡洛专属框架：600 RPM，41 发弹匣。",
+        projectileSpeed = 8.0f,
+        cooldownTicks = 2,
+        magazineSize = 41,
+        reloadTicks = 47
+    )
+
+    val THE_DEICIDE_FRAME = WeaponFrameDefinition(
+        id = id("rapid_fire_shotgun"),
+        displayName = "全自动速射框架",
+        description = "全自动泵式霰弹枪框架：140 RPM，7 发管式弹仓。",
+        projectileSpeed = 8.0f,
+        cooldownTicks = 9,
+        magazineSize = 7,
+        reloadTicks = 59
     )
 
     private val VANILLA_MELEE = WeaponFrameDefinition(id("vanilla_melee"), "原版近战框架", "保留原版剑、斧攻击节奏。")
@@ -116,6 +138,20 @@ object GearRegistry {
             "持续瞄准片刻后降低受到攻击时的准星扰动。",
             scopes = setOf(GearPerkScope.IZANAGIS_BURDEN)
         )
+        val monteCarloMethod = perk(
+            "monte_carlo_method",
+            "蒙特卡洛法",
+            "使用此武器造成伤害会缩短近战技能冷却；使用此武器完成击杀时有概率立即充满近战技能。",
+            scopes = setOf(GearPerkScope.MONTE_CARLO)
+        )
+        val markovChain = perk(
+            "markov_chain",
+            "马尔可夫链",
+            "此武器或近战完成击杀会暂时提高武器伤害，最多叠加 5 层；近战击杀会直接获得满层并为弹匣补充弹药。",
+            scopes = setOf(GearPerkScope.MONTE_CARLO),
+            durationTicks = 100,
+            maxStacks = 5
+        )
 
         registerDefinition(
             item = DestinyItems.FORGOTTEN_NAME,
@@ -146,6 +182,35 @@ object GearRegistry {
         )
 
         registerDefinition(
+            item = DestinyItems.GENERIC_GUN,
+            rarity = GearRarity.EXOTIC,
+            category = GearCategory.WEAPON,
+            frame = MONTE_CARLO_FRAME,
+            baseDamage = 4.0f,
+            ammoItem = DestinyItems.PRIMARY_AMMO,
+            ammoType = DestinyAmmoType.PRIMARY,
+            precisionMultiplier = 1.5f,
+            fixedPerks = listOf(monteCarloMethod, markovChain),
+            rollColumnLabels = listOf("异域内在", "异域特性"),
+            definitionId = id("monte_carlo"),
+            bindItem = false
+        )
+
+        registerDefinition(
+            item = DestinyItems.GENERIC_GUN,
+            rarity = GearRarity.LEGENDARY,
+            category = GearCategory.WEAPON,
+            frame = THE_DEICIDE_FRAME,
+            baseDamage = 18.0f,
+            ammoItem = DestinyItems.SPECIAL_AMMO,
+            ammoType = DestinyAmmoType.SPECIAL,
+            precisionMultiplier = 1.0f,
+            definitionId = id("the_deicide"),
+            damageElement = DestinyDamageElement.VOID,
+            bindItem = false
+        )
+
+        registerDefinition(
             item = DestinyItems.PERFECT_RETROGRADE,
             rarity = GearRarity.LEGENDARY,
             category = GearCategory.WEAPON,
@@ -172,6 +237,7 @@ object GearRegistry {
             explosionRadius = 1.25f,
             ammoItem = DestinyItems.SPECIAL_AMMO,
             ammoType = DestinyAmmoType.SPECIAL,
+            damageElement = DestinyDamageElement.SOLAR,
             perkColumns = listOf(
                 listOf(rifledBarrel, compensator, stableLauncher),
                 listOf(extendedMagazine, fastMagazine, impactMagazine),
@@ -185,7 +251,8 @@ object GearRegistry {
         registerVanillaArmor()
     }
 
-    fun definitionFor(stack: ItemStack): GearDefinition? = definitionsByItem[stack.item]
+    fun definitionFor(stack: ItemStack): GearDefinition? =
+        stack.gunPackIdOrNull()?.let(definitions::get) ?: definitionsByItem[stack.item]
 
     fun definition(id: ResourceLocation): GearDefinition? = definitions[id]
 
@@ -529,15 +596,34 @@ object GearRegistry {
         perkColumns: List<List<GearPerk>> = emptyList(),
         rollColumnLabels: List<String> = emptyList(),
         hasCatalystSlot: Boolean = false,
-        catalysts: List<GearPerk> = emptyList()
+        catalysts: List<GearPerk> = emptyList(),
+        damageElement: DestinyDamageElement = DestinyDamageElement.KINETIC,
+        definitionId: ResourceLocation? = null,
+        bindItem: Boolean = true
     ) {
-        val id = BuiltInRegistries.ITEM.getKey(item)
+        val id = definitionId ?: BuiltInRegistries.ITEM.getKey(item)
         val definition = GearDefinition(
-            item, id, rarity, category, frame, baseDamage, explosionRadius, ammoItem,
-            ammoType, precisionMultiplier, fixedPerks, perkColumns, rollColumnLabels, hasCatalystSlot, catalysts
+            item = item,
+            id = id,
+            rarity = rarity,
+            category = category,
+            frame = frame,
+            baseDamage = baseDamage,
+            explosionRadius = explosionRadius,
+            ammoItem = ammoItem,
+            ammoType = ammoType,
+            precisionMultiplier = precisionMultiplier,
+            fixedPerks = fixedPerks,
+            perkColumns = perkColumns,
+            rollColumnLabels = rollColumnLabels,
+            hasCatalystSlot = hasCatalystSlot,
+            catalysts = catalysts,
+            damageElement = damageElement
         )
         definitions[id] = definition
-        definitionsByItem[item] = definition
+        if (bindItem) {
+            definitionsByItem[item] = definition
+        }
     }
 
     private fun perk(

@@ -1,12 +1,17 @@
 package atopos.destiny2.client.action
 
+import atopos.destiny2.client.camera.VoidHunterSuperCameraClient
+import atopos.destiny2.client.camera.ThunderclapCameraClient
+import atopos.destiny2.client.renderer.ThunderclapPlayerProxyClient
 import atopos.destiny2.client.util.PlayerAnimationHelper
 import atopos.destiny2.common.action.DestinyActionBackend
 import atopos.destiny2.common.action.DestinyActionCameraPolicy
 import atopos.destiny2.common.action.DestinyActionDefinition
 import atopos.destiny2.common.action.DestinyActionRegistry
+import atopos.destiny2.common.entity.ThunderclapPlayerProxyEntity
 import com.mojang.brigadier.Command
 import dev.kosmx.playerAnim.minecraftApi.PlayerAnimationRegistry
+import net.fabricmc.loader.api.FabricLoader
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager.literal
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback
 import net.minecraft.client.Minecraft
@@ -23,14 +28,44 @@ object DestinyActionClient {
     fun register() {
         ClientCommandRegistrationCallback.EVENT.register { dispatcher, _ ->
             dispatcher.register(
-                literal("destinyaction")
+                literal("destinyui")
                     .then(
-                        literal("check").executes { context ->
-                            DestinyActionRegistry.definitions().forEach { definition ->
-                                context.source.sendFeedback(Component.literal(audit(definition)))
-                            }
-                            Command.SINGLE_SUCCESS
-                        }
+                        literal("action")
+                            .then(
+                                literal("check").executes { context ->
+                                    DestinyActionRegistry.definitions().forEach { definition ->
+                                        context.source.sendFeedback(Component.literal(audit(definition)))
+                                    }
+                                    Command.SINGLE_SUCCESS
+                                }
+                            )
+                            .then(
+                                literal("bendtest").executes { context ->
+                                    if (!FabricLoader.getInstance().isModLoaded("bendy-lib")) {
+                                        context.source.sendFeedback(Component.literal("BendyLib 未加载，膝盖弯曲不可用"))
+                                        return@executes 0
+                                    }
+                                    val player = Minecraft.getInstance().player ?: return@executes 0
+                                    val played = PlayerAnimationHelper.playAnimation(
+                                        player = player,
+                                        animationId = ResourceLocation.fromNamespaceAndPath(
+                                            "destiny2-mod",
+                                            "bendy_knee_test"
+                                        ),
+                                        forceThirdPerson = true,
+                                        cameraResetDelayMs = 3_000L,
+                                        blendInTicks = 2,
+                                        blendOutTicks = 3
+                                    )
+                                    context.source.sendFeedback(
+                                        Component.literal(
+                                            if (played) "开始播放无缝膝盖弯曲测试"
+                                            else "膝盖测试动画资源未加载"
+                                        )
+                                    )
+                                    if (played) Command.SINGLE_SUCCESS else 0
+                                }
+                            )
                     )
             )
         }
@@ -56,14 +91,48 @@ object DestinyActionClient {
             IncineratorSnapFirstPersonClient.play()
         }
         return when (definition.backend) {
-            DestinyActionBackend.PLAYER_LAYER -> PlayerAnimationHelper.playAnimation(
-                player = player,
-                animationId = definition.animationId,
-                forceThirdPerson = localPlayer && definition.cameraPolicy == DestinyActionCameraPolicy.THIRD_PERSON,
-                cameraResetDelayMs = definition.durationMs,
-                blendInTicks = definition.blendInTicks,
-                blendOutTicks = definition.blendOutTicks
-            )
+            DestinyActionBackend.PLAYER_LAYER -> {
+                val usesShoulderCamera = localPlayer && definition.thirdPersonCameraDurationMs != null
+                val thunderclapPhase = when (definition.id) {
+                    DestinyActionRegistry.ARC_TITAN_THUNDERCLAP_CHARGE ->
+                        ThunderclapPlayerProxyEntity.Phase.CHARGE
+                    DestinyActionRegistry.ARC_TITAN_THUNDERCLAP_RELEASE ->
+                        ThunderclapPlayerProxyEntity.Phase.RELEASE
+                    else -> null
+                }
+                val usesThunderclapCamera = localPlayer && thunderclapPhase != null
+                val played = if (thunderclapPhase != null) {
+                    ThunderclapPlayerProxyClient.play(player, thunderclapPhase, definition.durationTicks)
+                } else {
+                    PlayerAnimationHelper.playAnimation(
+                        player = player,
+                        animationId = definition.animationId,
+                        forceThirdPerson = localPlayer &&
+                            definition.cameraPolicy == DestinyActionCameraPolicy.THIRD_PERSON &&
+                            !usesShoulderCamera &&
+                            !usesThunderclapCamera,
+                        cameraResetDelayMs = definition.durationMs,
+                        blendInTicks = definition.blendInTicks,
+                        blendOutTicks = definition.blendOutTicks
+                    )
+                }
+                if (played && usesShoulderCamera) {
+                    VoidHunterSuperCameraClient.start(
+                        durationMs = definition.thirdPersonCameraDurationMs!!,
+                        rightOffsetBlocks = definition.thirdPersonRightOffsetBlocks
+                    )
+                }
+                if (played) {
+                    when (definition.id) {
+                        DestinyActionRegistry.ARC_TITAN_THUNDERCLAP_CHARGE ->
+                            ThunderclapCameraClient.startCharge(player, definition.durationTicks)
+                        DestinyActionRegistry.ARC_TITAN_THUNDERCLAP_RELEASE ->
+                            ThunderclapCameraClient.startRelease(player, definition.durationTicks)
+                        else -> Unit
+                    }
+                }
+                played
+            }
         }
     }
 

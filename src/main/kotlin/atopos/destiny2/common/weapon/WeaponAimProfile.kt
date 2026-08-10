@@ -16,7 +16,9 @@ data class WeaponAimProfile(
     val modelRotationY: Float = 0.0f,
     val modelRotationZ: Float = 0.0f,
     val hipCameraAnimationScale: Float = 1.0f,
-    val aimedCameraAnimationScale: Float = 0.72f
+    val aimedCameraAnimationScale: Float = 0.72f,
+    /** Use the renderer-independent circular optic fallback for built-in scopes. */
+    val scopeOverlay: Boolean = false
 ) {
     companion object {
         val DISABLED = WeaponAimProfile(enabled = false, zoom = 1.0f)

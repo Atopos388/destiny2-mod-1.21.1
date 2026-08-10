@@ -1,6 +1,7 @@
 package atopos.destiny2.common.gear
 
 import atopos.destiny2.common.effect.DestinyStatusRules
+import atopos.destiny2.common.effect.SolarDamageKind
 import atopos.destiny2.common.entity.MicroMissileProjectile
 import atopos.destiny2.common.entity.HuntingMarkEntity
 import atopos.destiny2.common.network.DestinyNetworking
@@ -440,7 +441,13 @@ object GearPerkRuntime {
                 }
                 GearPerkEffect.EMBER_BLADE -> {
                     if (context.isMelee && cooldownReady(attacker, perk)) {
-                        DestinyStatusRules.applyScorch(target, 20, perk.durationTicks)
+                        DestinyStatusRules.applyScorch(
+                            target,
+                            20,
+                            perk.durationTicks,
+                            attacker,
+                            SolarDamageKind.WEAPON
+                        )
                         setCooldown(attacker, perk)
                         showPerkBuff(attacker, perk, "炽热锋刃")
                     }

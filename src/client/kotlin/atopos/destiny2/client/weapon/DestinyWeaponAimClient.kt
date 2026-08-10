@@ -2,7 +2,6 @@ package atopos.destiny2.client.weapon
 
 import atopos.destiny2.common.weapon.DestinyRangedWeapon
 import atopos.destiny2.common.weapon.WeaponAimProfile
-import atopos.destiny2.client.tacz.SecondOrderDynamics
 import atopos.destiny2.client.tacz.TaczMath
 import com.mojang.blaze3d.vertex.PoseStack
 import com.mojang.math.Axis
@@ -21,8 +20,6 @@ object DestinyWeaponAimClient {
     private var currentProgress = 0.0f
     private var retainedProfile: WeaponAimProfile? = null
     private var aimingTimestampMs = System.currentTimeMillis()
-    private val worldFovDynamics = SecondOrderDynamics(0.5f, 1.2f, 0.5f, 70.0f)
-
     private var cameraPitch = 0.0f
     private var cameraYaw = 0.0f
     private var cameraRoll = 0.0f
@@ -33,6 +30,11 @@ object DestinyWeaponAimClient {
     private var authoredCameraX = 0.0f
     private var authoredCameraY = 0.0f
     private var authoredCameraZ = 0.0f
+
+    private var taczCameraPitch = 0.0f
+    private var taczCameraYaw = 0.0f
+    private var taczCameraRoll = 0.0f
+    private var lastTaczCameraUpdateNanos = Long.MIN_VALUE
 
     private var constraintTranslationX = 1.0f
     private var constraintTranslationY = 1.0f
@@ -130,15 +132,28 @@ object DestinyWeaponAimClient {
         poseStack.mulPose(Axis.XP.rotationDegrees(profile.modelRotationX * amount))
     }
 
+    /**
+     * Returns the current authored view without applying TaCZ's model-origin
+     * wrapper. Independent Bedrock first-person renderers already establish
+     * their own clean render origin before calling this bridge.
+     */
+    fun positioningView(partialTick: Float): Matrix4f? {
+        if (!hasFreshPositioningViews()) return null
+        return interpolateView(
+            authoredIdleView,
+            authoredIronView,
+            progress(partialTick)
+        )
+    }
+
     fun modifyWorldFov(originalFov: Double, partialTick: Float): Double {
         val profile = retainedProfile
-        val targetFov = if (profile == null) {
+        return if (profile == null) {
             originalFov
         } else {
             val magnification = 1.0 + (profile.zoom.coerceAtLeast(1.0f) - 1.0) * progress(partialTick)
             TaczMath.magnificationToFov(magnification, originalFov)
         }
-        return worldFovDynamics.update(targetFov.toFloat()).toDouble()
     }
 
     fun publishCameraBone(bone: GeoBone) {
@@ -163,6 +178,17 @@ object DestinyWeaponAimClient {
         authoredIdleView = Matrix4f(idleView)
         authoredIronView = Matrix4f(ironView)
         lastPositioningViewUpdateNanos = System.nanoTime()
+    }
+
+    /**
+     * TaCZ's camera node is not a geometry bone. Its authored world-box
+     * rotation is consumed by both the Minecraft camera and the gun model.
+     */
+    fun publishTaczCamera(rotationRadians: Vector3f) {
+        taczCameraPitch = Math.toDegrees(rotationRadians.x.toDouble()).toFloat()
+        taczCameraYaw = Math.toDegrees(rotationRadians.y.toDouble()).toFloat()
+        taczCameraRoll = -Math.toDegrees(rotationRadians.z.toDouble()).toFloat()
+        lastTaczCameraUpdateNanos = System.nanoTime()
     }
 
     fun clearPositioningViews() {
@@ -190,6 +216,7 @@ object DestinyWeaponAimClient {
     fun cameraTransform(partialTick: Float): CameraTransform {
         clearStaleCameraBone(force = false)
         clearStaleConstraintBone(force = false)
+        clearStaleTaczCamera(force = false)
         val profile = retainedProfile ?: return CameraTransform.ZERO
         val amount = progress(partialTick)
         val animationScale = Mth.lerp(
@@ -204,9 +231,34 @@ object DestinyWeaponAimClient {
                 (cameraOffsetY * animationScale * constrained(constraintTranslationY)).toDouble(),
                 (cameraOffsetZ * animationScale * constrained(constraintTranslationZ)).toDouble()
             ),
-            pitch = cameraPitch * animationScale * constrained(constraintRotationX),
-            yaw = cameraYaw * animationScale * constrained(constraintRotationY),
-            roll = cameraRoll * animationScale * constrained(constraintRotationZ)
+            pitch = (
+                cameraPitch * constrained(constraintRotationX) +
+                    taczCameraPitch
+                ) * animationScale,
+            yaw = (
+                cameraYaw * constrained(constraintRotationY) +
+                    taczCameraYaw
+                ) * animationScale,
+            roll = (
+                cameraRoll * constrained(constraintRotationZ) +
+                    taczCameraRoll
+                ) * animationScale
+        )
+    }
+
+    fun modelCameraRotation(partialTick: Float): Quaternionf {
+        clearStaleTaczCamera(force = false)
+        val profile = retainedProfile ?: return Quaternionf()
+        val amount = progress(partialTick)
+        val animationScale = Mth.lerp(
+            amount,
+            profile.hipCameraAnimationScale,
+            profile.aimedCameraAnimationScale
+        )
+        return Quaternionf().rotationZYX(
+            taczCameraRoll * animationScale * Mth.DEG_TO_RAD,
+            taczCameraYaw * animationScale * Mth.DEG_TO_RAD,
+            taczCameraPitch * animationScale * Mth.DEG_TO_RAD
         )
     }
 
@@ -246,6 +298,17 @@ object DestinyWeaponAimClient {
             constraintRotationX = 1.0f
             constraintRotationY = 1.0f
             constraintRotationZ = 1.0f
+        }
+    }
+
+    private fun clearStaleTaczCamera(force: Boolean) {
+        val stale = lastTaczCameraUpdateNanos == Long.MIN_VALUE ||
+            System.nanoTime() - lastTaczCameraUpdateNanos > CAMERA_BONE_TIMEOUT_NANOS
+        if (force || stale) {
+            taczCameraPitch = 0.0f
+            taczCameraYaw = 0.0f
+            taczCameraRoll = 0.0f
+            lastTaczCameraUpdateNanos = Long.MIN_VALUE
         }
     }
 

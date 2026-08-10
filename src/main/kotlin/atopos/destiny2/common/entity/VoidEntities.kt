@@ -10,6 +10,7 @@ import net.minecraft.nbt.CompoundTag
 import net.minecraft.server.level.ServerPlayer
 import net.minecraft.world.entity.EntityType
 import net.minecraft.world.entity.LivingEntity
+import net.minecraft.world.entity.player.Player
 import net.minecraft.world.entity.projectile.ThrowableItemProjectile
 import net.minecraft.network.syncher.EntityDataAccessor
 import net.minecraft.network.syncher.EntityDataSerializers
@@ -44,14 +45,21 @@ class VoidGrenadeEntity : ThrowableItemProjectile {
     override fun onHit(hitResult: HitResult) {
         super.onHit(hitResult)
         if (!this.level().isClientSide) {
-            (this.level() as? ServerLevel)?.let { level ->
-                level.playSound(null, this.blockPosition(), DestinySounds.VOID_GRENADE_IMPACT, SoundSource.PLAYERS, 0.75f, 1.0f)
-            }
             val impact = if (hitResult is BlockHitResult) {
                 hitResult.location.add(Vec3.atLowerCornerOf(hitResult.direction.normal).scale(0.035))
             } else {
                 hitResult.location
             }
+            (this.level() as? ServerLevel)?.playSound(
+                null,
+                impact.x,
+                impact.y,
+                impact.z,
+                DestinySounds.VOID_GRENADE_IMPACT,
+                SoundSource.PLAYERS,
+                1.0f,
+                1.0f
+            )
             val vortex = VoidVortexEntity(this.level(), impact.x, impact.y, impact.z, this.owner as? LivingEntity)
             this.level().addFreshEntity(vortex)
             this.discard()
@@ -61,9 +69,15 @@ class VoidGrenadeEntity : ThrowableItemProjectile {
 
 /**
  * 陷阱炸弹 (Snare Bomb)
- * 吸附在敌人身上或地面，爆炸后致盲+虚弱。
+ * 落地后部署为贴地地雷并让附近友军隐身；武装完成后由目标踩踏触发，
+ * 爆发烟雾并对其中的敌人持续造成递增伤害与虚弱。
  */
-class SnareBombEntity : ThrowableItemProjectile {
+class SnareBombEntity : ThrowableItemProjectile, VoidAbilityDamageCarrier {
+    private var ownerCanTrigger = false
+    private val smokeExposureTicks = mutableMapOf<UUID, Int>()
+
+    override val voidAbilitySource: VoidAbilitySource
+        get() = VoidAbilitySource.MELEE
     
     constructor(entityType: EntityType<out SnareBombEntity>, level: Level) : super(entityType, level)
     constructor(level: Level, owner: LivingEntity) : super(DestinyEntities.SNARE_BOMB, level) {
@@ -73,36 +87,285 @@ class SnareBombEntity : ThrowableItemProjectile {
 
     override fun getDefaultItem(): Item = Items.SLIME_BALL // Placeholder
 
-    override fun onHit(hitResult: HitResult) {
-        super.onHit(hitResult)
-        if (!this.level().isClientSide) {
-            // Immediate explosion for now (can upgrade to trap later)
-            explode()
-            this.discard()
+    fun state(): Int = entityData.get(DATA_STATE)
+
+    fun isDeployed(): Boolean = state() >= STATE_DEPLOYED
+
+    fun isTriggered(): Boolean = state() == STATE_TRIGGERED
+
+    fun stateAge(partialTick: Float = 0f): Float =
+        (tickCount - entityData.get(DATA_STATE_START_TICK)).toFloat() + partialTick
+
+    override fun defineSynchedData(builder: SynchedEntityData.Builder) {
+        super.defineSynchedData(builder)
+        builder.define(DATA_STATE, STATE_FLYING)
+        builder.define(DATA_STATE_START_TICK, 0)
+    }
+
+    override fun tick() {
+        if (state() == STATE_FLYING) {
+            super.tick()
+            if (!level().isClientSide && tickCount >= MAX_FLIGHT_TICKS) {
+                discard()
+            }
+            return
+        }
+
+        noPhysics = true
+        isNoGravity = true
+        deltaMovement = Vec3.ZERO
+        super.tick()
+        if (level().isClientSide) {
+            return
+        }
+
+        when (state()) {
+            STATE_DEPLOYED -> {
+                val age = stateAge()
+                if (age >= MAX_DEPLOYED_TICKS) {
+                    discard()
+                    return
+                }
+                if (age >= ARMING_TICKS) {
+                    updateOwnerTriggerPermission()
+                    if (findTriggerTarget() != null) {
+                        trigger()
+                    }
+                }
+            }
+
+            STATE_TRIGGERED -> {
+                if (stateAge() >= SMOKE_DURATION_TICKS) {
+                    discard()
+                    return
+                }
+                tickSmokeEffects()
+            }
         }
     }
 
-    private fun explode() {
-        val radius = 4.0
-        val level = this.level()
-        val entities = level.getEntities(this, this.boundingBox.inflate(radius))
-
-        (level as? ServerLevel)?.let { serverLevel ->
-            serverLevel.sendParticles(ParticleTypes.SQUID_INK, this.x, this.y + 0.1, this.z, 24, 0.8, 0.35, 0.8, 0.05)
-            serverLevel.sendParticles(ParticleTypes.REVERSE_PORTAL, this.x, this.y + 0.1, this.z, 18, 0.8, 0.25, 0.8, 0.08)
-            serverLevel.playSound(null, this.blockPosition(), DestinySounds.SNARE_BOMB_IMPACT, SoundSource.PLAYERS, 0.7f, 1.0f)
+    override fun onHit(hitResult: HitResult) {
+        if (state() != STATE_FLYING) {
+            return
         }
+        if (hitResult !is BlockHitResult) {
+            return
+        }
+        if (hitResult.direction != net.minecraft.core.Direction.UP) {
+            bounceOffSurface(hitResult)
+            return
+        }
+        super.onHit(hitResult)
+        if (level().isClientSide) {
+            return
+        }
+        deploy(hitResult)
+    }
 
-        for (entity in entities) {
-            if (entity is LivingEntity && entity != owner) {
-                val damageSource = owner?.let { level.damageSources().indirectMagic(this, it) }
-                    ?: level.damageSources().magic()
-                entity.hurt(damageSource, 2.0f)
-                entity.addEffect(MobEffectInstance(net.minecraft.world.effect.MobEffects.BLINDNESS, 100, 0))
-                DestinyStatusRules.applyWeaken(entity, 8 * 20)
-                entity.addEffect(MobEffectInstance(net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN, 8 * 20, 1))
+    private fun bounceOffSurface(hitResult: BlockHitResult) {
+        val normal = Vec3.atLowerCornerOf(hitResult.direction.normal)
+        val velocity = deltaMovement
+        val reflected = velocity.subtract(normal.scale(2.0 * velocity.dot(normal))).scale(0.42)
+        setPos(hitResult.location.add(normal.scale(0.045)))
+        deltaMovement = reflected
+    }
+
+    private fun deploy(hitResult: HitResult) {
+        val normalOffset = if (hitResult is BlockHitResult) {
+            Vec3.atLowerCornerOf(hitResult.direction.normal).scale(0.035)
+        } else {
+            Vec3(0.0, 0.035, 0.0)
+        }
+        val impact = hitResult.location.add(normalOffset)
+        setPos(impact)
+        deltaMovement = Vec3.ZERO
+        noPhysics = true
+        isNoGravity = true
+        setState(STATE_DEPLOYED)
+        grantDeploymentInvisibility()
+
+        (level() as? ServerLevel)?.playSound(
+            null,
+            blockPosition(),
+            DestinySounds.SNARE_BOMB_DEPLOY,
+            SoundSource.PLAYERS,
+            0.7f,
+            1.0f
+        )
+    }
+
+    private fun findTriggerTarget(): LivingEntity? {
+        val currentOwner = owner as? LivingEntity
+        return level().getEntitiesOfClass(
+            LivingEntity::class.java,
+            boundingBox.inflate(TRIGGER_HORIZONTAL_RADIUS, TRIGGER_HEIGHT, TRIGGER_HORIZONTAL_RADIUS)
+        ) { entity ->
+            val dx = entity.x - x
+            val dz = entity.z - z
+            val playerCanTrigger = entity is Player && (entity != currentOwner || ownerCanTrigger)
+            val hostileCanTrigger = entity !is Player &&
+                entity != currentOwner &&
+                (currentOwner == null || !entity.isAlliedTo(currentOwner))
+            entity.isAlive &&
+                (playerCanTrigger || hostileCanTrigger) &&
+                dx * dx + dz * dz <= TRIGGER_HORIZONTAL_RADIUS * TRIGGER_HORIZONTAL_RADIUS &&
+                entity.boundingBox.minY <= y + TRIGGER_HEIGHT &&
+                entity.boundingBox.maxY >= y - 0.12
+        }.minByOrNull { entity -> entity.distanceToSqr(this) }
+    }
+
+    private fun updateOwnerTriggerPermission() {
+        if (ownerCanTrigger) {
+            return
+        }
+        val currentOwner = owner as? LivingEntity ?: run {
+            ownerCanTrigger = true
+            return
+        }
+        val dx = currentOwner.x - x
+        val dz = currentOwner.z - z
+        val insideHorizontal = dx * dx + dz * dz <= TRIGGER_HORIZONTAL_RADIUS * TRIGGER_HORIZONTAL_RADIUS
+        val insideVertical = currentOwner.boundingBox.minY <= y + TRIGGER_HEIGHT &&
+            currentOwner.boundingBox.maxY >= y - 0.12
+        if (!insideHorizontal || !insideVertical) {
+            ownerCanTrigger = true
+        }
+    }
+
+    private fun trigger() {
+        if (state() != STATE_DEPLOYED) {
+            return
+        }
+        setState(STATE_TRIGGERED)
+        beginSmoke()
+    }
+
+    private fun beginSmoke() {
+        val level = level()
+        (level as? ServerLevel)?.let { serverLevel ->
+            serverLevel.playSound(null, this.blockPosition(), DestinySounds.SNARE_BOMB_TRIGGER, SoundSource.PLAYERS, 0.7f, 1.0f)
+        }
+        tickSmokeEffects()
+    }
+
+    private fun grantDeploymentInvisibility() {
+        val currentOwner = owner as? LivingEntity ?: return
+        level().getEntitiesOfClass(
+            LivingEntity::class.java,
+            boundingBox.inflate(EFFECT_RADIUS)
+        ) { entity ->
+            entity.isAlive &&
+                (entity === currentOwner || entity.isAlliedTo(currentOwner)) &&
+                position().distanceToSqr(entity.position()) <= EFFECT_RADIUS * EFFECT_RADIUS
+        }.forEach { ally ->
+            DestinyStatusRules.applyVoidInvisibility(ally, INVISIBILITY_DURATION_TICKS)
+        }
+    }
+
+    private fun tickSmokeEffects() {
+        val currentOwner = owner as? LivingEntity
+        val targets = level().getEntitiesOfClass(
+            LivingEntity::class.java,
+            boundingBox.inflate(EFFECT_RADIUS)
+        ) { entity ->
+            entity.isAlive &&
+                entity !== currentOwner &&
+                (currentOwner == null || !entity.isAlliedTo(currentOwner)) &&
+                position().distanceToSqr(entity.position()) <= EFFECT_RADIUS * EFFECT_RADIUS
+        }
+        val activeTargets = targets.mapTo(mutableSetOf()) { it.uuid }
+        smokeExposureTicks.keys.retainAll(activeTargets)
+
+        for (entity in targets) {
+            val exposureTicks = (smokeExposureTicks[entity.uuid] ?: 0) + 1
+            smokeExposureTicks[entity.uuid] = exposureTicks
+            val shouldPulse = exposureTicks == 1 || exposureTicks % SMOKE_DAMAGE_INTERVAL_TICKS == 0
+            if (!shouldPulse) {
+                continue
+            }
+
+            val damageSource = owner?.let { level().damageSources().indirectMagic(this, it) }
+                ?: level().damageSources().magic()
+            entity.hurt(damageSource, SnareBombRules.damageForExposure(exposureTicks))
+            DestinyStatusRules.applyWeaken(entity, WEAKEN_DURATION_TICKS)
+            if (entity is Player) {
+                entity.addEffect(
+                    MobEffectInstance(
+                        net.minecraft.world.effect.MobEffects.BLINDNESS,
+                        PLAYER_DISORIENT_DURATION_TICKS,
+                        0,
+                        false,
+                        false,
+                        false
+                    )
+                )
             }
         }
+    }
+
+    private fun setState(newState: Int) {
+        entityData.set(DATA_STATE, newState)
+        entityData.set(DATA_STATE_START_TICK, tickCount)
+    }
+
+    override fun addAdditionalSaveData(compound: CompoundTag) {
+        super.addAdditionalSaveData(compound)
+        compound.putInt(STATE_TAG, state())
+        compound.putInt(STATE_AGE_TAG, stateAge().toInt().coerceAtLeast(0))
+        compound.putBoolean(OWNER_CAN_TRIGGER_TAG, ownerCanTrigger)
+    }
+
+    override fun readAdditionalSaveData(compound: CompoundTag) {
+        super.readAdditionalSaveData(compound)
+        val restoredState = if (compound.contains(STATE_TAG)) compound.getInt(STATE_TAG) else STATE_FLYING
+        val restoredAge = if (compound.contains(STATE_AGE_TAG)) compound.getInt(STATE_AGE_TAG) else 0
+        ownerCanTrigger = compound.getBoolean(OWNER_CAN_TRIGGER_TAG)
+        val normalizedState = restoredState.coerceIn(STATE_FLYING, STATE_TRIGGERED)
+        entityData.set(DATA_STATE, normalizedState)
+        entityData.set(DATA_STATE_START_TICK, tickCount - restoredAge.coerceAtLeast(0))
+        if (normalizedState != STATE_FLYING) {
+            noPhysics = true
+            isNoGravity = true
+            deltaMovement = Vec3.ZERO
+        }
+    }
+
+    companion object {
+        const val STATE_FLYING = 0
+        const val STATE_DEPLOYED = 1
+        const val STATE_TRIGGERED = 2
+        const val ARMING_TICKS = 10
+        // The confirmed trigger recording is exactly 7.2 seconds at pitch 1.0.
+        const val SMOKE_DURATION_TICKS = 144
+        const val MAX_DEPLOYED_TICKS = 30 * 20
+        private const val MAX_FLIGHT_TICKS = 10 * 20
+        private const val TRIGGER_HORIZONTAL_RADIUS = 2.25
+        private const val TRIGGER_HEIGHT = 1.25
+        private const val EFFECT_RADIUS = 4.0
+        private const val INVISIBILITY_DURATION_TICKS = 5 * 20
+        private const val WEAKEN_DURATION_TICKS = 8 * 20
+        private const val PLAYER_DISORIENT_DURATION_TICKS = 30
+        private const val SMOKE_DAMAGE_INTERVAL_TICKS = 20
+        private const val STATE_TAG = "DestinySnareState"
+        private const val STATE_AGE_TAG = "DestinySnareStateAge"
+        private const val OWNER_CAN_TRIGGER_TAG = "DestinySnareOwnerCanTrigger"
+
+        private val DATA_STATE: EntityDataAccessor<Int> =
+            SynchedEntityData.defineId(SnareBombEntity::class.java, EntityDataSerializers.INT)
+        private val DATA_STATE_START_TICK: EntityDataAccessor<Int> =
+            SynchedEntityData.defineId(SnareBombEntity::class.java, EntityDataSerializers.INT)
+    }
+}
+
+object SnareBombRules {
+    private const val BASE_DAMAGE = 0.5f
+    private const val DAMAGE_GAIN_PER_SECOND = 0.1f
+    private const val MAX_DAMAGE_PER_PULSE = 1.2f
+
+    fun damageForExposure(exposureTicks: Int): Float {
+        val completedSeconds = (exposureTicks.coerceAtLeast(1) / 20).toFloat()
+        return (BASE_DAMAGE + completedSeconds * DAMAGE_GAIN_PER_SECOND)
+            .coerceAtMost(MAX_DAMAGE_PER_PULSE)
     }
 }
 
@@ -283,7 +546,7 @@ class VoidTetherEntity(
         
         for (entity in entities) {
             if (entity is LivingEntity && entity != owner && (owner == null || !entity.isAlliedTo(owner))) {
-                DestinyStatusRules.applySuppression(entity, 40)
+                DestinyStatusRules.applySuppression(entity, 40, owner)
                 DestinyStatusRules.applyStrongWeaken(entity, 12 * 20)
 
                 val dx = this.x - entity.x

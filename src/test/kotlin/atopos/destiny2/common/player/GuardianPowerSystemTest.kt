@@ -14,6 +14,12 @@ class GuardianPowerSystemTest {
         assertEquals(1.0f, snapshot.outgoingMultiplier)
         assertEquals(1.0f, snapshot.incomingMultiplier)
         assertFalse(snapshot.suppressed)
+
+        val targetSpecific = GuardianPowerSystem.forActivity(snapshot, 100)
+        assertEquals(0, targetSpecific.current)
+        assertEquals(1.0f, targetSpecific.outgoingMultiplier)
+        assertEquals(1.0f, targetSpecific.incomingMultiplier)
+        assertFalse(targetSpecific.suppressed)
     }
 
     @Test

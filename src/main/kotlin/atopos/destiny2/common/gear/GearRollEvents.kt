@@ -8,6 +8,7 @@ import atopos.destiny2.common.player.PlayerDestinyDataApi
 import atopos.destiny2.common.player.GuardianPowerRuntime
 import atopos.destiny2.common.player.GuardianPowerSystem
 import atopos.destiny2.common.network.DestinyNetworking
+import atopos.destiny2.common.weapon.MonteCarloExoticRuntime
 
 object GearRollEvents {
     fun register() {
@@ -32,11 +33,13 @@ object GearRollEvents {
                 }
                 GearPerkRuntime.tick(player)
                 ArmorModRuntime.tick(player)
+                MonteCarloExoticRuntime.tick(player)
             }
         }
         ServerPlayConnectionEvents.DISCONNECT.register { handler, _ ->
             GearPerkRuntime.clear(handler.player.uuid)
             ArmorModRuntime.clear(handler.player.uuid)
+            MonteCarloExoticRuntime.clear(handler.player)
             GuardianPowerRuntime.clear(handler.player.uuid)
         }
     }

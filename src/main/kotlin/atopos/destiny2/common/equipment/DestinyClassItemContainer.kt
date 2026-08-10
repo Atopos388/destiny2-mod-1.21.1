@@ -58,7 +58,9 @@ class DestinyClassItemSlot(
 ) : Slot(container, 0, x, y) {
     override fun mayPlace(stack: ItemStack): Boolean {
         val item = stack.item as? DestinyClassItem ?: return false
-        return owner !is ServerPlayer || item.requiredClass == PlayerDestinyDataApi.get(owner).destinyClass
+        if (owner !is ServerPlayer) return true
+        val data = PlayerDestinyDataApi.get(owner)
+        return item.requiredClass == data.destinyClass && data.isClassUnlocked(item.requiredClass)
     }
 
     override fun getMaxStackSize(): Int = 1

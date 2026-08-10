@@ -1,23 +1,35 @@
 {
   "ammo_type": "SPECIAL",
-  "damage": 20.0,
-  "head_shot": 1.5,
+  "damage": 25.0,
+  "head_shot": 1.7,
   "magazine_size": 4,
-  "reload_ticks": 64,
-  "empty_reload_bonus_ticks": 8,
+  "reload_ticks": 52,
+  "empty_reload_bonus_ticks": 10,
   "reload_feed_fraction": 0.72,
   "fire_mode": "SEMI",
   "supported_fire_modes": ["SEMI"],
   "rounds_per_minute": 90,
-  "bolt_ticks": 10,
+  "bolt_ticks": 13,
   "recoil": {
-    "pitch_min": 5.2,
-    "pitch_max": 6.4,
-    "yaw_min": -0.32,
-    "yaw_max": 0.32,
-    "kick_ms": 95,
-    "recover_ms": 430,
-    "aimed_multiplier": 0.55
+    "pitch_min": 4.2,
+    "pitch_max": 5.0,
+    "yaw_min": -0.2,
+    "yaw_max": 0.2,
+    "kick_ms": 82,
+    "recover_ms": 460,
+    "aimed_multiplier": 0.8,
+    "stability": 40,
+    "recoil_direction": 75
+  },
+  "accuracy": {
+    "hip_base_degrees": 1.8,
+    "aimed_base_degrees": 0.015,
+    "moving_penalty_degrees": 0.08,
+    "airborne_penalty_degrees": 1.5,
+    "bloom_per_shot_degrees": 0.3,
+    "max_bloom_degrees": 0.7,
+    "settle_delay_ticks": 6,
+    "bloom_decay_per_tick": 0.08
   },
   "crosshair": {
     "base_gap": 2.0,
@@ -37,7 +49,7 @@
     "life_ticks": 50,
     "pierce": 1,
     "distance_damage": [
-      {"distance": 192.0, "damage": 20.0}
+      {"distance": 192.0, "damage": 25.0}
     ]
   }
 }

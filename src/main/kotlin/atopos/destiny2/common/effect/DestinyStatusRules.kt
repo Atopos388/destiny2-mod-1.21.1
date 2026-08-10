@@ -2,9 +2,16 @@ package atopos.destiny2.common.effect
 
 import atopos.destiny2.common.network.DestinyNetworking
 import atopos.destiny2.common.aspect.DestinyAspectRuntime
+import atopos.destiny2.common.aspect.SolarFragmentBuff
+import atopos.destiny2.common.aspect.SolarWarlockFragmentRuntime
+import atopos.destiny2.common.aspect.VoidHunterAspectRuntime
+import atopos.destiny2.common.player.AbilitySlot
+import atopos.destiny2.common.player.PlayerDestinyDataApi
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking
 import net.minecraft.world.effect.MobEffectInstance
+import net.minecraft.world.effect.MobEffects
 import net.minecraft.world.entity.LivingEntity
+import net.minecraft.world.entity.Mob
 import net.minecraft.server.level.ServerPlayer
 import java.util.UUID
 
@@ -21,12 +28,34 @@ object DestinyStatusRules {
     private val amplifiedSprintTicks = mutableMapOf<UUID, Int>()
     private val lastArcPositions = mutableMapOf<UUID, Pair<Double, Double>>()
 
-    fun applyScorch(target: LivingEntity, stacks: Int, durationTicks: Int = SHORT_DURATION, source: ServerPlayer? = null) {
-        applyScorchInternal(target, stacks, durationTicks, source, applySourceModifiers = true)
+    fun applyScorch(
+        target: LivingEntity,
+        stacks: Int,
+        durationTicks: Int = SHORT_DURATION,
+        source: ServerPlayer? = null,
+        sourceKind: SolarDamageKind = SolarDamageKind.GENERIC,
+        castId: UUID? = null
+    ) {
+        applyScorchInternal(target, stacks, durationTicks, source, sourceKind, castId, applySourceModifiers = true)
     }
 
-    fun applyScorchExact(target: LivingEntity, stacks: Int, durationTicks: Int = SHORT_DURATION) {
-        applyScorchInternal(target, stacks, durationTicks, source = null, applySourceModifiers = false)
+    fun applyScorchExact(
+        target: LivingEntity,
+        stacks: Int,
+        durationTicks: Int = SHORT_DURATION,
+        source: ServerPlayer? = null,
+        sourceKind: SolarDamageKind = SolarDamageKind.GENERIC,
+        castId: UUID? = null
+    ) {
+        applyScorchInternal(
+            target,
+            stacks,
+            durationTicks,
+            source = source,
+            sourceKind = sourceKind,
+            castId = castId,
+            applySourceModifiers = false
+        )
     }
 
     private fun applyScorchInternal(
@@ -34,31 +63,95 @@ object DestinyStatusRules {
         stacks: Int,
         durationTicks: Int,
         source: ServerPlayer?,
+        sourceKind: SolarDamageKind,
+        castId: UUID?,
         applySourceModifiers: Boolean
     ) {
-        val adjustedStacks = if (applySourceModifiers) DestinyAspectRuntime.modifyScorchStacks(source, stacks) else stacks
+        val adjustedStacks = if (applySourceModifiers) {
+            DestinyAspectRuntime.modifyScorchStacks(source, stacks, sourceKind)
+        } else stacks
         val currentStacks = target.getEffect(DestinyEffects.SCORCH)?.let { it.amplifier + 1 } ?: 0
         val nextStacks = (currentStacks + adjustedStacks).coerceIn(1, SCORCH_IGNITION_STACKS)
+        val carrier = target as SolarScorchCarrier
+        if (source != null) {
+            carrier.destiny2modSetScorchContext(
+                SolarScorchContext(source.uuid, sourceKind, castId ?: UUID.randomUUID())
+            )
+        } else {
+            carrier.destiny2modSetScorchContext(null)
+        }
+        DestinyAspectRuntime.onScorchApplied(source, target)
+        if (nextStacks >= SCORCH_IGNITION_STACKS) {
+            target.removeEffect(DestinyEffects.SCORCH)
+            val context = carrier.destiny2modScorchContext()
+            SolarIgnitionRuntime.ignite(target, context)
+            carrier.destiny2modSetScorchContext(null)
+            return
+        }
         target.addEffect(MobEffectInstance(DestinyEffects.SCORCH, durationTicks, nextStacks - 1))
         syncStatus(target, "scorch", "灼烧", durationTicks, nextStacks)
-        DestinyAspectRuntime.onScorchApplied(source)
     }
 
-    fun applyRadiant(target: LivingEntity, durationTicks: Int = MEDIUM_DURATION) {
+    fun applyRadiant(
+        target: LivingEntity,
+        durationTicks: Int = MEDIUM_DURATION,
+        source: ServerPlayer? = null
+    ) {
         val adjustedDuration = DestinyAspectRuntime.modifySolarBuffDuration(target, durationTicks)
-        target.addEffect(MobEffectInstance(DestinyEffects.RADIANT, adjustedDuration, 0, false, false, true))
-        syncStatus(target, "radiant", "焕光", adjustedDuration)
+        val existing = target.getEffect(DestinyEffects.RADIANT)
+        val refreshThreshold = minOf(20, (adjustedDuration / 2).coerceAtLeast(1))
+        if (existing != null && existing.duration > adjustedDuration - refreshThreshold) return
+        val appliedDuration = maxOf(adjustedDuration, existing?.duration ?: 0)
+        target.addEffect(MobEffectInstance(DestinyEffects.RADIANT, appliedDuration, 0, false, false, true))
+        syncStatus(target, "radiant", "焕光", appliedDuration)
+        SolarWarlockFragmentRuntime.onSolarBuffApplied(source, target, SolarFragmentBuff.RADIANT)
     }
 
-    fun applyRestoration(target: LivingEntity, durationTicks: Int = AURA_REFRESH_DURATION, level: Int = 1) {
+    fun applyRestoration(
+        target: LivingEntity,
+        durationTicks: Int = AURA_REFRESH_DURATION,
+        level: Int = 1,
+        source: ServerPlayer? = null
+    ) {
         val adjustedDuration = DestinyAspectRuntime.modifySolarBuffDuration(target, durationTicks)
-        target.addEffect(MobEffectInstance(DestinyEffects.RESTORATION, adjustedDuration, level - 1, false, false, true))
-        syncStatus(target, "restoration", "恢复", adjustedDuration, level)
+        val requestedAmplifier = (level - 1).coerceAtLeast(0)
+        val existing = target.getEffect(DestinyEffects.RESTORATION)
+        val refreshThreshold = minOf(20, (adjustedDuration / 2).coerceAtLeast(1))
+        if (existing != null && existing.amplifier >= requestedAmplifier &&
+            existing.duration > adjustedDuration - refreshThreshold
+        ) return
+        val appliedAmplifier = maxOf(requestedAmplifier, existing?.amplifier ?: 0)
+        val appliedDuration = maxOf(adjustedDuration, existing?.duration ?: 0)
+        target.addEffect(MobEffectInstance(DestinyEffects.RESTORATION, appliedDuration, appliedAmplifier, false, false, true))
+        syncStatus(target, "restoration", "恢复", appliedDuration, appliedAmplifier + 1)
+        SolarWarlockFragmentRuntime.onSolarBuffApplied(source, target, SolarFragmentBuff.RESTORATION)
+    }
+
+    fun applyCure(target: LivingEntity, health: Float, source: ServerPlayer? = null) {
+        if (health <= 0.0f || !target.isAlive) return
+        target.heal(health)
+        (target as? ServerPlayer)?.let { player ->
+            syncTemporaryBuff(player, "destiny2-mod:solar/cure", "治愈", 20)
+        }
+        SolarWarlockFragmentRuntime.onSolarBuffApplied(source, target, SolarFragmentBuff.CURE)
     }
 
     fun applyAmplified(target: LivingEntity, durationTicks: Int = MEDIUM_DURATION) {
         target.addEffect(MobEffectInstance(DestinyEffects.AMPLIFIED, durationTicks, 0, false, false, true))
         syncStatus(target, "amplified", "增幅", durationTicks)
+    }
+
+    fun applyArcBlind(target: LivingEntity, durationTicks: Int = SHORT_DURATION) {
+        if (!target.isAlive || durationTicks <= 0) return
+        target.addEffect(MobEffectInstance(DestinyEffects.ARC_BLIND, durationTicks, 0, false, false, true))
+        // Vanilla Blindness provides the first-person occlusion while the custom
+        // effect remains the authoritative Destiny keyword.
+        target.addEffect(MobEffectInstance(MobEffects.BLINDNESS, durationTicks, 0, false, false, false))
+        (target as? Mob)?.let { mob ->
+            mob.target = null
+            mob.navigation.stop()
+        }
+        syncStatus(target, "arc_blind", "致盲", durationTicks)
     }
 
     /**
@@ -100,18 +193,38 @@ object DestinyStatusRules {
     }
 
     fun applyVoidInvisibility(target: LivingEntity, durationTicks: Int = SHORT_DURATION) {
-        target.addEffect(MobEffectInstance(DestinyEffects.VOID_INVISIBILITY, durationTicks, 0, false, false, true))
-        syncStatus(target, "void_invisibility", "虚空隐身", durationTicks)
+        val adjustedDuration = VoidHunterAspectRuntime.modifyVoidBuffDuration(target, durationTicks)
+        target.addEffect(MobEffectInstance(DestinyEffects.VOID_INVISIBILITY, adjustedDuration, 0, false, false, true))
+        target.addEffect(MobEffectInstance(MobEffects.INVISIBILITY, adjustedDuration, 0, false, false, false))
+        syncStatus(target, "void_invisibility", "虚空隐身", adjustedDuration)
+        (target as? ServerPlayer)?.let(VoidHunterAspectRuntime::onInvisibilityApplied)
+    }
+
+    fun removeVoidInvisibility(target: LivingEntity) {
+        target.removeEffect(DestinyEffects.VOID_INVISIBILITY)
+        target.removeEffect(MobEffects.INVISIBILITY)
     }
 
     fun applyDevour(target: LivingEntity, durationTicks: Int = MEDIUM_DURATION) {
-        target.addEffect(MobEffectInstance(DestinyEffects.DEVOUR, durationTicks, 0, false, false, true))
-        syncStatus(target, "devour", "吞噬", durationTicks)
+        val adjustedDuration = VoidHunterAspectRuntime.modifyVoidBuffDuration(target, durationTicks)
+        target.addEffect(MobEffectInstance(DestinyEffects.DEVOUR, adjustedDuration, 0, false, false, true))
+        target.heal(10.0f)
+        (target as? ServerPlayer)?.let { player ->
+            PlayerDestinyDataApi.get(player).cooldowns.reduce(
+                AbilitySlot.GRENADE,
+                player.serverLevel().gameTime,
+                40
+            )
+            DestinyNetworking.syncCooldowns(player)
+        }
+        syncStatus(target, "devour", "吞食", adjustedDuration)
     }
 
     fun applyVoidOvershield(target: LivingEntity, durationTicks: Int = MEDIUM_DURATION) {
-        target.addEffect(MobEffectInstance(DestinyEffects.VOID_OVERSHIELD, durationTicks, 0, false, false, true))
-        syncStatus(target, "void_overshield", "虚空护盾", durationTicks)
+        val adjustedDuration = VoidHunterAspectRuntime.modifyVoidBuffDuration(target, durationTicks)
+        target.addEffect(MobEffectInstance(DestinyEffects.VOID_OVERSHIELD, adjustedDuration, 0, false, false, true))
+        target.absorptionAmount = maxOf(target.absorptionAmount, 5.0f)
+        syncStatus(target, "void_overshield", "虚空覆盖护盾", adjustedDuration)
     }
 
     fun applyWeaken(target: LivingEntity, durationTicks: Int = SHORT_DURATION) {
@@ -124,9 +237,10 @@ object DestinyStatusRules {
         syncStatus(target, "weaken_strong", "强虚弱", durationTicks)
     }
 
-    fun applySuppression(target: LivingEntity, durationTicks: Int = 40) {
+    fun applySuppression(target: LivingEntity, durationTicks: Int = 40, source: ServerPlayer? = null) {
         target.addEffect(MobEffectInstance(DestinyEffects.SUPPRESSION, durationTicks, 0))
         syncStatus(target, "suppression", "压制", durationTicks)
+        VoidHunterAspectRuntime.onSuppressed(source, target)
     }
 
     fun applyVolatile(target: LivingEntity, durationTicks: Int = MEDIUM_DURATION) {

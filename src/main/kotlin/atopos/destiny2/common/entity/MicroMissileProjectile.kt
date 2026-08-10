@@ -2,11 +2,15 @@ package atopos.destiny2.common.entity
 
 import atopos.destiny2.common.combat.DestinyExplosionRuntime
 import atopos.destiny2.common.effect.DestinyStatusRules
+import atopos.destiny2.common.effect.SolarDamageKind
 import atopos.destiny2.common.gear.GearPerkEffect
 import atopos.destiny2.common.gear.GearPerkRuntime
 import atopos.destiny2.common.network.DestinyNetworking
 import atopos.destiny2.common.weapon.AmmoDropSystem
 import atopos.destiny2.common.weapon.DestinyAmmoType
+import atopos.destiny2.common.weapon.DestinyDamageElement
+import atopos.destiny2.common.weapon.DestinyElementalDamageCarrier
+import atopos.destiny2.common.weapon.DestinyWeaponDamageCarrier
 import atopos.destiny2.common.tacz.TaczEntityHitbox
 import atopos.destiny2.common.weapon.DamageNumberRuntime
 import atopos.destiny2.common.item.MicroMissileBurstWeaponItem
@@ -32,13 +36,17 @@ enum class MicroMissileBarrelEffect {
     TRACKING
 }
 
-class MicroMissileProjectile : ThrowableItemProjectile {
+class MicroMissileProjectile : ThrowableItemProjectile, DestinyWeaponDamageCarrier {
     private var destinyDamage: Float = 6.0f
     private var destinyExplosionRadius: Float = 1.5f
     private var barrelEffect = MicroMissileBarrelEffect.NONE
     private var directHitTarget: LivingEntity? = null
     private var directHitWasPrecision = false
     private var sourceAmmoType = DestinyAmmoType.SPECIAL
+    override val destinyAmmoType: DestinyAmmoType
+        get() = sourceAmmoType
+    override var destinyDamageElement: DestinyDamageElement = DestinyDamageElement.KINETIC
+        private set
     private var directHitMultiplier = 1.0f
 
     constructor(entityType: EntityType<out MicroMissileProjectile>, level: Level) : super(entityType, level)
@@ -55,12 +63,14 @@ class MicroMissileProjectile : ThrowableItemProjectile {
         explosionRadius: Float,
         barrelEffect: MicroMissileBarrelEffect = MicroMissileBarrelEffect.NONE,
         sourceAmmoType: DestinyAmmoType = DestinyAmmoType.SPECIAL,
-        directHitMultiplier: Float = 1.0f
+        directHitMultiplier: Float = 1.0f,
+        damageElement: DestinyDamageElement = DestinyDamageElement.KINETIC
     ) : this(level, owner) {
         destinyDamage = damage
         destinyExplosionRadius = explosionRadius
         this.barrelEffect = barrelEffect
         this.sourceAmmoType = sourceAmmoType
+        this.destinyDamageElement = damageElement
         this.directHitMultiplier = directHitMultiplier.coerceAtLeast(0.0f)
     }
 
@@ -143,7 +153,14 @@ class MicroMissileProjectile : ThrowableItemProjectile {
                     ) { target ->
                         target.isAlive && target !== shooter && target !== defeated && !target.isAlliedTo(shooter)
                     }.forEach { target ->
-                        DestinyStatusRules.applyScorchExact(target, scorchStacks, 100)
+                        DestinyStatusRules.applyScorchExact(
+                            target,
+                            scorchStacks,
+                            100,
+                            shooter,
+                            SolarDamageKind.WEAPON,
+                            uuid
+                        )
                     }
                 }
             }

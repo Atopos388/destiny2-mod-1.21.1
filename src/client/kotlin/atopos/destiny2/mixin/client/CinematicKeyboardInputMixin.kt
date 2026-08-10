@@ -1,6 +1,7 @@
 package atopos.destiny2.mixin.client
 
 import atopos.destiny2.client.cinematic.CinematicCameraClient
+import atopos.destiny2.client.camera.ThunderclapCameraClient
 import net.minecraft.client.player.Input
 import net.minecraft.client.player.KeyboardInput
 import org.spongepowered.asm.mixin.Mixin
@@ -13,7 +14,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo
 abstract class CinematicKeyboardInputMixin : Input() {
     @Inject(method = ["tick"], at = [At("RETURN")])
     private fun clearCinematicMovement(slowDown: Boolean, slowDownFactor: Float, ci: CallbackInfo) {
-        if (!CinematicCameraClient.isActive()) return
+        if (!CinematicCameraClient.isActive() && !ThunderclapCameraClient.isMovementLocked()) return
         leftImpulse = 0.0f
         forwardImpulse = 0.0f
         up = false

@@ -39,6 +39,10 @@ object SolarGrenadeWorldRenderer {
     private const val ERUPTION_TRAIL_GRAVITY = 0.055
     private const val ERUPTION_TRAIL_STEP = 0.58
     private const val CORE_GATHER_MOTES = 16
+    private const val CORONA_ARC_BUNDLES = 9
+    private const val CORONA_FILAMENTS_PER_BUNDLE = 3
+    private const val CORONA_ARCS = CORONA_ARC_BUNDLES * CORONA_FILAMENTS_PER_BUNDLE
+    private const val CORONA_ARC_SEGMENTS = 20
     private const val IMPACT_BURST_TICKS = 10f
     private const val IMPACT_BURST_RAYS = 12
 
@@ -46,6 +50,8 @@ object SolarGrenadeWorldRenderer {
     private var orbShader: ShaderInstance? = null
     @Volatile
     private var shellShader: ShaderInstance? = null
+    @Volatile
+    private var arcShader: ShaderInstance? = null
 
     fun register() {
         CoreShaderRegistrationCallback.EVENT.register { context ->
@@ -57,6 +63,10 @@ object SolarGrenadeWorldRenderer {
                 ResourceLocation.fromNamespaceAndPath("destiny2-mod", "solar_grenade_shell"),
                 DefaultVertexFormat.POSITION_COLOR
             ) { shader -> shellShader = shader }
+            context.register(
+                ResourceLocation.fromNamespaceAndPath("destiny2-mod", "solar_grenade_arc"),
+                DefaultVertexFormat.POSITION_TEX_COLOR
+            ) { shader -> arcShader = shader }
         }
         WorldRenderEvents.AFTER_TRANSLUCENT.register(::render)
     }
@@ -197,13 +207,23 @@ object SolarGrenadeWorldRenderer {
                 shader,
                 center.add(0.0, 0.13, 0.0),
                 camera,
-                0.58f * appear,
-                3.5f,
-                1.48f * strength,
+                0.62f * appear,
+                3.8f,
+                1.82f * strength,
                 worldTime + 8.2f,
                 modelView,
                 worldPose
             )
+            arcShader?.let { arc ->
+                renderCoronaArcs(
+                    arc,
+                    center,
+                    camera,
+                    age,
+                    modelView,
+                    worldPose
+                )
+            }
         }
 
         renderProjectileTrails(
@@ -576,6 +596,192 @@ object SolarGrenadeWorldRenderer {
         drawPositionColorBuffer(flameBuffer.build(), modelView, worldPose)
     }
 
+    /**
+     * Solar prominences rooted at two points on the molten core. Each strand
+     * follows a bowed quadratic path, then receives time-varying transverse
+     * displacement so it writhes without detaching from either endpoint.
+     * A broad orange pass under a narrow gold-white pass creates the hot core
+     * and corona glow without spawning particle entities.
+     */
+    private fun renderCoronaArcs(
+        shader: ShaderInstance,
+        center: Vec3,
+        camera: Vec3,
+        age: Float,
+        modelView: org.joml.Matrix4fStack,
+        worldPose: org.joml.Matrix4f
+    ) {
+        val formationFade = Mth.clamp((age - 5f) / 10f, 0f, 1f)
+        val endFade = 1f - Mth.clamp((age - 124f) / 16f, 0f, 1f)
+        val opacity = formationFade * endFade
+        if (opacity <= 0.001f) return
+
+        repeat(2) { layer ->
+            val hotCore = layer == 1
+            val buffer = Tesselator.getInstance().begin(
+                VertexFormat.Mode.QUADS,
+                DefaultVertexFormat.POSITION_TEX_COLOR
+            )
+            emitCoronaArcLayer(buffer, center.add(0.0, 0.13, 0.0), camera, age, opacity, hotCore)
+            drawArcBuffer(buffer.build(), shader, modelView, worldPose)
+        }
+    }
+
+    private fun emitCoronaArcLayer(
+        buffer: com.mojang.blaze3d.vertex.BufferBuilder,
+        center: Vec3,
+        camera: Vec3,
+        age: Float,
+        opacity: Float,
+        hotCore: Boolean
+    ) {
+        repeat(CORONA_ARCS) arcLoop@ { arc ->
+            val bundle = arc / CORONA_FILAMENTS_PER_BUNDLE
+            val filament = arc % CORONA_FILAMENTS_PER_BUNDLE
+            val lifeCycle = 58f + (bundle % 4) * 9f
+            val lifePhase = ((age + bundle * 17.3f) % lifeCycle) / lifeCycle
+            val appear = smoothStep01(lifePhase / 0.20f)
+            val disappear = 1f - smoothStep01((lifePhase - 0.70f) / 0.30f)
+            val lifeOpacity = appear * disappear
+            if (lifeOpacity <= 0.01f) return@arcLoop
+
+            val direction = if (bundle % 2 == 0) 1f else -1f
+            val filamentOffset = (filament - 1) * 0.032f
+            val magneticRock = sin(age * 0.035f + bundle * 1.37f) * 0.012f
+            val startAngle = bundle * 2.399963f + filamentOffset + magneticRock
+            val span = (0.72f + (bundle % 4) * 0.085f + filamentOffset * 0.35f) * direction
+            val endAngle = startAngle + span
+            val middleAngle = startAngle + span * 0.5f
+            val anchorRadius = 0.84f + (bundle % 3) * 0.035f + filament * 0.012f
+            val startHeight = 0.20f + ((bundle * 2) % 4) * 0.065f + filament * 0.012f
+            val endHeight = 0.22f + ((bundle * 3 + 1) % 4) * 0.06f - filament * 0.008f
+            val targetDistance = 2.84f + (bundle % 4) * 0.075f + filament * 0.012f
+            val targetElevation = 0.53f + (bundle % 3) * 0.075f + filamentOffset * 0.18f
+            val targetRadius = cos(targetElevation.toDouble()).toFloat() * targetDistance
+            val targetHeight = sin(targetElevation.toDouble()).toFloat() * targetDistance
+            val endpointMidRadius = anchorRadius * cos((span * 0.5f).toDouble()).toFloat()
+            val apexRadius = targetRadius * 2f - endpointMidRadius
+            val apexHeight = targetHeight * 2f - (startHeight + endHeight) * 0.5f
+            val breathing = sin(age * (0.055f + (bundle % 3) * 0.006f) + bundle * 1.73f) * 0.035f
+
+            val start = center.add(
+                cos(startAngle.toDouble()) * anchorRadius,
+                startHeight.toDouble(),
+                sin(startAngle.toDouble()) * anchorRadius
+            )
+            val end = center.add(
+                cos(endAngle.toDouble()) * anchorRadius,
+                endHeight.toDouble(),
+                sin(endAngle.toDouble()) * anchorRadius
+            )
+            val control = center.add(
+                cos((middleAngle + breathing * 0.35f).toDouble()) * (apexRadius + breathing),
+                (apexHeight + breathing * 0.55f).toDouble(),
+                sin((middleAngle + breathing * 0.35f).toDouble()) * (apexRadius + breathing)
+            )
+            val tangent = Vec3(
+                -sin(middleAngle.toDouble()),
+                0.0,
+                cos(middleAngle.toDouble())
+            )
+            val radial = Vec3(
+                cos(middleAngle.toDouble()),
+                0.0,
+                sin(middleAngle.toDouble())
+            )
+            val pulse = (
+                0.72f +
+                    sin(age * (0.13f + (bundle % 4) * 0.011f) + bundle * 2.11f + filament * 0.54f) * 0.17f
+                ).coerceIn(0.42f, 0.92f)
+
+            var previous = coronaArcPoint(start, control, end, tangent, radial, age, arc, 0f)
+            repeat(CORONA_ARC_SEGMENTS) { segment ->
+                val t0 = segment.toFloat() / CORONA_ARC_SEGMENTS
+                val t1 = (segment + 1f) / CORONA_ARC_SEGMENTS
+                val current = coronaArcPoint(start, control, end, tangent, radial, age, arc, t1)
+                val envelope0 = sin(Mth.PI * t0).coerceAtLeast(0f)
+                val envelope1 = sin(Mth.PI * t1).coerceAtLeast(0f)
+                val widthBase = if (hotCore) 0.0065f + filament * 0.0008f else 0.043f + filament * 0.004f
+                val width0 = widthBase * (0.18f + kotlin.math.sqrt(envelope0) * 0.82f)
+                val width1 = widthBase * (0.18f + kotlin.math.sqrt(envelope1) * 0.82f)
+                val segmentEnvelope = sin(Mth.PI * ((t0 + t1) * 0.5f)).coerceAtLeast(0f)
+                val strandWave = (
+                    sin(
+                        (t0 + t1) * Mth.PI * (1.15f + (arc % 3) * 0.22f) +
+                            age * (0.10f + (bundle % 4) * 0.01f) +
+                            bundle * 1.67f + filament * 0.49f
+                    ) * 0.5f + 0.5f
+                    ).coerceIn(0f, 1f)
+                val strandVeil = 0.12f + strandWave * strandWave * 0.88f
+                val alphaBase = if (hotCore) 82f else 23f
+                val alpha = (
+                    alphaBase * opacity * lifeOpacity * pulse * strandVeil *
+                        (0.08f + segmentEnvelope * 0.92f)
+                    ).toInt().coerceIn(0, 255)
+                val green = if (hotCore) 158 + filament * 10 else 48 + filament * 7
+                val blue = if (hotCore) 38 + filament * 10 else 3
+                emitSoftRibbon(
+                    buffer,
+                    previous,
+                    current,
+                    camera,
+                    width0,
+                    width1,
+                    255,
+                    green,
+                    blue,
+                    alpha,
+                    t0,
+                    t1
+                )
+                previous = current
+            }
+        }
+    }
+
+    private fun coronaArcPoint(
+        start: Vec3,
+        control: Vec3,
+        end: Vec3,
+        tangent: Vec3,
+        radial: Vec3,
+        age: Float,
+        arc: Int,
+        t: Float
+    ): Vec3 {
+        val inverse = 1f - t
+        val curve = start.scale((inverse * inverse).toDouble())
+            .add(control.scale((2f * inverse * t).toDouble()))
+            .add(end.scale((t * t).toDouble()))
+        val anchorEnvelope = sin(Mth.PI * t).coerceAtLeast(0f)
+        val bundle = arc / CORONA_FILAMENTS_PER_BUNDLE
+        val filament = arc % CORONA_FILAMENTS_PER_BUNDLE
+        val primaryWave = sin(
+            t * Mth.PI * (3.1f + filament * 0.42f) +
+                age * (0.25f + (bundle % 4) * 0.018f) +
+                arc * 1.41f
+        ) * (0.013f + filament * 0.004f) * anchorEnvelope
+        val secondaryWave = sin(
+            t * Mth.PI * (5.6f + filament * 0.55f) -
+                age * (0.31f + (bundle % 3) * 0.021f) +
+                arc * 0.83f
+        ) * 0.008f * anchorEnvelope
+        val verticalWave = sin(
+            t * Mth.PI * 4.6f +
+                age * (0.27f + (bundle % 5) * 0.014f) +
+                arc * 2.03f
+        ) * 0.012f * anchorEnvelope
+        return curve
+            .add(tangent.scale(primaryWave.toDouble()))
+            .add(radial.scale(secondaryWave.toDouble()))
+            .add(0.0, verticalWave.toDouble(), 0.0)
+    }
+
+    private fun smoothStep01(value: Float): Float {
+        val t = value.coerceIn(0f, 1f)
+        return t * t * (3f - 2f * t)
+    }
+
     private fun renderEruptionProjectiles(
         projectiles: List<SolarEruptionProjectileEntity>,
         camera: Vec3,
@@ -913,6 +1119,57 @@ object SolarGrenadeWorldRenderer {
         BufferUploader.drawWithShader(mesh)
         modelView.popMatrix()
         RenderSystem.applyModelViewMatrix()
+    }
+
+    private fun drawArcBuffer(
+        mesh: com.mojang.blaze3d.vertex.MeshData?,
+        shader: ShaderInstance,
+        modelView: org.joml.Matrix4fStack,
+        worldPose: org.joml.Matrix4f
+    ) {
+        if (mesh == null) return
+        modelView.pushMatrix()
+        modelView.mul(worldPose)
+        RenderSystem.applyModelViewMatrix()
+        RenderSystem.setShader { shader }
+        BufferUploader.drawWithShader(mesh)
+        modelView.popMatrix()
+        RenderSystem.applyModelViewMatrix()
+    }
+
+    private fun emitSoftRibbon(
+        buffer: com.mojang.blaze3d.vertex.BufferBuilder,
+        from: Vec3,
+        to: Vec3,
+        camera: Vec3,
+        fromHalfWidth: Float,
+        toHalfWidth: Float,
+        red: Int,
+        green: Int,
+        blue: Int,
+        alpha: Int,
+        fromV: Float,
+        toV: Float
+    ) {
+        val direction = to.subtract(from)
+        val midpoint = from.add(to).scale(0.5)
+        val sideUnit = direction.cross(camera.subtract(midpoint)).let {
+            if (it.lengthSqr() > 1.0e-8) it.normalize() else Vec3(1.0, 0.0, 0.0)
+        }
+        val fromSide = sideUnit.scale(fromHalfWidth.toDouble())
+        val toSide = sideUnit.scale(toHalfWidth.toDouble())
+        val a = from.subtract(camera).add(fromSide)
+        val b = from.subtract(camera).subtract(fromSide)
+        val c = to.subtract(camera).subtract(toSide)
+        val d = to.subtract(camera).add(toSide)
+        buffer.addVertex(a.x.toFloat(), a.y.toFloat(), a.z.toFloat())
+            .setUv(0f, fromV).setColor(red, green, blue, alpha)
+        buffer.addVertex(b.x.toFloat(), b.y.toFloat(), b.z.toFloat())
+            .setUv(1f, fromV).setColor(red, green, blue, alpha)
+        buffer.addVertex(c.x.toFloat(), c.y.toFloat(), c.z.toFloat())
+            .setUv(1f, toV).setColor(red, green, blue, alpha)
+        buffer.addVertex(d.x.toFloat(), d.y.toFloat(), d.z.toFloat())
+            .setUv(0f, toV).setColor(red, green, blue, alpha)
     }
 
     private fun emitRibbon(

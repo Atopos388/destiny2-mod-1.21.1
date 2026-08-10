@@ -2,6 +2,7 @@ package atopos.destiny2.common.entity
 
 import atopos.destiny2.common.combat.DestinyExplosionRuntime
 import atopos.destiny2.common.effect.DestinyStatusRules
+import atopos.destiny2.common.effect.SolarDamageKind
 import atopos.destiny2.common.player.AbilitySlot
 import atopos.destiny2.common.player.DestinyAbilityDamageCarrier
 import net.minecraft.core.BlockPos
@@ -223,7 +224,9 @@ object SolarExplosionEffect {
                 target,
                 (scorchStacks * falloff).toInt().coerceAtLeast(1),
                 scorchDuration,
-                scorchSource
+                scorchSource,
+                SolarDamageKind.GRENADE,
+                sourceEntity.uuid
             )
         }
 

@@ -15,6 +15,14 @@ object DestinyWeaponSoundClient {
         "huandan" to ResourceLocation.fromNamespaceAndPath("destiny2-mod", "forgotten_name_reload"),
         "reload_close" to ResourceLocation.fromNamespaceAndPath("destiny2-mod", "forgotten_name_reload_close"),
         "reload_insert" to ResourceLocation.fromNamespaceAndPath("destiny2-mod", "forgotten_name_reload_insert"),
+        "the_deicide_reload_insert" to ResourceLocation.fromNamespaceAndPath("destiny2-mod", "the_deicide_reload_insert"),
+        "the_deicide_reload_pump" to ResourceLocation.fromNamespaceAndPath("destiny2-mod", "the_deicide_reload_pump"),
+        "the_deicide_reload_enter" to ResourceLocation.fromNamespaceAndPath("destiny2-mod", "the_deicide_reload_pump"),
+        "the_deicide_fire" to ResourceLocation.fromNamespaceAndPath("destiny2-mod", "the_deicide_fire"),
+        "the_deicide_cockback" to ResourceLocation.fromNamespaceAndPath("destiny2-mod", "the_deicide_cockback"),
+        "the_deicide_cockback_01" to ResourceLocation.fromNamespaceAndPath("destiny2-mod", "the_deicide_cockback"),
+        "the_deicide_cockforward" to ResourceLocation.fromNamespaceAndPath("destiny2-mod", "the_deicide_cockforward"),
+        "the_deicide_cockforward_01" to ResourceLocation.fromNamespaceAndPath("destiny2-mod", "the_deicide_cockforward"),
         "weapon_draw" to ResourceLocation.fromNamespaceAndPath("destiny2-mod", "forgotten_name_draw"),
         "inspect_mechanical" to ResourceLocation.fromNamespaceAndPath("destiny2-mod", "forgotten_name_inspect"),
         "jixie" to ResourceLocation.fromNamespaceAndPath("destiny2-mod", "forgotten_name_ready"),
@@ -61,13 +69,22 @@ object DestinyWeaponSoundClient {
             if (playedReloadEvents.putIfAbsent(reloadEvent, now) != null) return
             playedReloadEvents.entries.removeIf { now - it.value > EVENT_HISTORY_NANOS }
         } else {
+            val duplicateWindow = if (id == THE_DEICIDE_COCKBACK_ID || id == THE_DEICIDE_COCKFORWARD_ID) {
+                THE_DEICIDE_MECHANICAL_DUPLICATE_WINDOW_NANOS
+            } else {
+                DUPLICATE_WINDOW_NANOS
+            }
             val lastPlayed = lastPlayedAtNanos[id]
-            if (lastPlayed != null && now - lastPlayed < DUPLICATE_WINDOW_NANOS) return
+            if (lastPlayed != null && now - lastPlayed < duplicateWindow) return
             lastPlayedAtNanos[id] = now
         }
         val volume = when (id) {
             FORGOTTEN_NAME_INSPECT_ID -> 0.6f
             FORGOTTEN_NAME_RELOAD_INSERT_ID -> 0.7f
+            THE_DEICIDE_RELOAD_INSERT_ID,
+            THE_DEICIDE_RELOAD_PUMP_ID,
+            THE_DEICIDE_COCKBACK_ID,
+            THE_DEICIDE_COCKFORWARD_ID -> 0.75f
             FORGOTTEN_NAME_RELOAD_ID,
             FORGOTTEN_NAME_RELOAD_CLOSE_ID,
             FORGOTTEN_NAME_DRAW_ID,
@@ -105,6 +122,15 @@ object DestinyWeaponSoundClient {
         ResourceLocation.fromNamespaceAndPath("destiny2-mod", "forgotten_name_inspect")
     private val FORGOTTEN_NAME_READY_ID =
         ResourceLocation.fromNamespaceAndPath("destiny2-mod", "forgotten_name_ready")
+    private val THE_DEICIDE_RELOAD_INSERT_ID =
+        ResourceLocation.fromNamespaceAndPath("destiny2-mod", "the_deicide_reload_insert")
+    private val THE_DEICIDE_RELOAD_PUMP_ID =
+        ResourceLocation.fromNamespaceAndPath("destiny2-mod", "the_deicide_reload_pump")
+    private val THE_DEICIDE_COCKBACK_ID =
+        ResourceLocation.fromNamespaceAndPath("destiny2-mod", "the_deicide_cockback")
+    private val THE_DEICIDE_COCKFORWARD_ID =
+        ResourceLocation.fromNamespaceAndPath("destiny2-mod", "the_deicide_cockforward")
     private const val DUPLICATE_WINDOW_NANOS = 500_000_000L
+    private const val THE_DEICIDE_MECHANICAL_DUPLICATE_WINDOW_NANOS = 75_000_000L
     private const val EVENT_HISTORY_NANOS = 30_000_000_000L
 }

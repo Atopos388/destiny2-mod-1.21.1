@@ -2,6 +2,7 @@ package atopos.destiny2.mixin.client;
 
 import atopos.destiny2.client.weapon.DestinyWeaponAimClient;
 import atopos.destiny2.common.item.IzanagiBurdenItem;
+import atopos.destiny2.common.item.GenericGunPackItem;
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.GameRenderer;
@@ -25,7 +26,14 @@ public class IzanagiNoDistractionsMixin {
         Minecraft client = Minecraft.getInstance();
         if (
                 client.player != null &&
-                client.player.getMainHandItem().getItem() instanceof IzanagiBurdenItem &&
+                (
+                        client.player.getMainHandItem().getItem() instanceof IzanagiBurdenItem ||
+                        (
+                                client.player.getMainHandItem().getItem() instanceof GenericGunPackItem &&
+                                GenericGunPackItem.Companion.id(client.player.getMainHandItem())
+                                        .equals(GenericGunPackItem.Companion.getIZANAGI_ID())
+                        )
+                ) &&
                 DestinyWeaponAimClient.INSTANCE.progress(1.0f) >= 0.999f
         ) {
             return Math.round(original * 0.65f);

@@ -1,6 +1,9 @@
 package atopos.destiny2.mixin.client
 
 import atopos.destiny2.client.cinematic.CinematicCameraClient
+import atopos.destiny2.client.camera.VoidHunterSuperCameraClient
+import atopos.destiny2.client.camera.ThunderclapCameraClient
+import atopos.destiny2.client.combat.HunterMeleeFirstPersonClient
 import atopos.destiny2.client.weapon.DestinyWeaponAimClient
 import net.minecraft.client.Camera
 import net.minecraft.util.Mth
@@ -71,6 +74,14 @@ abstract class CameraMixin {
 
         // 检测视角变化 (第一人称 <-> 第三人称)
         if (detached != d2WasDetached) {
+            if (VoidHunterSuperCameraClient.shouldUseInstantPerspectiveChange() ||
+                ThunderclapCameraClient.shouldUseInstantPerspectiveChange()
+            ) {
+                d2IsTransitioning = false
+                d2WasDetached = detached
+                d2ApplyWeaponCamera(entity, detached, partialTick)
+                return
+            }
             d2IsTransitioning = true
             d2TransitionStart = System.currentTimeMillis()
             
@@ -128,7 +139,50 @@ abstract class CameraMixin {
             d2ApplyRoll(cinematic.roll)
             return
         }
-        if (detached || entity !== net.minecraft.client.Minecraft.getInstance().player) return
+        val thunderclap = ThunderclapCameraClient.currentPose(partialTick)
+        if (thunderclap != null) {
+            this.setPosition(thunderclap.position)
+            this.setRotation(thunderclap.yaw, thunderclap.pitch)
+            d2ApplyRoll(thunderclap.roll)
+            return
+        }
+        val localPlayer = net.minecraft.client.Minecraft.getInstance().player
+        if (entity === localPlayer && detached) {
+            val rightOffset = VoidHunterSuperCameraClient.rightOffsetBlocks()
+            if (rightOffset != 0.0) {
+                this.setPosition(
+                    this.position.add(
+                        -left.x * rightOffset,
+                        -left.y * rightOffset,
+                        -left.z * rightOffset
+                    )
+                )
+            }
+            return
+        }
+        if (detached || entity !== localPlayer) return
+
+        val hunterMeleeCamera = HunterMeleeFirstPersonClient.cameraTransform(partialTick)
+        if (hunterMeleeCamera != null) {
+            if (hunterMeleeCamera.pitch != 0.0f || hunterMeleeCamera.yaw != 0.0f) {
+                this.setRotation(
+                    this.yRot + hunterMeleeCamera.yaw,
+                    this.xRot + hunterMeleeCamera.pitch
+                )
+            }
+            d2ApplyRoll(hunterMeleeCamera.roll)
+            if (hunterMeleeCamera.positionPixels != Vec3.ZERO) {
+                val position = hunterMeleeCamera.positionPixels.scale(1.0 / 16.0)
+                val worldOffset = Vec3(
+                    (-left.x * position.x) + (up.x * position.y) + (forwards.x * position.z),
+                    (-left.y * position.x) + (up.y * position.y) + (forwards.y * position.z),
+                    (-left.z * position.x) + (up.z * position.y) + (forwards.z * position.z)
+                )
+                this.setPosition(this.position.add(worldOffset))
+            }
+            return
+        }
+
         val animation = DestinyWeaponAimClient.cameraTransform(partialTick)
         if (animation.pitch != 0.0f || animation.yaw != 0.0f) {
             this.setRotation(this.yRot + animation.yaw, this.xRot + animation.pitch)

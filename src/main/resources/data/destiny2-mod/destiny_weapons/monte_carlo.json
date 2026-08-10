@@ -1,0 +1,58 @@
+{
+  "ammo_type": "PRIMARY",
+  "damage": 4.0,
+  "head_shot": 1.5,
+  "magazine_size": 41,
+  "reload_ticks": 47,
+  "empty_reload_bonus_ticks": 15,
+  "reload_feed_fraction": 0.72,
+  "fire_mode": "AUTO",
+  "supported_fire_modes": ["AUTO"],
+  "rounds_per_minute": 600,
+  "bolt_ticks": 0,
+  "recoil": {
+    "pitch_min": 0.85,
+    "pitch_max": 1.15,
+    "yaw_min": -0.75,
+    "yaw_max": 0.75,
+    "yaw_pattern": [0.78, 1.0, 0.72, 0.28, -0.34, -0.82, -1.0, -0.7, -0.18, 0.46],
+    "kick_ms": 55,
+    "recover_ms": 210,
+    "aimed_multiplier": 0.95,
+    "stability": 55,
+    "recoil_direction": 80
+  },
+  "accuracy": {
+    "hip_base_degrees": 0.65,
+    "aimed_base_degrees": 0.08,
+    "moving_penalty_degrees": 0.18,
+    "airborne_penalty_degrees": 1.4,
+    "bloom_per_shot_degrees": 0.055,
+    "max_bloom_degrees": 0.5,
+    "settle_delay_ticks": 2,
+    "bloom_decay_per_tick": 0.045
+  },
+  "crosshair": {
+    "base_gap": 4.0,
+    "moving_penalty": 4.5,
+    "airborne_penalty": 8.0,
+    "shot_penalty": 2.0,
+    "shot_decay_per_tick": 0.7,
+    "hide_aim_progress": 0.9
+  },
+  "ballistics": {
+    "range": 96.0,
+    "entity_tolerance": 0.08,
+    "bullet_impact": true,
+    "speed": 8.0,
+    "gravity": 0.0,
+    "friction": 0.006,
+    "life_ticks": 40,
+    "pierce": 1,
+    "distance_damage": [
+      {"distance": 50.0, "damage": 4.0},
+      {"distance": 80.0, "damage": 3.2},
+      {"distance": 96.0, "damage": 2.4}
+    ]
+  }
+}

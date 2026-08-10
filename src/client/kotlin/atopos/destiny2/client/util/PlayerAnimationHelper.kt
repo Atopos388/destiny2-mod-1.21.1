@@ -2,7 +2,6 @@ package atopos.destiny2.client.util
 
 import atopos.destiny2.Destiny2MODClient
 import dev.kosmx.playerAnim.api.layered.IAnimation
-import dev.kosmx.playerAnim.api.layered.KeyframeAnimationPlayer
 import dev.kosmx.playerAnim.api.layered.ModifierLayer
 import dev.kosmx.playerAnim.api.layered.modifier.AbstractFadeModifier
 import dev.kosmx.playerAnim.core.data.KeyframeAnimation
@@ -75,13 +74,13 @@ object PlayerAnimationHelper {
             return false
         }
 
-        val animation: KeyframeAnimation? = PlayerAnimationRegistry.getAnimation(animationId)
-        if (animation == null) {
+        val playable = PlayerAnimationRegistry.getAnimation(animationId)
+        if (playable == null) {
             logger.warn("Animation file not found: {}", animationId)
             return false
         }
 
-        val playerAnimation = KeyframeAnimationPlayer(animation)
+        val playerAnimation = playable.playAnimation()
         pendingFadeOuts.remove(player)
         if (blendInTicks > 0) {
             animationLayer.replaceAnimationWithFade(
@@ -93,7 +92,8 @@ object PlayerAnimationHelper {
             animationLayer.setAnimation(playerAnimation)
         }
 
-        val durationMs = cameraResetDelayMs ?: (animation.endTick * 50).toLong()
+        val durationMs = cameraResetDelayMs
+            ?: ((playable as? KeyframeAnimation)?.endTick?.times(50L) ?: 0L)
         if (blendOutTicks > 0) {
             val fadeDurationMs = blendOutTicks * 50L
             pendingFadeOuts[player] = PendingFadeOut(
@@ -102,7 +102,7 @@ object PlayerAnimationHelper {
                 blendOutTicks
             )
         }
-        updateCameraForAnimation(player, animation, forceThirdPerson, durationMs)
+        updateCameraForAnimation(player, forceThirdPerson, durationMs)
         return true
     }
 
@@ -124,9 +124,8 @@ object PlayerAnimationHelper {
 
     private fun updateCameraForAnimation(
         player: AbstractClientPlayer,
-        animation: KeyframeAnimation,
         forceThirdPerson: Boolean,
-        cameraResetDelayMs: Long?
+        durationMs: Long
     ) {
         val client = Minecraft.getInstance()
         if (player != client.player || !forceThirdPerson) {
@@ -136,7 +135,6 @@ object PlayerAnimationHelper {
         if (client.options.cameraType.isFirstPerson) {
             client.options.cameraType = CameraType.THIRD_PERSON_BACK
         }
-        val durationMs = cameraResetDelayMs ?: (animation.endTick * 50).toLong()
         Destiny2MODClient.cameraResetTime = System.currentTimeMillis() + durationMs
         Destiny2MODClient.shouldResetToFirstPerson = true
     }

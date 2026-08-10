@@ -79,8 +79,14 @@ object GuardianPowerSystem {
         )
     }
 
-    fun forActivity(current: GuardianPowerSnapshot, recommended: Int): GuardianPowerSnapshot =
-        forActivity(current.current, current.highestAvailable, recommended)
+    fun forActivity(current: GuardianPowerSnapshot, recommended: Int): GuardianPowerSnapshot {
+        // MORTAL players deliberately use the zero-power sentinel and do not
+        // participate in power suppression. Recomputing that sentinel against
+        // an activity recommendation would otherwise turn all PvE output into
+        // 0 and inflate all incoming damage to the maximum penalty.
+        if (current.current <= 0) return current
+        return forActivity(current.current, current.highestAvailable, recommended)
+    }
 
     fun normalDropPower(player: ServerPlayer, random: Random = Random.Default): Int {
         val data = PlayerDestinyDataApi.get(player)

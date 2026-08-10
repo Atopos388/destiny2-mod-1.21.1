@@ -27,6 +27,8 @@ class CinematicSessionTracker {
 
     fun isActive(playerId: UUID): Boolean = playerId in active
 
+    fun owns(playerId: UUID, sessionId: UUID): Boolean = active[playerId]?.sessionId == sessionId
+
     fun clear(playerId: UUID) {
         active.remove(playerId)
     }

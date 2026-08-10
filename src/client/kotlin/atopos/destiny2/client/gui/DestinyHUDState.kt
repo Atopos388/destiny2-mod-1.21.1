@@ -3,12 +3,16 @@ package atopos.destiny2.client.gui
 import atopos.destiny2.common.network.DestinyNetworking
 
 object DestinyHUDState {
+    var classId = ""
+        private set
     var className = ""
         private set
     var subclassName = ""
         private set
     private val abilityNames = mutableMapOf<Int, String>()
     private val selectedAbilityIds = mutableMapOf<Int, String>()
+    var selectedMovementId = ""
+        private set
     var selectedAspectIds: List<String> = emptyList()
         private set
     var selectedFragmentIds: List<String> = emptyList()
@@ -39,6 +43,7 @@ object DestinyHUDState {
         private set
 
     fun update(payload: DestinyNetworking.SyncPlayerDataPayload) {
+        classId = payload.classId
         className = payload.className
         subclassName = payload.subclassName
         abilityNames[DestinyNetworking.ABILITY_GRENADE] = payload.grenadeName
@@ -49,6 +54,7 @@ object DestinyHUDState {
         selectedAbilityIds[DestinyNetworking.ABILITY_MELEE] = payload.meleeId
         selectedAbilityIds[DestinyNetworking.ABILITY_CLASS] = payload.classAbilityId
         selectedAbilityIds[DestinyNetworking.ABILITY_SUPER] = payload.superId
+        selectedMovementId = payload.movementId
         selectedAspectIds = readCsv(payload.aspectIds)
         selectedFragmentIds = readCsv(payload.fragmentIds)
     }

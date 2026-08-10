@@ -6,8 +6,12 @@ import atopos.destiny2.common.tacz.TaczEntityHitbox
 import atopos.destiny2.common.weapon.AmmoDropSystem
 import atopos.destiny2.common.weapon.DamageNumberRuntime
 import atopos.destiny2.common.weapon.DestinyAmmoType
+import atopos.destiny2.common.weapon.DestinyDamageElement
+import atopos.destiny2.common.weapon.DestinyElementalDamageCarrier
+import atopos.destiny2.common.weapon.DestinyWeaponDamageCarrier
 import atopos.destiny2.common.weapon.ForgottenNameExoticRules
 import atopos.destiny2.common.weapon.ForgottenNameExoticRuntime
+import atopos.destiny2.common.weapon.MonteCarloExoticRuntime
 import atopos.destiny2.common.weapon.WeaponCombatProfile
 import atopos.destiny2.common.weapon.WeaponDistanceDamage
 import net.fabricmc.fabric.api.networking.v1.PlayerLookup
@@ -16,6 +20,7 @@ import net.minecraft.core.particles.ParticleTypes
 import net.minecraft.network.syncher.SynchedEntityData
 import net.minecraft.network.syncher.EntityDataAccessor
 import net.minecraft.network.syncher.EntityDataSerializers
+import net.minecraft.resources.ResourceLocation
 import net.minecraft.server.level.ServerLevel
 import net.minecraft.server.level.ServerPlayer
 import net.minecraft.util.Mth
@@ -34,10 +39,14 @@ import kotlin.math.sqrt
  * TaCZ-style kinetic bullet: a real tracked entity with per-tick swept block/entity collision.
  * The implementation is adapted from TaCZ Refabricated's EntityKineticBullet (GPL-3.0).
  */
-class ForgottenNameBulletEntity : Projectile {
+class ForgottenNameBulletEntity : Projectile, DestinyWeaponDamageCarrier {
     private var damage = 10.0f
     private var precisionMultiplier = 1.7f
     private var ammoType = DestinyAmmoType.PRIMARY
+    override val destinyAmmoType: DestinyAmmoType
+        get() = ammoType
+    override var destinyDamageElement: DestinyDamageElement = DestinyDamageElement.KINETIC
+        private set
     private var gravity = 0.0f
     private var friction = 0.01f
     private var lifeTicks = 40
@@ -46,6 +55,7 @@ class ForgottenNameBulletEntity : Projectile {
     private var entityTolerance = 0.08
     private var showBulletImpact = true
     private var forgottenTraitsEnabled = true
+    private var sourceWeaponId: ResourceLocation? = null
     private var distanceDamage: List<WeaponDistanceDamage> = emptyList()
     private var startPosition = Vec3.ZERO
     private val hitEntityIds = HashSet<Int>()
@@ -57,14 +67,17 @@ class ForgottenNameBulletEntity : Projectile {
         owner: LivingEntity,
         profile: WeaponCombatProfile,
         direction: Vec3,
-        forgottenTraitsEnabled: Boolean = true
+        forgottenTraitsEnabled: Boolean = true,
+        sourceWeaponId: ResourceLocation? = null
     ) :
         super(DestinyEntities.FORGOTTEN_NAME_BULLET, level) {
         this.owner = owner
         this.forgottenTraitsEnabled = forgottenTraitsEnabled
+        this.sourceWeaponId = sourceWeaponId
         damage = profile.baseDamage
         precisionMultiplier = profile.precisionMultiplier
         ammoType = profile.ammoType
+        destinyDamageElement = profile.damageElement
         gravity = profile.ballistics.gravity.coerceAtLeast(0.0f)
         friction = profile.ballistics.friction.coerceIn(0.0f, 1.0f)
         lifeTicks = profile.ballistics.lifeTicks.coerceAtLeast(1)
@@ -194,6 +207,9 @@ class ForgottenNameBulletEntity : Projectile {
         }
 
         val killed = wasAlive && !target.isAlive
+        if (sourceWeaponId == MonteCarloExoticRuntime.ID) {
+            shooter?.let { MonteCarloExoticRuntime.onWeaponHit(it, killed) }
+        }
         val namelessTriggered = forgottenTraitsEnabled &&
             ForgottenNameExoticRules.shouldTriggerNameless(echoStacksBefore, precisionHit, killed)
         if (precisionHit) {

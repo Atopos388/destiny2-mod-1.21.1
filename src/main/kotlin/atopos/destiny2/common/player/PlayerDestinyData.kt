@@ -10,11 +10,13 @@ data class PlayerDestinyData(
     var stats: DestinyStats = DestinyStats.defaultFor(DestinyClassType.DEFAULT),
     var cooldowns: AbilityCooldowns = AbilityCooldowns(),
     var combatState: DestinyCombatState = DestinyCombatState(),
-    var subclassConfig: PlayerSubclassConfiguration = DestinySubclassConfigRegistry.defaultFor(DestinySubclassType.DEFAULT),
+    var subclassConfig: PlayerSubclassConfiguration = PlayerSubclassConfiguration(),
     var subclassDefaultsVersion: Int = CURRENT_SUBCLASS_DEFAULTS_VERSION,
     var classItem: ItemStack = ItemStack.EMPTY,
     var journeyStage: GuardianJourneyStage = GuardianJourneyStage.MORTAL,
-    var awakeningPresentationPending: Boolean = false
+    var awakeningPresentationPending: Boolean = false,
+    var unlockedClasses: MutableSet<DestinyClassType> = mutableSetOf(),
+    var unlockedSubclassOptions: MutableSet<String> = mutableSetOf()
 ) {
     fun setClass(destinyClass: DestinyClassType) {
         this.destinyClass = destinyClass
@@ -23,6 +25,7 @@ data class PlayerDestinyData(
         this.cooldowns = AbilityCooldowns()
         this.combatState.resetForLoadout()
         this.subclassConfig = DestinySubclassConfigRegistry.defaultFor(this.subclass)
+        restrictCurrentSubclassConfig()
     }
 
     fun setSubclass(subclass: DestinySubclassType): Boolean {
@@ -33,7 +36,22 @@ data class PlayerDestinyData(
         this.cooldowns = AbilityCooldowns()
         this.combatState.resetForLoadout()
         this.subclassConfig = DestinySubclassConfigRegistry.defaultFor(subclass)
+        restrictCurrentSubclassConfig()
         return true
+    }
+
+    fun isClassUnlocked(destinyClass: DestinyClassType): Boolean = destinyClass in unlockedClasses
+
+    fun isSubclassOptionUnlocked(optionId: String?): Boolean =
+        !optionId.isNullOrBlank() && optionId in unlockedSubclassOptions
+
+    fun restrictCurrentSubclassConfig() {
+        subclassConfig.selectedAbilities.entries.removeAll { (_, id) -> !isSubclassOptionUnlocked(id) }
+        if (!isSubclassOptionUnlocked(subclassConfig.selectedMovementId)) {
+            subclassConfig.selectedMovementId = ""
+        }
+        subclassConfig.selectedAspects.removeAll { !isSubclassOptionUnlocked(it) }
+        subclassConfig.selectedFragments.removeAll { !isSubclassOptionUnlocked(it) }
     }
 
     fun copy(): PlayerDestinyData {
@@ -47,7 +65,9 @@ data class PlayerDestinyData(
             subclassDefaultsVersion = subclassDefaultsVersion,
             classItem = classItem.copy(),
             journeyStage = journeyStage,
-            awakeningPresentationPending = awakeningPresentationPending
+            awakeningPresentationPending = awakeningPresentationPending,
+            unlockedClasses = unlockedClasses.toMutableSet(),
+            unlockedSubclassOptions = unlockedSubclassOptions.toMutableSet()
         )
     }
 
@@ -63,6 +83,8 @@ data class PlayerDestinyData(
         if (!classItem.isEmpty) tag.put("class_item", classItem.saveOptional(registries))
         tag.putString("journey_stage", journeyStage.id)
         tag.putBoolean("awakening_presentation_pending", awakeningPresentationPending)
+        tag.putString("unlocked_classes", unlockedClasses.joinToString(",") { it.id })
+        tag.putString("unlocked_subclass_options", unlockedSubclassOptions.joinToString(","))
         return tag
     }
 
@@ -122,19 +144,40 @@ data class PlayerDestinyData(
                 GuardianJourneyStage.MORTAL
             }
             val awakeningPresentationPending = tag.getBoolean("awakening_presentation_pending")
+            val hasProgressionData = tag.contains("unlocked_classes")
+            val unlockedClasses = readCsv(tag.getString("unlocked_classes"))
+                .mapNotNull(DestinyClassType::findById)
+                .toMutableSet()
+            val unlockedOptions = readCsv(tag.getString("unlocked_subclass_options")).toMutableSet()
+            if (!hasProgressionData && journeyStage != GuardianJourneyStage.MORTAL) {
+                // Preserve pre-progression development worlds that previously had unrestricted class access.
+                unlockedClasses.addAll(DestinyClassType.entries)
+                DestinySubclassType.entries.forEach { type ->
+                    val definition = DestinySubclassConfigRegistry.definitionFor(type)
+                    definition.abilityOptions.values.flatten().mapTo(unlockedOptions) { it.id }
+                    definition.movementOptions.mapTo(unlockedOptions) { it.id }
+                    definition.aspectOptions.mapTo(unlockedOptions) { it.id }
+                    definition.fragmentOptions.mapTo(unlockedOptions) { it.id }
+                }
+            }
 
             return PlayerDestinyData(
-                destinyClass,
-                subclass,
-                stats,
-                cooldowns,
-                combatState,
-                subclassConfig,
-                CURRENT_SUBCLASS_DEFAULTS_VERSION,
-                classItem,
-                journeyStage,
-                awakeningPresentationPending
-            )
+                destinyClass = destinyClass,
+                subclass = subclass,
+                stats = stats,
+                cooldowns = cooldowns,
+                combatState = combatState,
+                subclassConfig = subclassConfig,
+                subclassDefaultsVersion = CURRENT_SUBCLASS_DEFAULTS_VERSION,
+                classItem = classItem,
+                journeyStage = journeyStage,
+                awakeningPresentationPending = awakeningPresentationPending,
+                unlockedClasses = unlockedClasses,
+                unlockedSubclassOptions = unlockedOptions
+            ).also(PlayerDestinyData::restrictCurrentSubclassConfig)
         }
+
+        private fun readCsv(value: String): List<String> =
+            value.split(",").map(String::trim).filter(String::isNotBlank)
     }
 }

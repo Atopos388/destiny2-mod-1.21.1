@@ -1,6 +1,10 @@
 {
   "item.destiny2-mod.glimmer": "微光",
   "item.destiny2-mod.izanagis_burden": "伊邪那岐的重担",
+  "gun.destiny2-mod.izanagis_burden": "伊邪那岐的重担",
+  "gun.destiny2-mod.monte_carlo": "蒙特卡洛",
+  "gun.destiny2-mod.the_deicide": "弑神者",
+  "subtitles.destiny2-mod.the_deicide_fire": "弑神者开火",
   "item.destiny2-mod.ghost_core": "机灵核心",
   "journey.destiny2-mod.awakening.title": "守护者",
   "journey.destiny2-mod.awakening.subtitle": "睁开眼睛。光能正在回应你。",
@@ -63,6 +67,7 @@
   "key.destiny2-mod.melee_ability": "近战技能",
   "key.destiny2-mod.class_ability": "职业技能",
   "key.destiny2-mod.super_ability": "终极技能",
+  "key.destiny2-mod.icarus_dash": "伊卡洛斯突进",
   "key.destiny2-mod.hud_editor": "打开 HUD 编辑器",
   "key.destiny2-mod.ldlib_editor": "打开 LDLib UI 编辑器",
   "key.destiny2-mod.reload_weapon": "武器换弹",
@@ -88,7 +93,7 @@
   ,"navigation.destiny2-mod.objective.awakened.description": "保存机灵核心，并收集用于建立第一套装备网络的材料。"
   ,"navigation.destiny2-mod.fireteam": "火力战队"
   ,"navigation.destiny2-mod.weapon.empty": "未装备武器"
-  ,"navigation.destiny2-mod.footer": "轻按 TAB：保持导航   //   长按 TAB：打开导航总览   //   /destinynav edit：编辑模板"
+  ,"navigation.destiny2-mod.footer": "轻按 TAB：保持导航   //   长按 TAB：打开导航总览   //   /destinyui nav edit：编辑模板"
   ,"navigation.destiny2-mod.director.title": "导航总览"
   ,"navigation.destiny2-mod.director.overview": "总览"
   ,"navigation.destiny2-mod.director.objectives": "目标"
@@ -100,4 +105,49 @@
   ,"entity.destiny2-mod.fallen_captain": "堕落者 队长"
   ,"entity.destiny2-mod.fallen_captain_pellet": "堕落者霰弹"
   ,"item.destiny2-mod.fallen_captain_spawn_egg": "堕落者 队长刷怪蛋"
+  ,"entity.destiny2-mod.jiling": "机灵"
+  ,"item.destiny2-mod.jiling_spawn_egg": "机灵刷怪蛋"
+  ,"item.destiny2-mod.void_breach": "虚空裂口"
+  ,"item.destiny2-mod.firesprite": "焰灵"
+  ,"class.destiny2-mod.hunter": "猎人"
+  ,"class.destiny2-mod.titan": "泰坦"
+  ,"class.destiny2-mod.warlock": "术士"
+  ,"tooltip.destiny2-mod.class_item.type": "职业物品 · %s"
+  ,"tooltip.destiny2-mod.class_item.identity.hunter": "披风记录行迹，也承载选择。"
+  ,"tooltip.destiny2-mod.class_item.identity.titan": "印记以锻痕证明它的来路。"
+  ,"tooltip.destiny2-mod.class_item.identity.warlock": "臂环让材料中的能量保持稳定。"
+  ,"tooltip.destiny2-mod.class_item.unattuned": "使用：需要机灵核心完成光能共鸣"
+  ,"message.destiny2-mod.class_resonance.not_awakened": "你尚未被机灵唤醒，光能没有回应。"
+  ,"message.destiny2-mod.class_resonance.missing_ghost_core": "背包中需要机灵核心才能完成共鸣。"
+  ,"message.destiny2-mod.class_resonance.already_unlocked": "这条道路已经与你完成共鸣。"
+  ,"message.destiny2-mod.class_resonance.first_unlocked": "光能已回应。%s的道路向你开启。"
+  ,"message.destiny2-mod.class_resonance.additional_unlocked": "%s的共鸣已被记录，当前职业没有改变。"
+  ,"message.destiny2-mod.class_resonance.complete": "光能共鸣完成"
+  ,"message.destiny2-mod.class_switch.denied": "该职业尚未解锁，或你仍处于战斗状态。"
+  ,"message.destiny2-mod.subclass_option.locked": "这项能力尚未寻回。"
+  ,"dialogue.destiny2-mod.speaker.ghost": "机灵"
+  ,"dialogue.destiny2-mod.awakening.eyes_up": "守护者……守护者？抬头看看我！"
+  ,"dialogue.destiny2-mod.awakening.eyes_up.1": "守护者……"
+  ,"dialogue.destiny2-mod.awakening.eyes_up.2": "守护者？"
+  ,"dialogue.destiny2-mod.awakening.eyes_up.3": "抬头看看我！"
+  ,"dialogue.destiny2-mod.awakening.searched": "你不知道我找你找了多久。"
+  ,"dialogue.destiny2-mod.awakening.searched.1": "你不知道我找你找了多久。"
+  ,"dialogue.destiny2-mod.awakening.ghost": "我是一个机灵。事实上，我现在是你的机灵。而你……其实你已经死了很久了。所以，你将会看到许多费解的东西。"
+  ,"dialogue.destiny2-mod.awakening.ghost.1": "我是一个机灵。"
+  ,"dialogue.destiny2-mod.awakening.ghost.2": "事实上，我现在是你的机灵。"
+  ,"dialogue.destiny2-mod.awakening.ghost.3": "而你……"
+  ,"dialogue.destiny2-mod.awakening.ghost.4": "其实你已经死了很久了。"
+  ,"dialogue.destiny2-mod.awakening.ghost.5": "所以，你将会看到许多费解的东西。"
+  ,"dialogue.destiny2-mod.awakening.wait": "噢，等一下。"
+  ,"dialogue.destiny2-mod.awakening.wait.1": "噢，等一下。"
+  ,"dialogue.destiny2-mod.awakening.move": "别担心，我还在。我们得行动了，快。"
+  ,"dialogue.destiny2-mod.awakening.move.1": "别担心，我还在。"
+  ,"dialogue.destiny2-mod.awakening.move.2": "我们得行动了，快。"
+  ,"item.destiny2-mod.revive_ghost": "待复苏机灵"
+  ,"item.destiny2-mod.ionic_trace": "离子轨迹"
+  ,"effect.destiny2-mod.arc_blind": "电弧致盲"
+  ,"entity.destiny2-mod.arc_flashbang_grenade": "闪光手雷"
+  ,"entity.destiny2-mod.arc_lightning_grenade": "闪电手雷"
+  ,"entity.destiny2-mod.arc_storm_grenade": "风暴手雷"
+  ,"item.destiny2-mod.strykers_sure_hand": "史赛克的老练"
 }

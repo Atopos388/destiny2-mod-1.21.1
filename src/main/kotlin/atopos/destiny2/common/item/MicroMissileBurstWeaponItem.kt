@@ -109,7 +109,8 @@ open class MicroMissileBurstWeaponItem(properties: Properties) : Item(properties
             definition.baseDamage,
             definition.precisionMultiplier,
             magazineCapacity(stack, definition),
-            (definition.frame.reloadTicks * GearRolls.reloadTimeMultiplier(stack)).toInt().coerceAtLeast(1)
+            (definition.frame.reloadTicks * GearRolls.reloadTimeMultiplier(stack)).toInt().coerceAtLeast(1),
+            damageElement = definition.damageElement
         )
     }
 
@@ -196,7 +197,8 @@ open class MicroMissileBurstWeaponItem(properties: Properties) : Item(properties
             },
             definition.ammoType,
             (if (GearPerkEffect.PRECISION_BARREL in effects) 1.125f else 1.0f) *
-                (if (GearPerkEffect.IMPACT_CASING in effects) 1.10f else 1.0f)
+                (if (GearPerkEffect.IMPACT_CASING in effects) 1.10f else 1.0f),
+            definition.damageElement
         )
         val armorTargeting = (shooter as? ServerPlayer)?.let(ArmorModRuntime::projectileInaccuracyMultiplier) ?: 1.0f
         missile.shootFromRotation(shooter, shooter.xRot, shooter.yRot, 0.0f, speed, GearRolls.projectileInaccuracyMultiplier(stack) * armorTargeting)

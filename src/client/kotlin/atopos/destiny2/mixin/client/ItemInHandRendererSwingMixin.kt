@@ -1,6 +1,9 @@
 package atopos.destiny2.mixin.client
 
 import atopos.destiny2.client.action.IncineratorSnapFirstPersonClient
+import atopos.destiny2.client.combat.HunterMeleeFirstPersonClient
+import atopos.destiny2.client.renderer.GenericGunPackItemRenderer
+import atopos.destiny2.common.item.GenericGunPackItem
 import atopos.destiny2.common.weapon.TaczGunPackItem
 import com.mojang.blaze3d.vertex.PoseStack
 import net.minecraft.client.Minecraft
@@ -37,18 +40,51 @@ abstract class ItemInHandRendererSwingMixin {
         combinedLight: Int,
         ci: CallbackInfo
     ) {
-        if (!IncineratorSnapFirstPersonClient.isActive(player)) return
-
-        if (hand == InteractionHand.MAIN_HAND) {
-            IncineratorSnapFirstPersonClient.render(
-                player = player,
-                partialTick = partialTick,
-                poseStack = poseStack,
-                bufferSource = bufferSource,
-                combinedLight = combinedLight
-            )
+        if (IncineratorSnapFirstPersonClient.isActive(player)) {
+            if (hand == InteractionHand.MAIN_HAND) {
+                IncineratorSnapFirstPersonClient.render(
+                    player = player,
+                    partialTick = partialTick,
+                    poseStack = poseStack,
+                    bufferSource = bufferSource,
+                    combinedLight = combinedLight
+                )
+            }
+            ci.cancel()
+            return
         }
-        ci.cancel()
+
+        if (HunterMeleeFirstPersonClient.isActive(player)) {
+            if (hand == InteractionHand.MAIN_HAND) {
+                HunterMeleeFirstPersonClient.render(
+                    player = player,
+                    partialTick = partialTick,
+                    poseStack = poseStack,
+                    bufferSource = bufferSource,
+                    combinedLight = combinedLight
+                )
+            }
+            ci.cancel()
+            return
+        }
+
+        // TaCZ intercepts this method before vanilla applies its fixed hand,
+        // swing and equip transforms. The authored idle_view is the only
+        // first-person positioning source for a generic gun pack.
+        if (player.mainHandItem.item is GenericGunPackItem) {
+            if (hand == InteractionHand.MAIN_HAND) {
+                GenericGunPackItemRenderer.INSTANCE.renderFirstPerson(
+                    player = Minecraft.getInstance().player ?: return,
+                    stack = stack,
+                    mode = net.minecraft.world.item.ItemDisplayContext.FIRST_PERSON_RIGHT_HAND,
+                    matrices = poseStack,
+                    vertexConsumers = bufferSource,
+                    light = combinedLight,
+                    partialTick = partialTick
+                )
+            }
+            ci.cancel()
+        }
     }
 
     /**

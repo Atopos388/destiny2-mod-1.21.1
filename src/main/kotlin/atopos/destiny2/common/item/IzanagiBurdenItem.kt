@@ -11,6 +11,8 @@ import atopos.destiny2.common.weapon.DestinyRangedWeapon
 import atopos.destiny2.common.weapon.DestinyWeaponDataRegistry
 import atopos.destiny2.common.weapon.IzanagiBurdenRules
 import atopos.destiny2.common.weapon.TaczProjectileDirection
+import atopos.destiny2.common.weapon.WeaponAccuracyRuntime
+import atopos.destiny2.common.weapon.WeaponRecoilMath
 import atopos.destiny2.common.weapon.WeaponAimProfile
 import atopos.destiny2.common.weapon.WeaponAmmoState
 import atopos.destiny2.common.weapon.WeaponCombatProfile
@@ -19,6 +21,7 @@ import atopos.destiny2.common.weapon.WeaponFireModeState
 import atopos.destiny2.common.weapon.WeaponHudStatus
 import atopos.destiny2.common.weapon.WeaponHudSync
 import atopos.destiny2.common.weapon.WeaponThirdPersonAction
+import atopos.destiny2.common.weapon.WeaponAnimationTimingBridge
 import net.fabricmc.fabric.api.networking.v1.PlayerLookup
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking
 import net.minecraft.core.component.DataComponents
@@ -37,6 +40,8 @@ import software.bernie.geckolib.animation.AnimatableManager
 import software.bernie.geckolib.animation.AnimationController
 import software.bernie.geckolib.animation.PlayState
 import software.bernie.geckolib.animation.RawAnimation
+import software.bernie.geckolib.constant.DataTickets
+import java.util.concurrent.atomic.AtomicInteger
 
 class IzanagiBurdenItem(properties: Properties) : TaczGunPackWeaponItem(properties), DestinyRangedWeapon {
     override val gunPackId: ResourceLocation
@@ -71,23 +76,34 @@ class IzanagiBurdenItem(properties: Properties) : TaczGunPackWeaponItem(properti
                 }
             )
         )
-        val direction = TaczProjectileDirection.validated(shooter.lookAngle, clientDirection)
+        val direction = WeaponAccuracyRuntime.shotDirection(
+            shooter,
+            WEAPON_ID,
+            profile.accuracy,
+            TaczProjectileDirection.validated(shooter.lookAngle, clientDirection),
+            level.random
+        )
         val bullet = ForgottenNameBulletEntity(level, shooter, shotProfile, direction, forgottenTraitsEnabled = false)
         level.addFreshEntity(bullet)
         WeaponAmmoState.consumeRound(stack, profile.magazineSize, profile.boltTicks)
         clearHonedEdge(stack)
+        triggerAnim<IzanagiBurdenItem>(
+            shooter,
+            GeoItem.getOrAssignId(stack, level),
+            ACTION_CONTROLLER,
+            alternatingTrigger(SHOOT_AND_BOLT_TRIGGER_A, SHOOT_AND_BOLT_TRIGGER_B)
+        )
 
         val recoil = profile.recoil
-        val recoilPitch = recoil.pitchMin + level.random.nextFloat() * (recoil.pitchMax - recoil.pitchMin)
-        val recoilYaw = recoil.yawMin + level.random.nextFloat() * (recoil.yawMax - recoil.yawMin)
+        val recoilShot = WeaponRecoilMath.sampleShot(recoil, level.random.nextFloat(), level.random.nextFloat())
         val feedback = DestinyNetworking.WeaponShotFeedbackPayload(
             shooter.uuid,
             bullet.x, bullet.y, bullet.z,
             bullet.x, bullet.y, bullet.z,
             ForgottenNameBulletEntity.IMPACT_MISS, false, false, false,
             true,
-            recoilPitch, recoilYaw,
-            recoil.kickDurationMs, recoil.recoverDurationMs, recoil.aimedMultiplier,
+            recoilShot.pitch, recoilShot.yaw,
+            recoilShot.kickDurationMs, recoilShot.recoverDurationMs, recoil.aimedMultiplier,
             0.0,
             false
         )
@@ -147,7 +163,11 @@ class IzanagiBurdenItem(properties: Properties) : TaczGunPackWeaponItem(properti
         )
         if (started) {
             val animationId = GeoItem.getOrAssignId(stack, level)
-            val trigger = if (state.chamberEmpty) RELOAD_EMPTY else RELOAD_TACTICAL
+            val trigger = if (state.chamberEmpty) {
+                alternatingTrigger(RELOAD_EMPTY_TRIGGER_A, RELOAD_EMPTY_TRIGGER_B)
+            } else {
+                alternatingTrigger(RELOAD_TACTICAL_TRIGGER_A, RELOAD_TACTICAL_TRIGGER_B)
+            }
             triggerAnim<IzanagiBurdenItem>(player, animationId, ACTION_CONTROLLER, trigger)
             player.inventoryMenu.broadcastChanges()
             WeaponHudSync.syncNow(player)
@@ -165,9 +185,9 @@ class IzanagiBurdenItem(properties: Properties) : TaczGunPackWeaponItem(properti
             player,
             GeoItem.getOrAssignId(stack, level),
             ACTION_CONTROLLER,
-            INSPECT
+            alternatingTrigger(INSPECT_TRIGGER_A, INSPECT_TRIGGER_B)
         )
-        DestinyNetworking.broadcastWeaponThirdPersonAction(player, WeaponThirdPersonAction.INSPECT, 50)
+        DestinyNetworking.broadcastWeaponThirdPersonAction(player, WeaponThirdPersonAction.INSPECT, INSPECT_TICKS)
         return true
     }
 
@@ -193,7 +213,7 @@ class IzanagiBurdenItem(properties: Properties) : TaczGunPackWeaponItem(properti
                     player,
                     GeoItem.getOrAssignId(stack, level),
                     ACTION_CONTROLLER,
-                    RELOAD_EMPTY
+                    alternatingTrigger(HONED_EDGE_TRIGGER_A, HONED_EDGE_TRIGGER_B)
                 )
                 DestinyNetworking.broadcastWeaponThirdPersonAction(
                     player,
@@ -229,19 +249,79 @@ class IzanagiBurdenItem(properties: Properties) : TaczGunPackWeaponItem(properti
     }
 
     override fun registerControllers(controllers: AnimatableManager.ControllerRegistrar) {
+        val reloadTacticalA = RawAnimation.begin().thenPlay(RELOAD_TACTICAL)
+        val reloadTacticalB = RawAnimation.begin().thenPlay(RELOAD_TACTICAL).thenWait(0)
+        val reloadEmptyA = RawAnimation.begin().thenPlay(RELOAD_EMPTY)
+        val reloadEmptyB = RawAnimation.begin().thenPlay(RELOAD_EMPTY).thenWait(0)
+        val reloadHonedEdgeA = RawAnimation.begin().thenPlay(RELOAD_HONED_EDGE)
+        val reloadHonedEdgeB = RawAnimation.begin().thenPlay(RELOAD_HONED_EDGE).thenWait(0)
+        val inspectA = RawAnimation.begin().thenPlay(INSPECT)
+        val inspectB = RawAnimation.begin().thenPlay(INSPECT).thenWait(0)
+        val shootAndBoltA = RawAnimation.begin().thenPlay(SHOOT).thenPlay(BOLT)
+        val shootAndBoltB = RawAnimation.begin().thenPlay(SHOOT).thenPlay(BOLT).thenWait(0)
+        var lockedAction: RawAnimation? = null
+        var lockedActionSpeed = 1.0f
+
         controllers.add(
             AnimationController(this, BASE_CONTROLLER, 4) { state ->
                 state.setAndContinue(RawAnimation.begin().thenLoop(STATIC_IDLE))
             }
         )
         controllers.add(
-            AnimationController(this, ACTION_CONTROLLER, 0) { PlayState.CONTINUE }
+            AnimationController(this, ACTION_CONTROLLER, 0) { state ->
+                val controller = state.controller
+                val current = controller.currentRawAnimation
+                val authoredTicks = when {
+                    current === reloadTacticalA || current === reloadTacticalB -> RELOAD_TACTICAL_AUTHORED_TICKS
+                    current === reloadEmptyA || current === reloadEmptyB -> RELOAD_EMPTY_AUTHORED_TICKS
+                    current === reloadHonedEdgeA || current === reloadHonedEdgeB -> HONED_EDGE_LOAD_TICKS.toFloat()
+                    else -> 0.0f
+                }
+                if (controller.isPlayingTriggeredAnimation && authoredTicks > 0.0f) {
+                    if (current !== lockedAction) {
+                        val stack = state.getData(DataTickets.ITEMSTACK)
+                        val stackReloadTotal = if (stack != null && stack.item === this) {
+                            val profile = combatProfile(stack)
+                            WeaponAmmoState.read(stack, profile.magazineSize).reloadTotal
+                        } else {
+                            0
+                        }
+                        val authoritativeTicks = when {
+                            current === reloadHonedEdgeA || current === reloadHonedEdgeB -> HONED_EDGE_LOAD_TICKS
+                            else -> stackReloadTotal.takeIf { it > 0 }
+                                ?: WeaponAnimationTimingBridge.reloadTotalTicks(WEAPON_ID)
+                        }
+                        lockedActionSpeed = if (authoritativeTicks > 0) {
+                            authoredTicks / authoritativeTicks.toFloat()
+                        } else {
+                            1.0f
+                        }
+                        lockedAction = current
+                    }
+                    state.setControllerSpeed(lockedActionSpeed)
+                } else {
+                    lockedAction = null
+                    lockedActionSpeed = 1.0f
+                    state.setControllerSpeed(1.0f)
+                }
+                PlayState.CONTINUE
+            }
                 .receiveTriggeredAnimations()
-                .triggerableAnim(RELOAD_TACTICAL, RawAnimation.begin().thenPlayAndHold(RELOAD_TACTICAL))
-                .triggerableAnim(RELOAD_EMPTY, RawAnimation.begin().thenPlayAndHold(RELOAD_EMPTY))
-                .triggerableAnim(INSPECT, RawAnimation.begin().thenPlayAndHold(INSPECT))
+                .triggerableAnim(RELOAD_TACTICAL_TRIGGER_A, reloadTacticalA)
+                .triggerableAnim(RELOAD_TACTICAL_TRIGGER_B, reloadTacticalB)
+                .triggerableAnim(RELOAD_EMPTY_TRIGGER_A, reloadEmptyA)
+                .triggerableAnim(RELOAD_EMPTY_TRIGGER_B, reloadEmptyB)
+                .triggerableAnim(HONED_EDGE_TRIGGER_A, reloadHonedEdgeA)
+                .triggerableAnim(HONED_EDGE_TRIGGER_B, reloadHonedEdgeB)
+                .triggerableAnim(INSPECT_TRIGGER_A, inspectA)
+                .triggerableAnim(INSPECT_TRIGGER_B, inspectB)
+                .triggerableAnim(SHOOT_AND_BOLT_TRIGGER_A, shootAndBoltA)
+                .triggerableAnim(SHOOT_AND_BOLT_TRIGGER_B, shootAndBoltB)
         )
     }
+
+    private fun alternatingTrigger(first: String, second: String): String =
+        if ((actionTriggerSequence.getAndIncrement() and 1) == 0) first else second
 
     private fun reloadTicks(player: ServerPlayer, baseTicks: Int): Int {
         val stats = DestinyStatsResolver.resolve(player)
@@ -275,8 +355,25 @@ class IzanagiBurdenItem(properties: Properties) : TaczGunPackWeaponItem(properti
         private const val STATIC_IDLE = "static_idle"
         private const val RELOAD_TACTICAL = "reload_tactical"
         private const val RELOAD_EMPTY = "reload_empty"
+        private const val RELOAD_HONED_EDGE = "reload_honed_edge"
         private const val INSPECT = "inspect"
-        private const val HONED_EDGE_LOAD_TICKS = 60
+        private const val SHOOT = "shoot"
+        private const val BOLT = "bolt"
+        private const val RELOAD_TACTICAL_TRIGGER_A = "reload_tactical_a"
+        private const val RELOAD_TACTICAL_TRIGGER_B = "reload_tactical_b"
+        private const val RELOAD_EMPTY_TRIGGER_A = "reload_empty_a"
+        private const val RELOAD_EMPTY_TRIGGER_B = "reload_empty_b"
+        private const val HONED_EDGE_TRIGGER_A = "reload_honed_edge_a"
+        private const val HONED_EDGE_TRIGGER_B = "reload_honed_edge_b"
+        private const val INSPECT_TRIGGER_A = "inspect_a"
+        private const val INSPECT_TRIGGER_B = "inspect_b"
+        private const val SHOOT_AND_BOLT_TRIGGER_A = "shoot_and_bolt_a"
+        private const val SHOOT_AND_BOLT_TRIGGER_B = "shoot_and_bolt_b"
+        private const val HONED_EDGE_LOAD_TICKS = 48
+        private const val INSPECT_TICKS = 88
+        private const val RELOAD_TACTICAL_AUTHORED_TICKS = 51.666f
+        private const val RELOAD_EMPTY_AUTHORED_TICKS = 61.666f
+        private val actionTriggerSequence = AtomicInteger()
 
         private fun fireCooldownTicks(roundsPerMinute: Int): Int =
             (1200.0 / roundsPerMinute.coerceAtLeast(1)).toInt().coerceAtLeast(1)
@@ -286,18 +383,19 @@ class IzanagiBurdenItem(properties: Properties) : TaczGunPackWeaponItem(properti
             baseDamage = IzanagiBurdenRules.BASE_DAMAGE,
             precisionMultiplier = IzanagiBurdenRules.PRECISION_MULTIPLIER,
             magazineSize = IzanagiBurdenRules.MAGAZINE_SIZE,
-            reloadTicks = 64,
+            reloadTicks = 52,
             roundsPerMinute = 90,
-            boltTicks = 10
+            boltTicks = 13
         )
         private val AIM_PROFILE = WeaponAimProfile(
-            aimTimeSeconds = 0.35f,
-            zoom = 2.0f,
+            aimTimeSeconds = 0.22f,
+            zoom = 4.0f,
             modelOffsetX = -0.10,
             modelOffsetY = 0.08,
             modelOffsetZ = -0.24,
             modelRotationX = -1.0f,
-            aimedCameraAnimationScale = 0.65f
+            aimedCameraAnimationScale = 0.65f,
+            scopeOverlay = true
         )
     }
 }

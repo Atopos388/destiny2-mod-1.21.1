@@ -15,6 +15,7 @@ object DestinyEffects {
 
     val AMPLIFIED_RAW = AmplifiedStatusEffect()
     val SPEED_BOOSTER_RAW = SpeedBoosterStatusEffect()
+    val ARC_BLIND_RAW = ArcBlindStatusEffect()
 
     val VOID_INVISIBILITY_RAW = VoidInvisibilityEffect()
     val DEVOUR_RAW = DevourEffect()
@@ -29,6 +30,7 @@ object DestinyEffects {
 
     lateinit var AMPLIFIED: Holder<MobEffect>
     lateinit var SPEED_BOOSTER: Holder<MobEffect>
+    lateinit var ARC_BLIND: Holder<MobEffect>
 
     lateinit var VOID_INVISIBILITY: Holder<MobEffect>
     lateinit var DEVOUR: Holder<MobEffect>
@@ -44,6 +46,7 @@ object DestinyEffects {
 
         AMPLIFIED = registerEffect("amplified", AMPLIFIED_RAW)
         SPEED_BOOSTER = registerEffect("speed_booster", SPEED_BOOSTER_RAW)
+        ARC_BLIND = registerEffect("arc_blind", ARC_BLIND_RAW)
 
         VOID_INVISIBILITY = registerEffect("void_invisibility", VOID_INVISIBILITY_RAW)
         DEVOUR = registerEffect("devour", DEVOUR_RAW)

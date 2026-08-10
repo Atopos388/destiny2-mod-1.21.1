@@ -2,6 +2,7 @@ package atopos.destiny2.client.weapon
 
 import atopos.destiny2.common.weapon.TaczWeaponAnimationBridge
 import atopos.destiny2.common.weapon.TaczWeaponAnimationContract
+import com.google.gson.JsonElement
 import com.google.gson.JsonParser
 import com.mojang.brigadier.Command
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager.literal
@@ -25,7 +26,8 @@ object TaczWeaponAnimationResources : SimpleSynchronousResourceReloadListener {
         val weaponId: ResourceLocation,
         val animationResource: ResourceLocation,
         val modelResource: ResourceLocation,
-        val usesStandardPositioning: Boolean
+        val usesStandardPositioning: Boolean,
+        val animationBoneAliases: Map<String, String>
     )
 
     data class Report(
@@ -33,10 +35,17 @@ object TaczWeaponAnimationResources : SimpleSynchronousResourceReloadListener {
         val animations: Set<String>,
         val bones: Set<String>,
         val placeholders: Set<String>,
+        val invalidKeyframes: Set<String>,
+        val unmappedAnimationBones: Set<String>,
         val loadErrors: List<String>
     ) {
         val missingEssentialAnimations: Set<String>
-            get() = TaczWeaponAnimationContract.essentialAnimations - animations
+            get() {
+                val available = animations.mapTo(hashSetOf()) { it.lowercase() }
+                return TaczWeaponAnimationContract.essentialAnimations.filterTo(linkedSetOf()) {
+                    it.lowercase() !in available
+                }
+            }
         val missingEssentialBones: Set<String>
             get() = requiredBones - bones
         private val requiredBones: Set<String>
@@ -53,7 +62,8 @@ object TaczWeaponAnimationResources : SimpleSynchronousResourceReloadListener {
             get() = TaczWeaponAnimationContract.workflowBones - bones
         val ready: Boolean
             get() = loadErrors.isEmpty() && missingEssentialAnimations.isEmpty() &&
-                missingEssentialBones.isEmpty() && placeholders.isEmpty()
+                missingEssentialBones.isEmpty() && placeholders.isEmpty() &&
+                invalidKeyframes.isEmpty() && unmappedAnimationBones.isEmpty()
 
         fun summary(): String = buildString {
             append(specification.weaponId).append(": ")
@@ -66,6 +76,14 @@ object TaczWeaponAnimationResources : SimpleSynchronousResourceReloadListener {
                 append("缺少必需动画=").append(missingEssentialAnimations.joinToString(", ")).append("; ")
             }
             if (placeholders.isNotEmpty()) append("占位动画=").append(placeholders.joinToString(", ")).append("; ")
+            if (invalidKeyframes.isNotEmpty()) {
+                append("invalid keyframes=").append(invalidKeyframes.joinToString(", ")).append("; ")
+            }
+            if (unmappedAnimationBones.isNotEmpty()) {
+                append("unmapped animation bones=")
+                    .append(unmappedAnimationBones.joinToString(", "))
+                    .append("; ")
+            }
             if (missingEssentialBones.isNotEmpty()) {
                 append("缺少必需骨骼=").append(missingEssentialBones.joinToString(", ")).append("; ")
             }
@@ -81,17 +99,20 @@ object TaczWeaponAnimationResources : SimpleSynchronousResourceReloadListener {
         ResourceManagerHelper.get(PackType.CLIENT_RESOURCES).registerReloadListener(this)
         ClientCommandRegistrationCallback.EVENT.register { dispatcher, _ ->
             dispatcher.register(
-                literal("destinyanimation")
+                literal("destinyui")
                     .then(
-                        literal("check").executes { context ->
-                            val current = reports.values.sortedBy { it.specification.weaponId.toString() }
-                            if (current.isEmpty()) {
-                                context.source.sendFeedback(Component.literal("尚未加载武器动画资源"))
-                            } else {
-                                current.forEach { context.source.sendFeedback(Component.literal(it.summary())) }
-                            }
-                            Command.SINGLE_SUCCESS
-                        }
+                        literal("animation")
+                            .then(
+                                literal("check").executes { context ->
+                                    val current = reports.values.sortedBy { it.specification.weaponId.toString() }
+                                    if (current.isEmpty()) {
+                                        context.source.sendFeedback(Component.literal("尚未加载武器动画资源"))
+                                    } else {
+                                        current.forEach { context.source.sendFeedback(Component.literal(it.summary())) }
+                                    }
+                                    Command.SINGLE_SUCCESS
+                                }
+                            )
                     )
             )
         }
@@ -102,7 +123,13 @@ object TaczWeaponAnimationResources : SimpleSynchronousResourceReloadListener {
 
     override fun onResourceManagerReload(manager: ResourceManager) {
         val specifications = TaczGunPackResources.definitions().map {
-            Specification(it.id, it.animation, it.model, it.usesStandardPositioning)
+            Specification(
+                it.id,
+                it.animation,
+                it.model,
+                it.usesStandardPositioning,
+                it.animationBoneAliases
+            )
         }
         val loaded = specifications.associate { it.weaponId to audit(manager, it) }
         reports.clear()
@@ -119,21 +146,45 @@ object TaczWeaponAnimationResources : SimpleSynchronousResourceReloadListener {
         val animations = linkedSetOf<String>()
         val placeholders = linkedSetOf<String>()
         val bones = linkedSetOf<String>()
+        val invalidKeyframes = linkedSetOf<String>()
+        val animationBones = linkedSetOf<String>()
 
         runCatching {
-            val resource = manager.getResource(spec.animationResource).orElseThrow()
-            val root = resource.openAsReader().use(JsonParser::parseReader).asJsonObject
+            val bytes = TaczGunPackResources.resourceBytes(spec.animationResource)
+                ?: error("missing ${spec.animationResource}")
+            val root = bytes.inputStream().reader(Charsets.UTF_8)
+                .use(JsonParser::parseReader).asJsonObject
             root.getAsJsonObject("animations")?.entrySet()?.forEach { (name, value) ->
                 animations += name
                 if (value.isJsonObject && value.asJsonObject.get("destiny2_placeholder")?.asBoolean == true) {
                     placeholders += name
                 }
+                if (spec.usesStandardPositioning) {
+                    value.asJsonObject.getAsJsonObject("bones")?.entrySet()?.forEach { (boneName, boneValue) ->
+                        animationBones += spec.animationBoneAliases[boneName] ?: boneName
+                        if (!boneValue.isJsonObject) {
+                            invalidKeyframes += "$name/$boneName"
+                        } else {
+                            boneValue.asJsonObject.entrySet()
+                                .filter { (channelName, _) ->
+                                    channelName == "position" ||
+                                        channelName == "rotation" ||
+                                        channelName == "scale"
+                                }
+                                .forEach { (channelName, channelValue) ->
+                                    validateChannel(name, boneName, channelName, channelValue, invalidKeyframes)
+                                }
+                        }
+                    }
+                }
             }
         }.onFailure { errors += "动画文件 ${spec.animationResource}: ${it.message}" }
 
         runCatching {
-            val resource = manager.getResource(spec.modelResource).orElseThrow()
-            val root = resource.openAsReader().use(JsonParser::parseReader).asJsonObject
+            val bytes = TaczGunPackResources.resourceBytes(spec.modelResource)
+                ?: error("missing ${spec.modelResource}")
+            val root = bytes.inputStream().reader(Charsets.UTF_8)
+                .use(JsonParser::parseReader).asJsonObject
             root.getAsJsonArray("minecraft:geometry")?.forEach { geometry ->
                 geometry.asJsonObject.getAsJsonArray("bones")?.forEach { bone ->
                     bone.asJsonObject.get("name")?.asString?.let(bones::add)
@@ -141,7 +192,71 @@ object TaczWeaponAnimationResources : SimpleSynchronousResourceReloadListener {
             }
         }.onFailure { errors += "模型文件 ${spec.modelResource}: ${it.message}" }
 
-        return Report(spec, animations, bones, placeholders, errors)
+        val unmappedAnimationBones = animationBones.filterTo(linkedSetOf()) { it !in bones }
+        return Report(
+            spec,
+            animations,
+            bones,
+            placeholders,
+            invalidKeyframes,
+            unmappedAnimationBones,
+            errors
+        )
+    }
+
+    private fun validateChannel(
+        animationName: String,
+        boneName: String,
+        channelName: String,
+        channel: JsonElement,
+        invalid: MutableSet<String>
+    ) {
+        val prefix = "$animationName/$boneName/$channelName"
+        when {
+            channel.isJsonPrimitive -> {
+                if (!channel.asJsonPrimitive.isNumber) invalid += prefix
+            }
+            channel.isJsonArray -> {
+                if (!channel.isVectorLike()) invalid += prefix
+            }
+            channel.isJsonObject -> {
+                val vector = channel.asJsonObject.get("vector")
+                if (vector != null) {
+                    if (!vector.isVectorLike()) invalid += prefix
+                } else {
+                    channel.asJsonObject.entrySet().forEach { (time, frame) ->
+                        if (time.toFloatOrNull() == null || !frame.isValidKeyframe()) {
+                            invalid += "$prefix@$time"
+                        }
+                    }
+                }
+            }
+            else -> invalid += prefix
+        }
+    }
+
+    private fun JsonElement.isValidKeyframe(): Boolean = when {
+        isJsonArray -> isVectorLike()
+        isJsonObject -> {
+            val frame = asJsonObject
+            val pre = frame.get("pre")
+            val post = frame.get("post")
+            val vector = frame.get("vector")
+            (pre?.isVectorLike() == true || post?.isVectorLike() == true || vector?.isVectorLike() == true) &&
+                (pre == null || pre.isVectorLike()) &&
+                (post == null || post.isVectorLike()) &&
+                (vector == null || vector.isVectorLike())
+        }
+        else -> false
+    }
+
+    private fun JsonElement.isVectorLike(): Boolean = when {
+        isJsonArray -> asJsonArray.size() >= 3 &&
+            (0..2).all { index ->
+                asJsonArray[index].isJsonPrimitive && asJsonArray[index].asJsonPrimitive.isNumber
+            }
+        isJsonObject -> asJsonObject.get("vector")?.isVectorLike() == true
+        else -> false
     }
 
     private fun resolveAnimation(weaponId: ResourceLocation, requested: String, fallback: String): String {

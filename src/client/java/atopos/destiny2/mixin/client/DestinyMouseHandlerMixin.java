@@ -2,6 +2,7 @@
 package atopos.destiny2.mixin.client;
 
 import atopos.destiny2.client.cinematic.CinematicCameraClient;
+import atopos.destiny2.client.camera.ThunderclapCameraClient;
 import atopos.destiny2.client.tacz.TaczMath;
 import atopos.destiny2.client.weapon.DestinyWeaponAimClient;
 import atopos.destiny2.common.weapon.WeaponAimProfile;
@@ -31,7 +32,7 @@ public class DestinyMouseHandlerMixin {
             double pitch,
             Operation<Void> original
     ) {
-        if (CinematicCameraClient.INSTANCE.isActive()) {
+        if (CinematicCameraClient.INSTANCE.isActive() || ThunderclapCameraClient.INSTANCE.isViewLocked()) {
             return;
         }
         DestinyWeaponAimClient aim = DestinyWeaponAimClient.INSTANCE;

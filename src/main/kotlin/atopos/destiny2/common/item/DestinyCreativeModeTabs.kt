@@ -11,6 +11,7 @@ import net.minecraft.resources.ResourceKey
 import net.minecraft.resources.ResourceLocation
 import net.minecraft.world.item.CreativeModeTab
 import net.minecraft.world.item.ItemStack
+import atopos.destiny2.common.weapon.DestinyWeaponDataRegistry
 
 object DestinyCreativeModeTabs {
     val DESTINY_TAB_KEY: ResourceKey<CreativeModeTab> = ResourceKey.create(
@@ -31,6 +32,13 @@ object DestinyCreativeModeTabs {
         ItemGroupEvents.modifyEntriesEvent(DESTINY_TAB_KEY).register { content ->
             DestinyBlocks.creativeTabItems().forEach(content::accept)
             DestinyItems.creativeTabItems().forEach(content::accept)
+            DestinyWeaponDataRegistry.ids()
+                .filterNot { it == LEGACY_FORGOTTEN_NAME }
+                .map(GenericGunPackItem::stack)
+                .forEach(content::accept)
         }
     }
+
+    private val LEGACY_FORGOTTEN_NAME =
+        ResourceLocation.fromNamespaceAndPath("destiny2-mod", "forgotten_name")
 }

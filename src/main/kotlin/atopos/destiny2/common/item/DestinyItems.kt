@@ -38,6 +38,18 @@ object DestinyItems {
     /** World pickup consumed directly by ArmorModRuntime; it never enters normal inventory. */
     val ORB_OF_POWER = registerSimple("orb_of_power", Item.Properties().stacksTo(1).rarity(Rarity.RARE))
 
+    /** Void subclass pickup; grants class-ability energy and is consumed on contact. */
+    val VOID_BREACH = registerSimple("void_breach", Item.Properties().stacksTo(1).rarity(Rarity.RARE))
+
+    /** Solar subclass pickup; grants grenade energy and is consumed on contact. */
+    val FIRESPRITE = registerSimple("firesprite", Item.Properties().stacksTo(1).rarity(Rarity.RARE).fireResistant())
+
+    /** Temporary world marker used by the server-owned ally revive flow. */
+    val REVIVE_GHOST = registerSimple("revive_ghost", Item.Properties().stacksTo(1).rarity(Rarity.RARE).fireResistant())
+
+    /** Arc subclass pickup that homes to its owner and grants ability/Bolt Charge energy. */
+    val IONIC_TRACE = registerSimple("ionic_trace", Item.Properties().stacksTo(1).rarity(Rarity.RARE).fireResistant())
+
     @Deprecated("Use HEAVY_AMMO; retained for old worlds and item ids")
     val PERFECT_RETROGRADE_AMMO = registerSimple("perfect_retrograde_ammo", Item.Properties().stacksTo(64).rarity(Rarity.UNCOMMON))
 
@@ -56,6 +68,21 @@ object DestinyItems {
         IzanagiBurdenItem(Item.Properties().stacksTo(1).rarity(Rarity.EPIC))
     )
 
+    /**
+     * TaCZ-style shared registry item. The selected gun definition is stored
+     * on each stack, so future packs do not require another item registration.
+     */
+    val GENERIC_GUN = register(
+        "gun",
+        GenericGunPackItem(Item.Properties().stacksTo(1).rarity(Rarity.EPIC))
+    )
+
+    /** Legendary heavy sword: Stryker's Sure-Hand. */
+    val STRYKERS_SURE_HAND = register(
+        "strykers_sure_hand",
+        StrykersSureHandItem(Item.Properties().stacksTo(1).rarity(Rarity.RARE).fireResistant())
+    )
+
     val MICRO_MISSILE_TEST = register(
         "micro_missile_test",
         MicroMissileBurstWeaponItem(Item.Properties().stacksTo(1).rarity(Rarity.RARE))
@@ -67,6 +94,16 @@ object DestinyItems {
             DestinyEntities.FALLEN_CAPTAIN,
             0x182431,
             0x77C9E8,
+            Item.Properties()
+        )
+    )
+
+    val JILING_SPAWN_EGG = register(
+        "jiling_spawn_egg",
+        SpawnEggItem(
+            DestinyEntities.JILING,
+            0x25282D,
+            0x57DDF4,
             Item.Properties()
         )
     )
@@ -103,17 +140,17 @@ object DestinyItems {
 
     val HUNTER_CLOAK = register(
         "hunter_cloak",
-        DestinyClassItem(DestinyClassType.HUNTER, "猎人披风", Item.Properties().stacksTo(1).rarity(Rarity.RARE))
+        DestinyClassItem(DestinyClassType.HUNTER, Item.Properties().stacksTo(1).rarity(Rarity.RARE))
     )
 
     val WARLOCK_BOND = register(
         "warlock_bond",
-        DestinyClassItem(DestinyClassType.WARLOCK, "术士臂环", Item.Properties().stacksTo(1).rarity(Rarity.RARE))
+        DestinyClassItem(DestinyClassType.WARLOCK, Item.Properties().stacksTo(1).rarity(Rarity.RARE))
     )
 
     val TITAN_MARK = register(
         "titan_mark",
-        DestinyClassItem(DestinyClassType.TITAN, "泰坦印记", Item.Properties().stacksTo(1).rarity(Rarity.RARE))
+        DestinyClassItem(DestinyClassType.TITAN, Item.Properties().stacksTo(1).rarity(Rarity.RARE))
     )
 
     fun register() {
@@ -124,13 +161,15 @@ object DestinyItems {
         return buildList {
             add(GHOST_CORE)
             add(FORGOTTEN_NAME)
-            add(IZANAGIS_BURDEN)
             add(PERFECT_RETROGRADE)
+            add(STRYKERS_SURE_HAND)
             add(MICRO_MISSILE_TEST)
             add(FALLEN_CAPTAIN_SPAWN_EGG)
+            add(JILING_SPAWN_EGG)
             add(PRIMARY_AMMO)
             add(SPECIAL_AMMO)
             add(HEAVY_AMMO)
+            add(VOID_BREACH)
             add(GLIMMER)
             add(STRANGE_COIN)
             add(RIGID_SYNTHCORD)

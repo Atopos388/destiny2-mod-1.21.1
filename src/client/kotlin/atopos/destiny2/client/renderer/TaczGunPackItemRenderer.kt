@@ -31,7 +31,7 @@ class TaczGunPackItemRenderer :
     GeoItemRenderer<TaczGunPackWeaponItem>(TaczGunPackModel()),
     BuiltinItemRendererRegistry.DynamicItemRenderer {
 
-    private fun isFirstPerson(): Boolean =
+    internal fun isFirstPerson(): Boolean =
         renderPerspective == ItemDisplayContext.FIRST_PERSON_RIGHT_HAND ||
             renderPerspective == ItemDisplayContext.FIRST_PERSON_LEFT_HAND
 
@@ -108,7 +108,7 @@ class TaczGunPackItemRenderer :
             poseStack.popPose()
         }
 
-        if (isFirstPerson() && bone.name in definition?.skinBones.orEmpty()) {
+        if (isFirstPerson() && !isReRender && bone.name in definition?.skinBones.orEmpty()) {
             val player = Minecraft.getInstance().player ?: return
             val armType = RenderType.entityTranslucent(player.skin.texture())
             super.renderRecursively(
@@ -144,11 +144,17 @@ class TaczGunPackItemRenderer :
 
     private fun publishRig(definition: TaczGunPackResources.GunPackDefinition?) {
         geoModel.getBone(TaczGunPackResources.CAMERA).ifPresent(DestinyWeaponAimClient::publishCameraBone)
-        if (definition?.usesStandardPositioning == true) {
-            // TaCZ view matrices are authored for its own Bedrock renderer.
-            // Applying them here double-counts the render origin and moves the
-            // weapon vertically in GeckoLib.
-            DestinyWeaponAimClient.clearPositioningViews()
+        if (
+            definition?.usesStandardPositioning == true &&
+            definition.applyGeckoPositioning
+        ) {
+            val idle = definition.matrix(TaczGunPackResources.IDLE_VIEW)
+            val iron = definition.matrix(TaczGunPackResources.IRON_VIEW)
+            if (idle != null && iron != null) {
+                DestinyWeaponAimClient.publishPositioningViews(idle, iron)
+            } else {
+                DestinyWeaponAimClient.clearPositioningViews()
+            }
         } else {
             DestinyWeaponAimClient.clearPositioningViews()
             geoModel.getBone(TaczGunPackResources.CONSTRAINT)

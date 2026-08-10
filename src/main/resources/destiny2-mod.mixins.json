@@ -4,6 +4,7 @@
 	"compatibilityLevel": "JAVA_21",
 	"mixins": [
 		"MixinLivingEntity",
+		"MixinMobAwakeningTarget",
 		"MixinPlayer",
 		"MixinProjectile",
 		"MixinServerPlayerDestinyData",

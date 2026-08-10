@@ -635,17 +635,37 @@ object DestinyAspectScreen {
         }
 
         button(ui, "ability_slot_3")?.let { target ->
+            var renderedOptionId: String? = "<uninitialized>"
             target.setOnClick {
                 playButtonClickAnimation(target)
                 tray.toggle(
                     key = "ability:movement",
                     titleText = "移动技能选项",
-                    options = emptyList(),
+                    options = definition.movementOptions,
                     anchor = target,
                     widthPercent = 23.54f,
-                    selected = { false },
-                    emptyText = "移动技能系统尚未接入。"
-                ) { }
+                    selected = { option -> DestinyHUDState.selectedMovementId == option.id },
+                    emptyText = "当前子职业没有可用的移动技能。"
+                ) { option ->
+                    if (sendChanges) {
+                        ClientPlayNetworking.send(
+                            DestinyNetworking.ConfigureSubclassPayload("movement", "movement", option.id)
+                        )
+                    }
+                }
+            }
+            target.addEventListener(UIEvents.TICK) {
+                val selectedId = DestinyHUDState.selectedMovementId
+                if (selectedId != renderedOptionId) {
+                    renderedOptionId = selectedId
+                    applyOptionVisual(
+                        target,
+                        definition.movementOptions.firstOrNull { it.id == selectedId },
+                        "移动技能",
+                        selectedId.isNotBlank(),
+                        subclassAccent(definition.subclass)
+                    )
+                }
             }
         }
 

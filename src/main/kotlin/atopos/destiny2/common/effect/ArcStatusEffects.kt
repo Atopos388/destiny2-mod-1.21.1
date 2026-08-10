@@ -5,6 +5,8 @@ import net.minecraft.world.effect.MobEffect
 import net.minecraft.world.effect.MobEffectCategory
 import net.minecraft.world.entity.ai.attributes.AttributeModifier
 import net.minecraft.world.entity.ai.attributes.Attributes
+import net.minecraft.world.entity.LivingEntity
+import net.minecraft.world.entity.Mob
 
 /**
  * 电弧增幅：提供机动和武器操控，不直接提高伤害。
@@ -38,5 +40,21 @@ class SpeedBoosterStatusEffect : MobEffect(MobEffectCategory.BENEFICIAL, 0xC9F6F
             0.15,
             AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL
         )
+    }
+}
+
+/**
+ * Arc Blind is kept separate from vanilla Blindness so combat rules can test
+ * the Destiny keyword without treating unrelated potions as Arc damage.
+ */
+class ArcBlindStatusEffect : MobEffect(MobEffectCategory.HARMFUL, 0xDDF9FF) {
+    override fun shouldApplyEffectTickThisTick(duration: Int, amplifier: Int): Boolean = true
+
+    override fun applyEffectTick(entity: LivingEntity, amplifier: Int): Boolean {
+        (entity as? Mob)?.let { mob ->
+            mob.target = null
+            mob.navigation.stop()
+        }
+        return true
     }
 }

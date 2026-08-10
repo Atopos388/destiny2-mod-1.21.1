@@ -8,9 +8,15 @@ import atopos.destiny2.client.gui.DestinyDamageNumbers
 import atopos.destiny2.client.gui.DestinyNavigationState
 import atopos.destiny2.client.action.DestinyActionClient
 import atopos.destiny2.client.cinematic.CinematicCameraClient
+import atopos.destiny2.client.combat.QuickMeleeAimClient
+import atopos.destiny2.client.combat.HunterMeleeFirstPersonClient
 import atopos.destiny2.client.particle.bedrock.BedrockParticleEngine
+import atopos.destiny2.client.renderer.VoidHunterSuperAuraClient
+import atopos.destiny2.client.renderer.ThunderclapGroundLiftRenderer
+import atopos.destiny2.client.renderer.ThunderclapBlastRenderer
 import atopos.destiny2.client.weapon.DestinyWeaponFeedbackClient
 import atopos.destiny2.client.weapon.DestinyWeaponThirdPersonClient
+import atopos.destiny2.client.weapon.GenericGunAnimationClient
 import atopos.destiny2.common.network.DestinyNetworking
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking
 import net.minecraft.resources.ResourceLocation
@@ -28,6 +34,29 @@ object ClientNetworking {
                 } else {
                     Destiny2MODClient.clientCooldowns[payload.abilityType] = Pair(endTime, durationMs)
                 }
+            }
+        }
+
+        ClientPlayNetworking.registerGlobalReceiver(DestinyNetworking.QuickMeleeAssistPayload.ID) { payload, context ->
+            context.client().execute {
+                if (payload.hunterMelee) {
+                    HunterMeleeFirstPersonClient.play()
+                }
+                if (payload.targetEntityId >= 0) {
+                    QuickMeleeAimClient.start(payload.targetEntityId)
+                }
+            }
+        }
+
+        ClientPlayNetworking.registerGlobalReceiver(DestinyNetworking.PlayHunterGrenadeThrowPayload.ID) { _, context ->
+            context.client().execute {
+                HunterMeleeFirstPersonClient.playGrenadeThrow()
+            }
+        }
+
+        ClientPlayNetworking.registerGlobalReceiver(DestinyNetworking.PlayHunterChargedMeleePayload.ID) { _, context ->
+            context.client().execute {
+                HunterMeleeFirstPersonClient.playChargedMelee()
             }
         }
 
@@ -94,6 +123,7 @@ object ClientNetworking {
         ClientPlayNetworking.registerGlobalReceiver(DestinyNetworking.WeaponThirdPersonActionPayload.ID) { payload, context ->
             context.client().execute {
                 DestinyWeaponThirdPersonClient.onAction(payload)
+                GenericGunAnimationClient.onAction(payload)
             }
         }
 
@@ -103,10 +133,28 @@ object ClientNetworking {
             }
         }
 
+        ClientPlayNetworking.registerGlobalReceiver(DestinyNetworking.VoidHunterSuperAuraPayload.ID) { payload, context ->
+            context.client().execute {
+                VoidHunterSuperAuraClient.activate(payload.playerId, payload.durationTicks)
+            }
+        }
+
         ClientPlayNetworking.registerGlobalReceiver(DestinyNetworking.PlayWorldVfxPayload.ID) { payload, context ->
             context.client().execute {
                 val effectId = ResourceLocation.tryParse(payload.effectId)
                     ?: return@execute
+                if (effectId == THUNDERCLAP_GROUND_LIFT_EFFECT) {
+                    val origin = Vec3(payload.x, payload.y, payload.z)
+                    ThunderclapBlastRenderer.activate(
+                        origin = origin,
+                        yawDegrees = payload.yaw
+                    )
+                    ThunderclapGroundLiftRenderer.activate(
+                        origin = origin,
+                        yawDegrees = payload.yaw
+                    )
+                    return@execute
+                }
                 BedrockParticleEngine.queueWorld(
                     effect = effectId,
                     position = Vec3(payload.x, payload.y, payload.z),
@@ -124,4 +172,9 @@ object ClientNetworking {
         }
 
     }
+
+    private val THUNDERCLAP_GROUND_LIFT_EFFECT = ResourceLocation.fromNamespaceAndPath(
+        "destiny2-mod",
+        "vfx/thunderclap_ground_lift"
+    )
 }

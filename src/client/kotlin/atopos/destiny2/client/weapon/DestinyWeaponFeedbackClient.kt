@@ -6,23 +6,26 @@ import atopos.destiny2.common.network.DestinyNetworking
 import atopos.destiny2.common.weapon.DestinyRangedWeapon
 import atopos.destiny2.common.weapon.WeaponRecoilProfile
 import net.minecraft.client.Minecraft
+import net.minecraft.client.player.LocalPlayer
 import net.minecraft.core.particles.ParticleTypes
 import net.minecraft.util.Mth
 import net.minecraft.world.phys.Vec3
 import kotlin.math.ceil
+import kotlin.math.exp
+import kotlin.math.max
 
-/** TaCZ-style recoil curve, tracer, impact and hit-marker adapter. */
+/** Frame-sampled recoil, tracer, impact and hit-marker adapter. */
 object DestinyWeaponFeedbackClient {
-    private data class RecoilImpulse(
-        val startedAt: Long,
-        val pitch: Float,
-        val yaw: Float,
-        val profile: WeaponRecoilProfile,
-        var lastPitch: Float = 0.0f,
-        var lastYaw: Float = 0.0f
-    )
-
-    private val impulses = ArrayList<RecoilImpulse>()
+    private var recoilTargetPitch = 0.0f
+    private var recoilTargetYaw = 0.0f
+    private var recoilAppliedPitch = 0.0f
+    private var recoilAppliedYaw = 0.0f
+    private var recoilPitchLimit = 0.0f
+    private var recoilYawLimit = 0.0f
+    private var recoilKickMs = 45
+    private var recoilRecoverMs = 240
+    private var lastRecoilShotAtMs = Long.MIN_VALUE
+    private var lastRecoilFrameNanos = Long.MIN_VALUE
     private var shotBloom = 0.0f
 
     fun onShot(payload: DestinyNetworking.WeaponShotFeedbackPayload) {
@@ -55,6 +58,7 @@ object DestinyWeaponFeedbackClient {
         }
 
         if (client.player?.uuid != payload.shooterId) return
+        GenericGunAnimationClient.onLocalShotFeedback()
         DestinyWeaponHUDState.weaponHit(payload.hit, payload.precision, payload.killed)
         if (!payload.applyRecoil) return
         val profile = WeaponRecoilProfile(
@@ -67,58 +71,85 @@ object DestinyWeaponFeedbackClient {
             1.0f,
             profile.aimedMultiplier
         )
-        impulses += RecoilImpulse(
-            System.currentTimeMillis(),
-            payload.recoilPitch * aimScale,
-            payload.recoilYaw * aimScale,
-            profile
-        )
+        val pitch = payload.recoilPitch * aimScale
+        val yaw = payload.recoilYaw * aimScale
+        recoilPitchLimit = max(recoilPitchLimit, kotlin.math.abs(pitch) * PITCH_ACCUMULATION_SHOTS)
+            .coerceAtLeast(kotlin.math.abs(pitch))
+        recoilYawLimit = max(recoilYawLimit, kotlin.math.abs(yaw) * YAW_ACCUMULATION_SHOTS)
+            .coerceAtLeast(MIN_YAW_LIMIT)
+        recoilTargetPitch = (recoilTargetPitch + pitch).coerceIn(-recoilPitchLimit, recoilPitchLimit)
+        recoilTargetYaw = (recoilTargetYaw + yaw).coerceIn(-recoilYawLimit, recoilYawLimit)
+        recoilKickMs = profile.kickDurationMs.coerceAtLeast(1)
+        recoilRecoverMs = profile.recoverDurationMs.coerceAtLeast(1)
+        lastRecoilShotAtMs = System.currentTimeMillis()
+        if (lastRecoilFrameNanos == Long.MIN_VALUE) {
+            lastRecoilFrameNanos = System.nanoTime()
+        }
         shotBloom = (shotBloom + (DestinyWeaponHUDState.snapshot?.crosshair?.shotPenalty ?: 4.0f))
             .coerceAtMost(24.0f)
     }
 
     fun tick(client: Minecraft) {
-        val player = client.player ?: run {
-            impulses.clear()
+        if (client.player == null) {
+            clearRecoil()
             shotBloom = 0.0f
             return
         }
         val profile = DestinyWeaponHUDState.snapshot
         shotBloom = (shotBloom - (profile?.crosshair?.shotDecayPerTick ?: 0.75f)).coerceAtLeast(0.0f)
+    }
 
-        val now = System.currentTimeMillis()
-        val iterator = impulses.iterator()
-        while (iterator.hasNext()) {
-            val impulse = iterator.next()
-            val elapsed = (now - impulse.startedAt).coerceAtLeast(0L)
-            val pitch: Float
-            val yaw: Float
-            if (elapsed <= impulse.profile.kickDurationMs) {
-                val t = elapsed.toFloat() / impulse.profile.kickDurationMs.coerceAtLeast(1)
-                val eased = 1.0f - (1.0f - t) * (1.0f - t)
-                pitch = impulse.pitch * eased
-                yaw = impulse.yaw * eased
-            } else {
-                val recoveryElapsed = elapsed - impulse.profile.kickDurationMs
-                val t = recoveryElapsed.toFloat() / impulse.profile.recoverDurationMs.coerceAtLeast(1)
-                if (t >= 1.0f) {
-                    player.xRot -= 0.0f - impulse.lastPitch
-                    player.yRot += 0.0f - impulse.lastYaw
-                    iterator.remove()
-                    continue
-                }
-                val remaining = (1.0f - t)
-                pitch = impulse.pitch * remaining * remaining
-                yaw = impulse.yaw * remaining * remaining
-            }
-            player.xRot -= pitch - impulse.lastPitch
-            player.yRot += yaw - impulse.lastYaw
-            impulse.lastPitch = pitch
-            impulse.lastYaw = yaw
+    /**
+     * Called from MouseHandler.turnPlayer, which runs at render/input cadence
+     * instead of the fixed 20 Hz client tick.
+     */
+    fun updateRecoilFrame(player: LocalPlayer) {
+        if (lastRecoilFrameNanos == Long.MIN_VALUE) return
+        val nowNanos = System.nanoTime()
+        val deltaMs = ((nowNanos - lastRecoilFrameNanos) / 1_000_000.0f).coerceIn(0.0f, MAX_FRAME_MS)
+        lastRecoilFrameNanos = nowNanos
+        if (deltaMs <= 0.0f) return
+
+        val nowMs = System.currentTimeMillis()
+        if (nowMs - lastRecoilShotAtMs >= RECOVERY_DELAY_MS) {
+            val recoveryAlpha = responseAlpha(deltaMs, recoilRecoverMs)
+            recoilTargetPitch += (0.0f - recoilTargetPitch) * recoveryAlpha
+            recoilTargetYaw += (0.0f - recoilTargetYaw) * recoveryAlpha
+        }
+
+        val kickAlpha = responseAlpha(deltaMs, recoilKickMs)
+        val nextPitch = recoilAppliedPitch + (recoilTargetPitch - recoilAppliedPitch) * kickAlpha
+        val nextYaw = recoilAppliedYaw + (recoilTargetYaw - recoilAppliedYaw) * kickAlpha
+        player.xRot -= nextPitch - recoilAppliedPitch
+        player.yRot += nextYaw - recoilAppliedYaw
+        recoilAppliedPitch = nextPitch
+        recoilAppliedYaw = nextYaw
+
+        if (
+            kotlin.math.abs(recoilTargetPitch) < SETTLED_EPSILON &&
+            kotlin.math.abs(recoilTargetYaw) < SETTLED_EPSILON &&
+            kotlin.math.abs(recoilAppliedPitch) < SETTLED_EPSILON &&
+            kotlin.math.abs(recoilAppliedYaw) < SETTLED_EPSILON
+        ) {
+            clearRecoil()
         }
     }
 
     fun shotBloom(): Float = shotBloom
+
+    private fun responseAlpha(deltaMs: Float, durationMs: Int): Float =
+        (1.0f - exp(-RESPONSE_STRENGTH * deltaMs / durationMs.coerceAtLeast(1))).coerceIn(0.0f, 1.0f)
+
+    private fun clearRecoil() {
+        recoilTargetPitch = 0.0f
+        recoilTargetYaw = 0.0f
+        recoilAppliedPitch = 0.0f
+        recoilAppliedYaw = 0.0f
+        recoilPitchLimit = 0.0f
+        recoilYawLimit = 0.0f
+        lastRecoilShotAtMs = Long.MIN_VALUE
+        lastRecoilFrameNanos = Long.MIN_VALUE
+    }
 
     private fun spawnTracer(start: Vec3, end: Vec3, requestedStep: Double) {
         val level = Minecraft.getInstance().level ?: return
@@ -132,4 +163,12 @@ object DestinyWeaponFeedbackClient {
             level.addParticle(ParticleTypes.ELECTRIC_SPARK, point.x, point.y, point.z, 0.0, 0.0, 0.0)
         }
     }
+
+    private const val PITCH_ACCUMULATION_SHOTS = 5.0f
+    private const val YAW_ACCUMULATION_SHOTS = 6.0f
+    private const val MIN_YAW_LIMIT = 0.65f
+    private const val RECOVERY_DELAY_MS = 125L
+    private const val RESPONSE_STRENGTH = 4.0f
+    private const val MAX_FRAME_MS = 50.0f
+    private const val SETTLED_EPSILON = 0.001f
 }

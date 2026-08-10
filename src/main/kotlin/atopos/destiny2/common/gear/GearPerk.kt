@@ -16,6 +16,7 @@ enum class GearPerkScope {
     MICRO_MISSILE,
     FORGOTTEN_NAME,
     IZANAGIS_BURDEN,
+    MONTE_CARLO,
     MELEE,
     BOW,
     CROSSBOW,

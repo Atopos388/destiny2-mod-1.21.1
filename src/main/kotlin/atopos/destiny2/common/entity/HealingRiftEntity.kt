@@ -2,6 +2,7 @@ package atopos.destiny2.common.entity
 
 import atopos.destiny2.common.effect.DestinyStatusRules
 import net.minecraft.nbt.CompoundTag
+import net.minecraft.server.level.ServerPlayer
 import net.minecraft.world.entity.Entity
 import net.minecraft.world.entity.EntityType
 import net.minecraft.world.entity.LivingEntity
@@ -45,6 +46,7 @@ class HealingRiftEntity(
         }
 
         if (duration % 20 == 0) {
+            val source = owner as? ServerPlayer
             val radius = 6.0
             val entities = this.level().getEntities(this, AABB(
                 this.x - radius, this.y - 1, this.z - radius,
@@ -54,9 +56,13 @@ class HealingRiftEntity(
             for (entity in entities) {
                 val dx = entity.x - this.x
                 val dz = entity.z - this.z
-                if (entity is Player && dx * dx + dz * dz <= radius * radius) {
-                    entity.heal(4.0f)
-                    DestinyStatusRules.applyRestoration(entity, 70)
+                val currentOwner = owner
+                if (entity is Player && currentOwner is Player &&
+                    (entity === currentOwner || entity.isAlliedTo(currentOwner)) &&
+                    dx * dx + dz * dz <= radius * radius
+                ) {
+                    DestinyStatusRules.applyCure(entity, 4.0f, source)
+                    DestinyStatusRules.applyRestoration(entity, 70, source = source)
                 }
             }
         }

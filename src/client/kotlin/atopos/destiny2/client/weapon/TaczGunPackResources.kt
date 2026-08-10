@@ -1,5 +1,7 @@
 package atopos.destiny2.client.weapon
 
+import atopos.destiny2.common.weapon.DestinyGunPackFiles
+import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import net.fabricmc.fabric.api.resource.ResourceManagerHelper
@@ -8,8 +10,8 @@ import net.minecraft.resources.ResourceLocation
 import net.minecraft.server.packs.PackType
 import net.minecraft.server.packs.resources.ResourceManager
 import org.joml.Matrix4f
+import org.joml.Vector3f
 import org.slf4j.LoggerFactory
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Resource-pack loader for TaCZ-style GeckoLib guns.
@@ -19,15 +21,32 @@ import java.util.concurrent.ConcurrentHashMap
  */
 object TaczGunPackResources : SimpleSynchronousResourceReloadListener {
     private val logger = LoggerFactory.getLogger("DestinyTaCZGunPack")
-    private val packs = ConcurrentHashMap<ResourceLocation, GunPackDefinition>()
+
+    private data class LoadedState(
+        val packs: Map<ResourceLocation, GunPackDefinition>,
+        val resources: Map<ResourceLocation, ByteArray>
+    )
+
+    @Volatile
+    private var state = LoadedState(emptyMap(), emptyMap())
 
     data class GunPackDefinition(
         val id: ResourceLocation,
         val model: ResourceLocation,
         val texture: ResourceLocation,
         val animation: ResourceLocation,
+        val cycleAnimation: String?,
+        val mergeCycleIntoShoot: Boolean,
+        val idleViewBone: String,
+        val additiveShoot: Boolean,
+        val applyGeckoPositioning: Boolean,
         val skinBones: Set<String>,
         val firstPersonOnlyBones: Set<String>,
+        val reversedPlayerArms: Boolean,
+        val aimXyFromConstraint: Boolean,
+        val idleViewPivot: Vector3f?,
+        val aimViewPivot: Vector3f?,
+        val animationBoneAliases: Map<String, String>,
         val boneNames: Set<String>,
         val positioning: Map<String, Matrix4f>,
         val loadErrors: List<String>
@@ -68,21 +87,60 @@ object TaczGunPackResources : SimpleSynchronousResourceReloadListener {
 
     override fun onResourceManagerReload(manager: ResourceManager) {
         val loaded = linkedMapOf<ResourceLocation, GunPackDefinition>()
+        val externalSnapshot = DestinyGunPackFiles.scan()
+        val loadedResources = linkedMapOf<ResourceLocation, ByteArray>()
+        fun resolveResource(location: ResourceLocation): ByteArray? {
+            loadedResources[location]?.let { return it }
+            return readResource(manager, externalSnapshot, location)?.also { bytes ->
+                loadedResources[location] = bytes
+            }
+        }
+
         manager.listResources(PACK_DIRECTORY) { it.path.endsWith(".json") }
             .toSortedMap(compareBy(ResourceLocation::toString))
             .forEach { (_, resource) ->
                 runCatching {
                     resource.openAsReader().use(JsonParser::parseReader).asJsonObject
                 }.onSuccess { root ->
-                    val definition = loadDefinition(manager, root)
+                    val definition = loadDefinition(root, ::resolveResource)
                     loaded[definition.id] = definition
                 }.onFailure {
                     logger.error("Failed to read TaCZ gun-pack definition from {}", resource.sourcePackId(), it)
                 }
             }
+        externalSnapshot
+            .filter { entry ->
+                entry.path.startsWith("assets/") &&
+                    "/$PACK_DIRECTORY/" in entry.path &&
+                    entry.path.endsWith(".json")
+            }
+            .forEach { entry ->
+                runCatching {
+                    entry.bytes.inputStream().reader(Charsets.UTF_8)
+                        .use(JsonParser::parseReader).asJsonObject
+                }.onSuccess { root ->
+                    val definition = loadDefinition(root, ::resolveResource)
+                    loaded[definition.id] = definition
+                }.onFailure {
+                    logger.error(
+                        "Failed to read external gun-pack definition {} from {}",
+                        entry.path,
+                        entry.packName,
+                        it
+                    )
+                }
+            }
 
-        packs.clear()
-        packs.putAll(loaded)
+        loaded.values
+            .flatMap { definition ->
+                listOf(definition.model, definition.texture, definition.animation)
+            }
+            .distinct()
+            .forEach(::resolveResource)
+
+        // Publish complete immutable snapshots in one assignment. Render code
+        // must never read Gradle's live output files while they are being replaced.
+        state = LoadedState(loaded.toMap(), loadedResources.toMap())
         loaded.values.forEach { definition ->
             if (definition.loadErrors.isEmpty()) {
                 logger.info(
@@ -97,31 +155,64 @@ object TaczGunPackResources : SimpleSynchronousResourceReloadListener {
         }
     }
 
-    fun definition(id: ResourceLocation): GunPackDefinition? = packs[id]
+    fun definition(id: ResourceLocation): GunPackDefinition? = state.packs[id]
 
-    fun definitions(): Collection<GunPackDefinition> = packs.values.toList()
+    fun definitions(): Collection<GunPackDefinition> = state.packs.values.toList()
 
     fun model(id: ResourceLocation): ResourceLocation =
-        packs[id]?.model ?: conventional(id, "geo", ".geo.json")
+        state.packs[id]?.model ?: conventional(id, "geo", ".geo.json")
 
     fun texture(id: ResourceLocation): ResourceLocation =
-        packs[id]?.texture ?: conventional(id, "textures/item", ".png")
+        state.packs[id]?.texture ?: conventional(id, "textures/item", ".png")
 
     fun animation(id: ResourceLocation): ResourceLocation =
-        packs[id]?.animation ?: conventional(id, "animations", ".animation.json")
+        state.packs[id]?.animation ?: conventional(id, "animations", ".animation.json")
 
-    private fun loadDefinition(manager: ResourceManager, root: JsonObject): GunPackDefinition {
+    fun resourceBytes(location: ResourceLocation): ByteArray? =
+        state.resources[location]
+
+    private fun readResource(
+        manager: ResourceManager,
+        externalSnapshot: List<DestinyGunPackFiles.FileEntry>,
+        location: ResourceLocation
+    ): ByteArray? =
+        DestinyGunPackFiles.clientResource(location, externalSnapshot)
+            ?: manager.getResource(location).orElse(null)?.open()?.use { it.readAllBytes() }
+
+    private fun loadDefinition(
+        root: JsonObject,
+        readResource: (ResourceLocation) -> ByteArray?
+    ): GunPackDefinition {
         val id = ResourceLocation.parse(root.requiredString("id"))
         val model = root.resource("model", conventional(id, "geo", ".geo.json"))
         val texture = root.resource("texture", conventional(id, "textures/item", ".png"))
         val animation = root.resource("animation", conventional(id, "animations", ".animation.json"))
+        val cycleAnimation = root.get("cycle_animation")
+            ?.takeIf(JsonElement::isJsonPrimitive)
+            ?.asString
+            ?.trim()
+            ?.takeIf(String::isNotEmpty)
+        val mergeCycleIntoShoot = root.get("merge_cycle_into_shoot")?.asBoolean ?: false
+        val configuredIdleViewBone = root.get("idle_view_bone")
+            ?.takeIf(JsonElement::isJsonPrimitive)
+            ?.asString
+            ?.trim()
+            ?.takeIf(String::isNotEmpty)
+        val idleViewBone = configuredIdleViewBone ?: IDLE_VIEW
+        val additiveShoot = root.get("additive_shoot")?.asBoolean ?: false
+        val applyGeckoPositioning = root.get("apply_gecko_positioning")?.asBoolean ?: false
         val skinBones = root.stringSet("skin_bones").ifEmpty { DEFAULT_SKIN_BONES }
         val firstPersonOnlyBones = root.stringSet("first_person_only_bones") + skinBones
+        val reversedPlayerArms = root.get("reversed_player_arms")?.asBoolean ?: false
+        val aimXyFromConstraint = root.get("aim_xy_from_constraint")?.asBoolean ?: false
+        val idleViewPivot = root.floatVector3("idle_view_pivot")
+        val aimViewPivot = root.floatVector3("aim_view_pivot")
+        val animationBoneAliases = root.stringMap("animation_bone_aliases")
         val errors = mutableListOf<String>()
 
         val rawBones = runCatching {
-            val resource = manager.getResource(model).orElseThrow()
-            resource.openAsReader().use(JsonParser::parseReader).asJsonObject
+            val bytes = readResource(model) ?: error("missing model $model")
+            bytes.inputStream().reader(Charsets.UTF_8).use(JsonParser::parseReader).asJsonObject
                 .getAsJsonArray("minecraft:geometry")
                 ?.firstOrNull()
                 ?.asJsonObject
@@ -130,12 +221,33 @@ object TaczGunPackResources : SimpleSynchronousResourceReloadListener {
                 .orEmpty()
         }.onFailure { errors += "model $model: ${it.message}" }.getOrDefault(emptyList())
 
-        if (manager.getResource(texture).isEmpty) errors += "missing texture $texture"
-        if (manager.getResource(animation).isEmpty) errors += "missing animation $animation"
+        if (readResource(texture) == null) errors += "missing texture $texture"
+        if (readResource(animation) == null) errors += "missing animation $animation"
 
         val indexed = rawBones.associateBy(RawBone::name)
+        if (configuredIdleViewBone != null && idleViewBone !in indexed) {
+            errors += "missing configured idle view bone $idleViewBone"
+        }
+        val positioningBones = if (aimXyFromConstraint) {
+            val ironView = indexed[IRON_VIEW]
+            val constraint = indexed[CONSTRAINT]
+            if (ironView == null || constraint == null) {
+                errors += "aim_xy_from_constraint requires both $IRON_VIEW and $CONSTRAINT"
+                indexed
+            } else {
+                indexed + (
+                    IRON_VIEW to ironView.copy(
+                        pivotX = constraint.pivotX,
+                        pivotY = constraint.pivotY
+                    )
+                )
+            }
+        } else {
+            indexed
+        }
         val positioning = POSITIONING_BONES.mapNotNull { name ->
-            buildPositioningInverse(name, indexed)?.let { name to it }
+            val sourceBone = if (name == IDLE_VIEW) idleViewBone else name
+            buildPositioningInverse(sourceBone, positioningBones)?.let { name to it }
         }.toMap()
 
         return GunPackDefinition(
@@ -143,8 +255,18 @@ object TaczGunPackResources : SimpleSynchronousResourceReloadListener {
             model,
             texture,
             animation,
+            cycleAnimation,
+            mergeCycleIntoShoot,
+            idleViewBone,
+            additiveShoot,
+            applyGeckoPositioning,
             skinBones,
             firstPersonOnlyBones,
+            reversedPlayerArms,
+            aimXyFromConstraint,
+            idleViewPivot,
+            aimViewPivot,
+            animationBoneAliases,
             indexed.keys,
             positioning,
             errors
@@ -218,6 +340,15 @@ object TaczGunPackResources : SimpleSynchronousResourceReloadListener {
 
     private fun JsonObject.stringSet(key: String): Set<String> =
         getAsJsonArray(key)?.mapTo(linkedSetOf()) { it.asString }.orEmpty()
+
+    private fun JsonObject.stringMap(key: String): Map<String, String> =
+        getAsJsonObject(key)?.entrySet()?.associate { (name, value) -> name to value.asString }.orEmpty()
+
+    private fun JsonObject.floatVector3(key: String): Vector3f? {
+        val values = getAsJsonArray(key) ?: return null
+        if (values.size() < 3) return null
+        return Vector3f(values[0].asFloat, values[1].asFloat, values[2].asFloat)
+    }
 
     private fun com.google.gson.JsonArray?.floatOrZero(index: Int): Float =
         if (this != null && index in 0 until size()) get(index).asFloat else 0f

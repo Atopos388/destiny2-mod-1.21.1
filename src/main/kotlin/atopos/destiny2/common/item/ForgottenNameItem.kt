@@ -16,6 +16,8 @@ import atopos.destiny2.common.player.DestinyStatsResolver
 import atopos.destiny2.common.gear.ArmorModRuntime
 import atopos.destiny2.common.weapon.DestinyWeaponDataRegistry
 import atopos.destiny2.common.weapon.TaczProjectileDirection
+import atopos.destiny2.common.weapon.WeaponAccuracyRuntime
+import atopos.destiny2.common.weapon.WeaponRecoilMath
 import atopos.destiny2.common.weapon.TaczWeaponAnimationBridge
 import atopos.destiny2.common.weapon.TaczWeaponAnimationContract
 import atopos.destiny2.common.weapon.WeaponFireModeState
@@ -64,25 +66,32 @@ class ForgottenNameItem(properties: Properties) : TaczGunPackWeaponItem(properti
             return false
         }
 
-        val look = ForgottenNameExoticRuntime.adjustAim(
+        val assistedLook = ForgottenNameExoticRuntime.adjustAim(
             shooter,
             TaczProjectileDirection.validated(shooter.lookAngle, clientDirection)
+        )
+        val look = WeaponAccuracyRuntime.shotDirection(
+            shooter,
+            WEAPON_ID,
+            profile.accuracy,
+            assistedLook,
+            level.random,
+            ForgottenNameExoticRuntime.projectileInaccuracy(shooter, 1.0f)
         )
         val bullet = ForgottenNameBulletEntity(level, shooter, profile, look)
         level.addFreshEntity(bullet)
         WeaponAmmoState.consumeRound(stack, profile.magazineSize, profile.boltTicks)
 
         val recoil = profile.recoil
-        val recoilPitch = recoil.pitchMin + level.random.nextFloat() * (recoil.pitchMax - recoil.pitchMin)
-        val recoilYaw = recoil.yawMin + level.random.nextFloat() * (recoil.yawMax - recoil.yawMin)
+        val recoilShot = WeaponRecoilMath.sampleShot(recoil, level.random.nextFloat(), level.random.nextFloat())
         val feedback = DestinyNetworking.WeaponShotFeedbackPayload(
             shooter.uuid,
             bullet.x, bullet.y, bullet.z,
             bullet.x, bullet.y, bullet.z,
             ForgottenNameBulletEntity.IMPACT_MISS, false, false, false,
             true,
-            recoilPitch, recoilYaw,
-            recoil.kickDurationMs, recoil.recoverDurationMs, recoil.aimedMultiplier,
+            recoilShot.pitch, recoilShot.yaw,
+            recoilShot.kickDurationMs, recoilShot.recoverDurationMs, recoil.aimedMultiplier,
             0.0,
             false
         )

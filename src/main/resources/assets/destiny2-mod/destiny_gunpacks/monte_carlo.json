@@ -1,0 +1,14 @@
+{
+  "id": "destiny2-mod:monte_carlo",
+  "model": "destiny2-mod:geo/monte_carlo.geo.json",
+  "texture": "destiny2-mod:textures/item/monte_carlo.png",
+  "animation": "destiny2-mod:animations/monte_carlo.animation.json",
+  "skin_bones": [
+    "lefthand_pos",
+    "righthand_pos"
+  ],
+  "animation_bone_aliases": {
+    "mag_and_lefthand": "lefthand_and_mag",
+    "gun_and_righthand": "bone2"
+  }
+}

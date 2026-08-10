@@ -40,6 +40,42 @@
       "destiny2-mod:weapons/forgotten_name_ready_full"
     ]
   },
+  "the_deicide_reload_insert": {
+    "sounds": [
+      "destiny2-mod:weapons/the_deicide_reload_01",
+      "destiny2-mod:weapons/the_deicide_reload_02",
+      "destiny2-mod:weapons/the_deicide_reload_03",
+      "destiny2-mod:weapons/the_deicide_reload_04",
+      "destiny2-mod:weapons/the_deicide_reload_05",
+      "destiny2-mod:weapons/the_deicide_reload_06"
+    ]
+  },
+  "the_deicide_reload_pump": {
+    "sounds": [
+      "destiny2-mod:weapons/the_deicide_reload_enter_01",
+      "destiny2-mod:weapons/the_deicide_reload_enter_02",
+      "destiny2-mod:weapons/the_deicide_reload_enter_03"
+    ]
+  },
+  "the_deicide_fire": {
+    "subtitle": "subtitles.destiny2-mod.the_deicide_fire",
+    "sounds": [
+      {
+        "name": "destiny2-mod:weapons/the_deicide_fire",
+        "stream": true
+      }
+    ]
+  },
+  "the_deicide_cockback": {
+    "sounds": [
+      "destiny2-mod:weapons/the_deicide_cockback"
+    ]
+  },
+  "the_deicide_cockforward": {
+    "sounds": [
+      "destiny2-mod:weapons/the_deicide_cockforward"
+    ]
+  },
   "fallen_shock_rifle_fire": {
     "subtitle": "subtitles.destiny2-mod.fallen_shock_rifle_fire",
     "sounds": [
@@ -68,26 +104,67 @@
       "destiny2-mod:fallen/captain_melee_swing_05"
     ]
   },
+  "hunter_melee_swing": {
+    "sounds": [
+      "destiny2-mod:combat/hunter_melee/swing_01",
+      "destiny2-mod:combat/hunter_melee/swing_02",
+      "destiny2-mod:combat/hunter_melee/swing_03",
+      "destiny2-mod:combat/hunter_melee/swing_04",
+      "destiny2-mod:combat/hunter_melee/swing_05",
+      "destiny2-mod:combat/hunter_melee/swing_06",
+      "destiny2-mod:combat/hunter_melee/swing_07",
+      "destiny2-mod:combat/hunter_melee/swing_08"
+    ]
+  },
+  "hunter_melee_hit_common": {
+    "sounds": [
+      "destiny2-mod:combat/hunter_melee/hit_common_01",
+      "destiny2-mod:combat/hunter_melee/hit_common_02",
+      "destiny2-mod:combat/hunter_melee/hit_common_03",
+      "destiny2-mod:combat/hunter_melee/hit_common_04",
+      "destiny2-mod:combat/hunter_melee/hit_common_05",
+      "destiny2-mod:combat/hunter_melee/hit_common_06",
+      "destiny2-mod:combat/hunter_melee/hit_common_07",
+      "destiny2-mod:combat/hunter_melee/hit_common_08"
+    ]
+  },
+  "hunter_melee_hit_flesh": {
+    "sounds": [
+      "destiny2-mod:combat/hunter_melee/hit_flesh_01",
+      "destiny2-mod:combat/hunter_melee/hit_flesh_02",
+      "destiny2-mod:combat/hunter_melee/hit_flesh_03",
+      "destiny2-mod:combat/hunter_melee/hit_flesh_04"
+    ]
+  },
   "void_grenade_cast": {
     "sounds": [
-      "destiny2-mod:abilities/void_hunter/vortex_grenade_cast_01",
-      "destiny2-mod:abilities/void_hunter/vortex_grenade_cast_02",
-      "destiny2-mod:abilities/void_hunter/vortex_grenade_cast_03",
-      "destiny2-mod:abilities/void_hunter/vortex_grenade_cast_04"
+      "destiny2-mod:abilities/void_hunter/vortex_grenade_throw_confirmed"
     ]
   },
   "void_grenade_impact": {
     "sounds": [
-      "destiny2-mod:abilities/void_hunter/vortex_grenade_impact_01",
-      "destiny2-mod:abilities/void_hunter/vortex_grenade_impact_02",
-      "destiny2-mod:abilities/void_hunter/vortex_grenade_impact_03"
+      {
+        "name": "destiny2-mod:abilities/void_hunter/vortex_grenade_explosion_confirmed",
+        "stream": true
+      }
     ]
   },
   "snare_bomb_cast": {
     "sounds": [
-      "destiny2-mod:abilities/void_hunter/snare_cast_01",
-      "destiny2-mod:abilities/void_hunter/snare_cast_02",
-      "destiny2-mod:abilities/void_hunter/snare_cast_03"
+      "destiny2-mod:abilities/void_hunter/snare_throw_confirmed"
+    ]
+  },
+  "snare_bomb_deploy": {
+    "sounds": [
+      "destiny2-mod:abilities/void_hunter/snare_deploy_confirmed"
+    ]
+  },
+  "snare_bomb_trigger": {
+    "sounds": [
+      {
+        "name": "destiny2-mod:abilities/void_hunter/snare_trigger_confirmed",
+        "stream": true
+      }
     ]
   },
   "snare_bomb_impact": {
@@ -151,12 +228,18 @@
   },
   "well_of_radiance_cast": {
     "sounds": [
-      "destiny2-mod:abilities/solar_warlock/well_cast_exact"
+      {
+        "name": "destiny2-mod:abilities/solar_warlock/well_cast_confirmed",
+        "stream": true
+      }
     ]
   },
-  "well_of_radiance_impact": {
+  "well_of_radiance_loop": {
     "sounds": [
-      "destiny2-mod:abilities/solar_warlock/well_impact_exact"
+      {
+        "name": "destiny2-mod:abilities/solar_warlock/well_loop_confirmed",
+        "stream": true
+      }
     ]
   },
   "heat_rises_activate": {
@@ -168,7 +251,60 @@
   },
   "guardian_awakening": {
     "sounds": [
-      "destiny2-mod:cinematic/guardian_awakening"
+      {
+        "name": "destiny2-mod:cinematic/guardian_awakening",
+        "stream": true
+      }
+    ]
+  },
+  "awakening_eyes_up": {
+    "sounds": [
+      {
+        "name": "destiny2-mod:cinematic/guardian_awakening_dialogue/eyes_up",
+        "stream": true
+      }
+    ]
+  },
+  "awakening_searched": {
+    "sounds": [
+      {
+        "name": "destiny2-mod:cinematic/guardian_awakening_dialogue/searched",
+        "stream": true
+      }
+    ]
+  },
+  "awakening_ghost": {
+    "sounds": [
+      {
+        "name": "destiny2-mod:cinematic/guardian_awakening_dialogue/ghost",
+        "stream": true
+      }
+    ]
+  },
+  "awakening_wait": {
+    "sounds": [
+      {
+        "name": "destiny2-mod:cinematic/guardian_awakening_dialogue/wait",
+        "stream": true
+      }
+    ]
+  },
+  "awakening_move": {
+    "sounds": [
+      {
+        "name": "destiny2-mod:cinematic/guardian_awakening_dialogue/move",
+        "stream": true
+      }
+    ]
+  },
+  "awakening_ghost_move_in": {
+    "sounds": [
+      "destiny2-mod:cinematic/guardian_awakening_dialogue/ghost_move_in"
+    ]
+  },
+  "awakening_ghost_move_out": {
+    "sounds": [
+      "destiny2-mod:cinematic/guardian_awakening_dialogue/ghost_move_out"
     ]
   }
 }

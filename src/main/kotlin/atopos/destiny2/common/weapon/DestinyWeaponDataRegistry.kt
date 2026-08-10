@@ -37,6 +37,22 @@ object DestinyWeaponDataRegistry : SimpleSynchronousResourceReloadListener {
                 logger.error("Failed to load weapon data {}", path, it)
             }
         }
+        DestinyGunPackFiles.serverDefinitions().forEach { entry ->
+            runCatching {
+                val root = entry.bytes.inputStream().reader(Charsets.UTF_8)
+                    .use(JsonParser::parseReader).asJsonObject
+                val id = DestinyGunPackFiles.idFromDefinitionPath(entry.path, ROOT)
+                    ?: error("invalid weapon definition path ${entry.path}")
+                loaded[id] = parse(root)
+            }.onFailure {
+                logger.error(
+                    "Failed to load external weapon data {} from {}",
+                    entry.path,
+                    entry.packName,
+                    it
+                )
+            }
+        }
         profiles.clear()
         profiles.putAll(loaded)
         logger.info("Loaded {} Destiny weapon definitions", profiles.size)
@@ -44,8 +60,11 @@ object DestinyWeaponDataRegistry : SimpleSynchronousResourceReloadListener {
 
     fun profile(id: ResourceLocation): WeaponCombatProfile? = profiles[id]
 
+    fun ids(): List<ResourceLocation> = profiles.keys.sortedBy(ResourceLocation::toString)
+
     private fun parse(root: JsonObject): WeaponCombatProfile {
         val recoilJson = root.obj("recoil")
+        val accuracyJson = root.obj("accuracy")
         val crosshairJson = root.obj("crosshair")
         val ballisticsJson = root.obj("ballistics")
         return WeaponCombatProfile(
@@ -67,9 +86,22 @@ object DestinyWeaponDataRegistry : SimpleSynchronousResourceReloadListener {
                 pitchMax = recoilJson.float("pitch_max", 0.0f),
                 yawMin = recoilJson.float("yaw_min", 0.0f),
                 yawMax = recoilJson.float("yaw_max", 0.0f),
+                yawPattern = recoilJson.recoilPattern("yaw_pattern"),
                 kickDurationMs = recoilJson.int("kick_ms", 70).coerceAtLeast(1),
                 recoverDurationMs = recoilJson.int("recover_ms", 310).coerceAtLeast(1),
-                aimedMultiplier = recoilJson.float("aimed_multiplier", 0.68f).coerceAtLeast(0.0f)
+                aimedMultiplier = recoilJson.float("aimed_multiplier", 0.68f).coerceIn(0.0f, 1.5f),
+                stability = recoilJson.float("stability", 60.0f).coerceIn(0.0f, 100.0f),
+                recoilDirection = recoilJson.float("recoil_direction", 70.0f).coerceIn(0.0f, 100.0f)
+            ),
+            accuracy = WeaponAccuracyProfile(
+                hipBaseDegrees = accuracyJson.float("hip_base_degrees", 0.45f).coerceAtLeast(0.0f),
+                aimedBaseDegrees = accuracyJson.float("aimed_base_degrees", 0.04f).coerceAtLeast(0.0f),
+                movingPenaltyDegrees = accuracyJson.float("moving_penalty_degrees", 0.15f).coerceAtLeast(0.0f),
+                airbornePenaltyDegrees = accuracyJson.float("airborne_penalty_degrees", 1.25f).coerceAtLeast(0.0f),
+                bloomPerShotDegrees = accuracyJson.float("bloom_per_shot_degrees", 0.08f).coerceAtLeast(0.0f),
+                maxBloomDegrees = accuracyJson.float("max_bloom_degrees", 0.5f).coerceAtLeast(0.0f),
+                settleDelayTicks = accuracyJson.int("settle_delay_ticks", 3).coerceAtLeast(0),
+                bloomDecayPerTick = accuracyJson.float("bloom_decay_per_tick", 0.06f).coerceAtLeast(0.0f)
             ),
             crosshair = WeaponCrosshairProfile(
                 baseGap = crosshairJson.float("base_gap", 5.0f),
@@ -96,7 +128,10 @@ object DestinyWeaponDataRegistry : SimpleSynchronousResourceReloadListener {
                         value.float("damage", 0.0f).coerceAtLeast(0.0f)
                     )
                 }?.sortedBy(WeaponDistanceDamage::distance) ?: emptyList()
-            )
+            ),
+            projectilesPerShot = root.int("projectiles_per_shot", 1).coerceIn(1, 32),
+            projectileSpreadDegrees = root.float("projectile_spread_degrees", 0.0f).coerceIn(0.0f, 30.0f),
+            damageElement = DestinyDamageElement.fromSerializedName(root.string("damage_element", "KINETIC"))
         )
     }
 
@@ -112,6 +147,17 @@ object DestinyWeaponDataRegistry : SimpleSynchronousResourceReloadListener {
     private fun JsonObject.float(name: String, fallback: Float): Float =
         get(name)?.takeIf { it.isJsonPrimitive }?.asFloat ?: fallback
 
+    private fun JsonObject.recoilPattern(name: String): List<Float> {
+        val array = get(name)?.takeIf { it.isJsonArray }?.asJsonArray ?: return emptyList()
+        if (array.size() > MAX_RECOIL_PATTERN_LENGTH) return emptyList()
+        return runCatching {
+            array.map { node ->
+                require(node.isJsonPrimitive)
+                node.asFloat.also { require(it.isFinite()) }.coerceIn(-1.0f, 1.0f)
+            }
+        }.getOrDefault(emptyList())
+    }
+
     private fun JsonObject.double(name: String, fallback: Double): Double =
         get(name)?.takeIf { it.isJsonPrimitive }?.asDouble ?: fallback
 
@@ -119,4 +165,5 @@ object DestinyWeaponDataRegistry : SimpleSynchronousResourceReloadListener {
         get(name)?.takeIf { it.isJsonPrimitive }?.asBoolean ?: fallback
 
     private const val ROOT = "destiny_weapons"
+    private const val MAX_RECOIL_PATTERN_LENGTH = 128
 }

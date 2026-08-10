@@ -1,6 +1,7 @@
 package atopos.destiny2.common.entity
 
 import atopos.destiny2.common.effect.DestinyStatusRules
+import atopos.destiny2.common.effect.SolarDamageKind
 import atopos.destiny2.common.aspect.DestinyAspectRuntime
 import atopos.destiny2.common.player.AbilitySlot
 import atopos.destiny2.common.player.DestinyAbilityDamageCarrier
@@ -287,7 +288,14 @@ class SolarFlareEntity(
         entities.forEach { entity ->
             if (entity is LivingEntity && isEnemy(entity)) {
                 val source = owner as? net.minecraft.server.level.ServerPlayer
-                DestinyStatusRules.applyScorch(entity, 18, if (touchOfFlame) 150 else 120, source)
+                DestinyStatusRules.applyScorch(
+                    entity,
+                    18,
+                    if (touchOfFlame) 150 else 120,
+                    source,
+                    SolarDamageKind.GRENADE,
+                    uuid
+                )
                 val damageSource = owner?.let { damageSources().indirectMagic(this, it) } ?: damageSources().inFire()
                 entity.hurt(damageSource, 2.5f)
             }

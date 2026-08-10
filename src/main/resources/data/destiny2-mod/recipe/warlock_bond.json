@@ -1,0 +1,30 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    "LGL",
+    "RXR",
+    "LBG"
+  ],
+  "key": {
+    "B": {
+      "item": "minecraft:book"
+    },
+    "G": {
+      "item": "minecraft:gold_ingot"
+    },
+    "L": {
+      "item": "minecraft:lapis_lazuli"
+    },
+    "R": {
+      "item": "minecraft:redstone"
+    },
+    "X": {
+      "tag": "destiny2-mod:light_crystals"
+    }
+  },
+  "result": {
+    "id": "destiny2-mod:warlock_bond",
+    "count": 1
+  }
+}

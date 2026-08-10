@@ -18,6 +18,7 @@ object DestinyKeybindings {
     
     // 终极技能 (F)
     lateinit var SUPER_ABILITY_KEY: KeyMapping
+    lateinit var ICARUS_DASH_KEY: KeyMapping
 
     lateinit var HUD_EDITOR_KEY: KeyMapping
     lateinit var LDLIB_EDITOR_KEY: KeyMapping
@@ -51,6 +52,13 @@ object DestinyKeybindings {
             "key.destiny2-mod.super_ability",
             InputConstants.Type.KEYSYM,
             GLFW.GLFW_KEY_F,
+            "category.destiny2-mod.controls"
+        ))
+
+        ICARUS_DASH_KEY = KeyBindingHelper.registerKeyBinding(KeyMapping(
+            "key.destiny2-mod.icarus_dash",
+            InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_X,
             "category.destiny2-mod.controls"
         ))
 

@@ -11,11 +11,16 @@ import atopos.destiny2.common.loot.DestinyLoot
 import atopos.destiny2.common.network.DestinyNetworking
 import atopos.destiny2.common.player.DestinyPlayerCommands
 import atopos.destiny2.common.player.GuardianAwakeningRuntime
+import atopos.destiny2.common.player.ClassResonanceRuntime
 import atopos.destiny2.common.sound.DestinySounds
 import atopos.destiny2.common.ability.DestinyAbilityRegistry
+import atopos.destiny2.common.ability.ArcTitanAbilities
 import atopos.destiny2.common.ability.GamblerDodgeAbility
 import atopos.destiny2.common.ability.SolarWarlockAbilities
+import atopos.destiny2.common.ability.VoidHunterAbilities
 import atopos.destiny2.common.aspect.VoidHunterAspectRuntime
+import atopos.destiny2.common.aspect.SolarWarlockFragmentRuntime
+import atopos.destiny2.common.aspect.ArcTitanFragmentRuntime
 import atopos.destiny2.common.worldgen.DestinyWorldgen
 import atopos.destiny2.common.weapon.WeaponHudSync
 import atopos.destiny2.common.weapon.ForgottenNameExoticRuntime
@@ -39,9 +44,13 @@ object Destiny2MOD : ModInitializer {
         DestinyLoot.register()
         DestinyCreativeModeTabs.register()
         DestinyAbilityRegistry.register()
+        ArcTitanAbilities.register()
         SolarWarlockAbilities.register()
+        VoidHunterAbilities.register()
         GamblerDodgeAbility.register()
         VoidHunterAspectRuntime.register()
+        SolarWarlockFragmentRuntime.register()
+        ArcTitanFragmentRuntime.register()
         DestinyWorldgen.register()
         DestinyNetworking.register()
         DestinyWeaponDataRegistry.register()
@@ -49,6 +58,7 @@ object Destiny2MOD : ModInitializer {
         ForgottenNameExoticRuntime.register()
         DestinyPlayerCommands.register()
         GuardianAwakeningRuntime.register()
+        ClassResonanceRuntime.register()
         
         logger.info("Destiny 2 Mod Initialized!")
 	}

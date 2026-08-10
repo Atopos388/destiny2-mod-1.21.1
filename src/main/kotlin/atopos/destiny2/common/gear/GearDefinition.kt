@@ -1,6 +1,7 @@
 package atopos.destiny2.common.gear
 
 import atopos.destiny2.common.weapon.DestinyAmmoType
+import atopos.destiny2.common.weapon.DestinyDamageElement
 import net.minecraft.resources.ResourceLocation
 import net.minecraft.world.item.Item
 
@@ -20,5 +21,6 @@ data class GearDefinition(
     val rollColumnLabels: List<String> = emptyList(),
     val hasCatalystSlot: Boolean = false,
     /** Catalysts which the server allows this exact gear definition to equip. */
-    val catalysts: List<GearPerk> = emptyList()
+    val catalysts: List<GearPerk> = emptyList(),
+    val damageElement: DestinyDamageElement = DestinyDamageElement.KINETIC
 )

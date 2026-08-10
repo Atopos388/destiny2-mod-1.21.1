@@ -3,6 +3,7 @@ package atopos.destiny2.common.entity
 import atopos.destiny2.common.aspect.DestinyAspectRuntime
 import atopos.destiny2.common.combat.DestinyExplosionRuntime
 import atopos.destiny2.common.effect.DestinyStatusRules
+import atopos.destiny2.common.effect.SolarDamageKind
 import atopos.destiny2.common.player.AbilitySlot
 import atopos.destiny2.common.player.DestinyAbilityDamageCarrier
 import atopos.destiny2.common.particle.BedrockWorldParticleBridge
@@ -119,7 +120,9 @@ class IncineratorSnapProjectile(
             val damageSource = (owner as? LivingEntity)?.let { damageSources().indirectMagic(this, it) } ?: damageSources().inFire()
             val hit = target.hurt(damageSource, 4.0f)
             if (hit) {
-                (owner as? net.minecraft.server.level.ServerPlayer)?.let(DestinyAspectRuntime::onPoweredMeleeHit)
+                (owner as? net.minecraft.server.level.ServerPlayer)?.let { player ->
+                    DestinyAspectRuntime.onPoweredMeleeHit(player, target, uuid)
+                }
             }
         }
     }
@@ -152,7 +155,7 @@ class IncineratorSnapProjectile(
         val damageSource = (owner as? LivingEntity)?.let {
             damageSources().indirectMagic(this, it)
         } ?: damageSources().inFire()
-        var hitEnemy = false
+        var hitEnemy: LivingEntity? = null
         currentLevel.getEntities(
             this,
             AABB(
@@ -170,12 +173,20 @@ class IncineratorSnapProjectile(
                     damageSource,
                     TIMED_EXPLOSION_DAMAGE
                 )
-                DestinyStatusRules.applyScorch(entity, TIMED_EXPLOSION_SCORCH, 140, sourcePlayer)
-                hitEnemy = true
+                DestinyStatusRules.applyScorch(
+                    entity,
+                    TIMED_EXPLOSION_SCORCH,
+                    140,
+                    sourcePlayer,
+                    SolarDamageKind.POWERED_MELEE,
+                    uuid
+                )
+                if (hitEnemy == null) hitEnemy = entity
             }
         }
-        if (hitEnemy) {
-            sourcePlayer?.let(DestinyAspectRuntime::onPoweredMeleeHit)
+        val torchesTarget = hitEnemy
+        if (torchesTarget != null && sourcePlayer != null) {
+            DestinyAspectRuntime.onPoweredMeleeHit(sourcePlayer, torchesTarget, uuid)
         }
         currentLevel.broadcastEntityEvent(this, TIMED_EXPLOSION_EVENT)
         currentLevel.playSound(

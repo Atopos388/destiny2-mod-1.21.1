@@ -1,5 +1,6 @@
 package atopos.destiny2.common.entity
 
+import atopos.destiny2.common.aspect.SolarWarlockAspectRules
 import net.fabricmc.fabric.api.`object`.builder.v1.entity.FabricEntityTypeBuilder
 import net.minecraft.core.Registry
 import net.minecraft.core.registries.BuiltInRegistries
@@ -13,6 +14,17 @@ import net.fabricmc.fabric.api.`object`.builder.v1.entity.FabricDefaultAttribute
  * 实体注册表 (Entity Registry)
  */
 object DestinyEntities {
+    val THUNDERCLAP_PLAYER_PROXY: EntityType<ThunderclapPlayerProxyEntity> = Registry.register(
+        BuiltInRegistries.ENTITY_TYPE,
+        ResourceLocation.fromNamespaceAndPath("destiny2-mod", "thunderclap_player_proxy"),
+        FabricEntityTypeBuilder.create(MobCategory.MISC) { type, world ->
+            ThunderclapPlayerProxyEntity(type, world)
+        }
+            .dimensions(EntityDimensions.fixed(0.6f, 1.8f))
+            .trackRangeChunks(10)
+            .trackedUpdateRate(1)
+            .build()
+    )
     
     // 注册烈日手雷实体
     val SOLAR_GRENADE = Registry.register(
@@ -29,6 +41,66 @@ object DestinyEntities {
         ResourceLocation.fromNamespaceAndPath("destiny2-mod", "solar_flare"),
         FabricEntityTypeBuilder.create(MobCategory.MISC) { type, world -> SolarFlareEntity(type, world) }
             .dimensions(EntityDimensions.fixed(1.0f, 1.0f))
+            .build()
+    )
+
+    val HEALING_GRENADE = Registry.register(
+        BuiltInRegistries.ENTITY_TYPE,
+        ResourceLocation.fromNamespaceAndPath("destiny2-mod", "healing_grenade"),
+        FabricEntityTypeBuilder.create(MobCategory.MISC) { type, world -> HealingGrenadeEntity(type, world) }
+            .dimensions(
+                EntityDimensions.fixed(
+                    SolarWarlockAspectRules.MINECRAFT_CALIBRATION_GRENADE_ENTITY_SIZE,
+                    SolarWarlockAspectRules.MINECRAFT_CALIBRATION_GRENADE_ENTITY_SIZE
+                )
+            )
+            .trackRangeChunks(SolarWarlockAspectRules.MINECRAFT_CALIBRATION_GRENADE_TRACK_RANGE_CHUNKS)
+            .trackedUpdateRate(SolarWarlockAspectRules.MINECRAFT_CALIBRATION_GRENADE_TRACKED_UPDATE_RATE)
+            .build()
+    )
+
+    val HEALING_GRENADE_ORB = Registry.register(
+        BuiltInRegistries.ENTITY_TYPE,
+        ResourceLocation.fromNamespaceAndPath("destiny2-mod", "healing_grenade_orb"),
+        FabricEntityTypeBuilder.create(MobCategory.MISC) { type, world -> HealingGrenadeOrbEntity(type, world) }
+            .dimensions(
+                EntityDimensions.fixed(
+                    SolarWarlockAspectRules.MINECRAFT_CALIBRATION_HEALING_ORB_ENTITY_SIZE,
+                    SolarWarlockAspectRules.MINECRAFT_CALIBRATION_HEALING_ORB_ENTITY_SIZE
+                )
+            )
+            .trackRangeChunks(SolarWarlockAspectRules.MINECRAFT_CALIBRATION_GRENADE_TRACK_RANGE_CHUNKS)
+            .trackedUpdateRate(SolarWarlockAspectRules.MINECRAFT_CALIBRATION_HEALING_ORB_TRACKED_UPDATE_RATE)
+            .build()
+    )
+
+    val FIREBOLT_GRENADE = Registry.register(
+        BuiltInRegistries.ENTITY_TYPE,
+        ResourceLocation.fromNamespaceAndPath("destiny2-mod", "firebolt_grenade"),
+        FabricEntityTypeBuilder.create(MobCategory.MISC) { type, world -> FireboltGrenadeEntity(type, world) }
+            .dimensions(
+                EntityDimensions.fixed(
+                    SolarWarlockAspectRules.MINECRAFT_CALIBRATION_GRENADE_ENTITY_SIZE,
+                    SolarWarlockAspectRules.MINECRAFT_CALIBRATION_GRENADE_ENTITY_SIZE
+                )
+            )
+            .trackRangeChunks(SolarWarlockAspectRules.MINECRAFT_CALIBRATION_GRENADE_TRACK_RANGE_CHUNKS)
+            .trackedUpdateRate(SolarWarlockAspectRules.MINECRAFT_CALIBRATION_GRENADE_TRACKED_UPDATE_RATE)
+            .build()
+    )
+
+    val FUSION_GRENADE = Registry.register(
+        BuiltInRegistries.ENTITY_TYPE,
+        ResourceLocation.fromNamespaceAndPath("destiny2-mod", "fusion_grenade"),
+        FabricEntityTypeBuilder.create(MobCategory.MISC) { type, world -> FusionGrenadeEntity(type, world) }
+            .dimensions(
+                EntityDimensions.fixed(
+                    SolarWarlockAspectRules.MINECRAFT_CALIBRATION_GRENADE_ENTITY_SIZE,
+                    SolarWarlockAspectRules.MINECRAFT_CALIBRATION_GRENADE_ENTITY_SIZE
+                )
+            )
+            .trackRangeChunks(SolarWarlockAspectRules.MINECRAFT_CALIBRATION_GRENADE_TRACK_RANGE_CHUNKS)
+            .trackedUpdateRate(SolarWarlockAspectRules.MINECRAFT_CALIBRATION_GRENADE_TRACKED_UPDATE_RATE)
             .build()
     )
 
@@ -110,6 +182,66 @@ object DestinyEntities {
             .build()
     )
 
+    val ARC_PULSE_GRENADE = Registry.register(
+        BuiltInRegistries.ENTITY_TYPE,
+        ResourceLocation.fromNamespaceAndPath("destiny2-mod", "arc_pulse_grenade"),
+        FabricEntityTypeBuilder.create(MobCategory.MISC) { type, world -> ArcPulseGrenadeEntity(type, world) }
+            .dimensions(EntityDimensions.fixed(0.25f, 0.25f))
+            .trackRangeChunks(8)
+            .trackedUpdateRate(1)
+            .build()
+    )
+
+    val ARC_FLASHBANG_GRENADE = Registry.register(
+        BuiltInRegistries.ENTITY_TYPE,
+        ResourceLocation.fromNamespaceAndPath("destiny2-mod", "arc_flashbang_grenade"),
+        FabricEntityTypeBuilder.create(MobCategory.MISC) { type, world -> ArcFlashbangGrenadeEntity(type, world) }
+            .dimensions(EntityDimensions.fixed(0.25f, 0.25f))
+            .trackRangeChunks(8)
+            .trackedUpdateRate(1)
+            .build()
+    )
+
+    val ARC_LIGHTNING_GRENADE = Registry.register(
+        BuiltInRegistries.ENTITY_TYPE,
+        ResourceLocation.fromNamespaceAndPath("destiny2-mod", "arc_lightning_grenade"),
+        FabricEntityTypeBuilder.create(MobCategory.MISC) { type, world -> ArcLightningGrenadeEntity(type, world) }
+            .dimensions(EntityDimensions.fixed(0.25f, 0.25f))
+            .trackRangeChunks(8)
+            .trackedUpdateRate(1)
+            .build()
+    )
+
+    val ARC_STORM_GRENADE = Registry.register(
+        BuiltInRegistries.ENTITY_TYPE,
+        ResourceLocation.fromNamespaceAndPath("destiny2-mod", "arc_storm_grenade"),
+        FabricEntityTypeBuilder.create(MobCategory.MISC) { type, world -> ArcStormGrenadeEntity(type, world) }
+            .dimensions(EntityDimensions.fixed(0.35f, 0.35f))
+            .trackRangeChunks(8)
+            .trackedUpdateRate(1)
+            .build()
+    )
+
+    val ARC_ABILITY_DAMAGE = Registry.register(
+        BuiltInRegistries.ENTITY_TYPE,
+        ResourceLocation.fromNamespaceAndPath("destiny2-mod", "arc_ability_damage"),
+        FabricEntityTypeBuilder.create(MobCategory.MISC) { type, world -> ArcAbilityDamageEntity(type, world) }
+            .dimensions(EntityDimensions.fixed(0.1f, 0.1f))
+            .trackRangeChunks(8)
+            .trackedUpdateRate(1)
+            .build()
+    )
+
+    val ARC_TITAN_BARRICADE: EntityType<ArcTitanBarricadeEntity> = Registry.register(
+        BuiltInRegistries.ENTITY_TYPE,
+        ResourceLocation.fromNamespaceAndPath("destiny2-mod", "arc_titan_barricade"),
+        FabricEntityTypeBuilder.create(MobCategory.MISC) { type, world -> ArcTitanBarricadeEntity(type, world) }
+            .dimensions(EntityDimensions.fixed(4.2f, 2.6f))
+            .trackRangeChunks(10)
+            .trackedUpdateRate(1)
+            .build()
+    )
+
     val SOLAR_ERUPTION_PROJECTILE = Registry.register(
         BuiltInRegistries.ENTITY_TYPE,
         ResourceLocation.fromNamespaceAndPath("destiny2-mod", "solar_eruption_projectile"),
@@ -172,7 +304,18 @@ object DestinyEntities {
             .build()
     )
 
+    val JILING: EntityType<JilingEntity> = Registry.register(
+        BuiltInRegistries.ENTITY_TYPE,
+        ResourceLocation.fromNamespaceAndPath("destiny2-mod", "jiling"),
+        FabricEntityTypeBuilder.create(MobCategory.CREATURE) { type, world -> JilingEntity(type, world) }
+            .dimensions(EntityDimensions.fixed(0.5f, 0.5f))
+            .trackRangeChunks(8)
+            .trackedUpdateRate(2)
+            .build()
+    )
+
     fun register() {
         FabricDefaultAttributeRegistry.register(FALLEN_CAPTAIN, FallenCaptainEntity.createAttributes())
+        FabricDefaultAttributeRegistry.register(JILING, JilingEntity.createAttributes())
     }
 }

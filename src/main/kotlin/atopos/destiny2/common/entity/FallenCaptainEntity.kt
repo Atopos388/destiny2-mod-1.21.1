@@ -302,7 +302,7 @@ class FallenCaptainEntity(
             }
             else -> {
                 comboStage = 0
-                attackCooldown = if (finished == CombatAction.ROAR) 8 else 14
+                attackCooldown = if (finished == CombatAction.ROAR) 8 else 7
             }
         }
     }
@@ -476,7 +476,7 @@ class FallenCaptainEntity(
         private const val PATH_RECALCULATION_TICKS = 5
         private const val RETREAT_PATH_RECALCULATION_TICKS = 10
         private const val RETREAT_DIRECTION_INTERVAL = 50
-        private const val SHOTGUN_COOLDOWN_TICKS = 65
+        private const val SHOTGUN_COOLDOWN_TICKS = 32
         private const val MELEE_SWING_SOUND_TICK = 4
         private const val MELEE_SEARCH_RADIUS = 4.5
         private val IDLE_ANIMATION = RawAnimation.begin().thenLoop("idle")

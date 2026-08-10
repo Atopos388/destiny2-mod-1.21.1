@@ -28,7 +28,9 @@ data class DestinyActionDefinition(
     val animationResource: ResourceLocation? = null,
     val speed: Double = 1.0,
     val blendInTicks: Int = 3,
-    val blendOutTicks: Int = 5
+    val blendOutTicks: Int = 5,
+    val thirdPersonCameraDurationMs: Long? = null,
+    val thirdPersonRightOffsetBlocks: Double = 0.0
 ) {
     val durationMs: Long
         get() = durationTicks.coerceAtLeast(1) * 50L
@@ -42,6 +44,9 @@ object DestinyActionRegistry {
 
     val HEALING_RIFT_CAST = id("action/healing_rift_cast")
     val INCINERATOR_SNAP_CAST = id("action/incinerator_snap_cast")
+    val VOID_HUNTER_SHADOWSHOT_CAST = id("action/void_hunter_shadowshot_cast")
+    val ARC_TITAN_THUNDERCLAP_CHARGE = id("action/arc_titan_thunderclap_charge")
+    val ARC_TITAN_THUNDERCLAP_RELEASE = id("action/arc_titan_thunderclap_release")
     init {
         register(
             DestinyActionDefinition(
@@ -68,6 +73,46 @@ object DestinyActionRegistry {
             )
         )
         bindAbility(id("solar_warlock_healing_rift"), HEALING_RIFT_CAST)
+
+        register(
+            DestinyActionDefinition(
+                id = VOID_HUNTER_SHADOWSHOT_CAST,
+                animationId = id("void_hunter_shadowshot"),
+                backend = DestinyActionBackend.PLAYER_LAYER,
+                durationTicks = 29,
+                cameraPolicy = DestinyActionCameraPolicy.THIRD_PERSON,
+                blendInTicks = 2,
+                blendOutTicks = 0,
+                thirdPersonCameraDurationMs = 920L,
+                thirdPersonRightOffsetBlocks = 0.58
+            )
+        )
+        bindAbility(id("void_hunter_shadowshot"), VOID_HUNTER_SHADOWSHOT_CAST)
+
+        register(
+            DestinyActionDefinition(
+                id = ARC_TITAN_THUNDERCLAP_CHARGE,
+                animationId = id("thunderclap_charge"),
+                backend = DestinyActionBackend.PLAYER_LAYER,
+                durationTicks = 41,
+                cameraPolicy = DestinyActionCameraPolicy.THIRD_PERSON,
+                blendInTicks = 1,
+                blendOutTicks = 1
+            )
+        )
+        bindAbility(id("arc_titan_thunderclap"), ARC_TITAN_THUNDERCLAP_CHARGE)
+
+        register(
+            DestinyActionDefinition(
+                id = ARC_TITAN_THUNDERCLAP_RELEASE,
+                animationId = id("thunderclap_release"),
+                backend = DestinyActionBackend.PLAYER_LAYER,
+                durationTicks = 36,
+                cameraPolicy = DestinyActionCameraPolicy.THIRD_PERSON,
+                blendInTicks = 0,
+                blendOutTicks = 2
+            )
+        )
     }
 
     fun definition(id: ResourceLocation): DestinyActionDefinition? = definitions[id]

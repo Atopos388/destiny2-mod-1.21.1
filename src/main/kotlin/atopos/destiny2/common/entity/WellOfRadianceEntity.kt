@@ -1,11 +1,16 @@
 package atopos.destiny2.common.entity
 
+import atopos.destiny2.common.aspect.SolarWarlockFragmentRuntime
 import atopos.destiny2.common.effect.DestinyStatusRules
+import atopos.destiny2.common.effect.SolarDamageKind
+import atopos.destiny2.common.effect.SolarIgnitionRuntime
+import atopos.destiny2.common.effect.SolarScorchContext
 import atopos.destiny2.common.particle.BedrockWorldParticleBridge
 import atopos.destiny2.common.sound.DestinySounds
 import net.minecraft.nbt.CompoundTag
 import net.minecraft.resources.ResourceLocation
 import net.minecraft.server.level.ServerLevel
+import net.minecraft.server.level.ServerPlayer
 import net.minecraft.sounds.SoundSource
 import net.minecraft.world.entity.Entity
 import net.minecraft.world.entity.EntityType
@@ -66,6 +71,17 @@ class WellOfRadianceEntity(
             return
         }
 
+        if (tickCount == LOOP_SOUND_START_TICK) {
+            level().playSound(
+                null,
+                blockPosition(),
+                DestinySounds.WELL_OF_RADIANCE_LOOP,
+                SoundSource.PLAYERS,
+                1.0f,
+                1.0f
+            )
+        }
+
         applyAuraEffects()
     }
 
@@ -90,12 +106,24 @@ class WellOfRadianceEntity(
     private fun performInitialImpact() {
         val radius = 5.0
         val damage = 10.0f
-        level().playSound(null, blockPosition(), DestinySounds.WELL_OF_RADIANCE_IMPACT, SoundSource.PLAYERS, 0.65f, 1.0f)
+        val sourcePlayer = owner as? ServerPlayer
+        val context = sourcePlayer?.let { SolarScorchContext(it.uuid, SolarDamageKind.SUPER, uuid) }
 
         val entities = level().getEntities(this, AABB(x - radius, y - 2, z - radius, x + radius, y + 4, z + radius))
         entities.forEach { entity ->
             if (entity is LivingEntity && entity != owner && isEnemy(entity)) {
-                entity.hurt(damageSources().magic(), damage)
+                val source = if (sourcePlayer != null) damageSources().indirectMagic(this, sourcePlayer) else damageSources().magic()
+                val wasAlive = entity.isAlive
+                if (context != null) {
+                    SolarIgnitionRuntime.withAttributedSolarDamage(entity, context, ignition = false) {
+                        entity.hurt(source, damage)
+                    }
+                } else {
+                    entity.hurt(source, damage)
+                }
+                if (wasAlive && !entity.isAlive && sourcePlayer != null && context != null) {
+                    SolarWarlockFragmentRuntime.onAttributedFinalBlow(sourcePlayer, entity, context, wasScorched = false)
+                }
             }
         }
 
@@ -103,13 +131,14 @@ class WellOfRadianceEntity(
 
     private fun applyAuraEffects() {
         val radius = 8.0
+        val source = owner as? ServerPlayer
         val entities = level().getEntities(this, AABB(x - radius, y - 2, z - radius, x + radius, y + 4, z + radius))
         entities.forEach { entity ->
             if (entity is LivingEntity && (entity == owner || isAlly(entity))) {
-                DestinyStatusRules.applyRadiant(entity, 120)
-                DestinyStatusRules.applyRestoration(entity, 80, level = 2)
+                DestinyStatusRules.applyRadiant(entity, 120, source)
+                DestinyStatusRules.applyRestoration(entity, 80, level = 2, source = source)
                 if (entity is Player && tickCount % 20 == 0) {
-                    entity.heal(5.0f)
+                    DestinyStatusRules.applyCure(entity, 5.0f, source)
                 }
             }
         }
@@ -159,6 +188,8 @@ class WellOfRadianceEntity(
     override fun getAnimatableInstanceCache(): AnimatableInstanceCache = cache
 
     private companion object {
+        const val LOOP_SOUND_START_TICK = 35
+
         // Temporarily hide both authored Well particle emitters without touching
         // their JSON, textures, animation keyframes, or bridge registrations.
         const val LEGACY_PARTICLES_VISIBLE = false

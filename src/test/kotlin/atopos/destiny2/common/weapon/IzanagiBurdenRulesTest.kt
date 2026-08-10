@@ -8,9 +8,9 @@ import org.junit.jupiter.api.Test
 class IzanagiBurdenRulesTest {
     @Test
     fun `base shot uses requested damage and precision multiplier`() {
-        assertEquals(20.0f, IzanagiBurdenRules.BASE_DAMAGE)
-        assertEquals(1.5f, IzanagiBurdenRules.PRECISION_MULTIPLIER)
-        assertEquals(30.0f, IzanagiBurdenRules.BASE_DAMAGE * IzanagiBurdenRules.PRECISION_MULTIPLIER)
+        assertEquals(25.0f, IzanagiBurdenRules.BASE_DAMAGE)
+        assertEquals(1.7f, IzanagiBurdenRules.PRECISION_MULTIPLIER)
+        assertEquals(42.5f, IzanagiBurdenRules.BASE_DAMAGE * IzanagiBurdenRules.PRECISION_MULTIPLIER)
     }
 
     @Test

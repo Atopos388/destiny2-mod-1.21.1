@@ -12,8 +12,10 @@ import net.minecraft.network.chat.Component
 object DestinyPlayerCommands {
     fun register() {
         CommandRegistrationCallback.EVENT.register { dispatcher, _, _ ->
-            dispatcher.register(
-                Commands.literal("destinydata")
+            val root = Commands.literal("destiny")
+
+            root.then(
+                Commands.literal("status")
                     .executes { context ->
                         val player = context.source.playerOrException
                         val data = PlayerDestinyDataApi.get(player)
@@ -22,8 +24,8 @@ object DestinyPlayerCommands {
                     }
             )
 
-            dispatcher.register(
-                Commands.literal("destinycooldown")
+            root.then(
+                Commands.literal("cooldown")
                     .then(
                         Commands.literal("reset")
                             .executes { context ->
@@ -42,8 +44,8 @@ object DestinyPlayerCommands {
                     )
             )
 
-            dispatcher.register(
-                Commands.literal("destinyclass")
+            root.then(
+                Commands.literal("class")
                     .executes { context ->
                         val data = PlayerDestinyDataApi.get(context.source.playerOrException)
                         val profile = DestinyClassRegistry.profileFor(data.destinyClass)
@@ -65,6 +67,7 @@ object DestinyPlayerCommands {
                     )
                     .then(
                         Commands.literal("set")
+                            .requires { source -> source.hasPermission(2) }
                             .then(
                                 Commands.argument("class", StringArgumentType.word())
                                     .executes { context ->
@@ -78,6 +81,7 @@ object DestinyPlayerCommands {
                                         } else {
                                             val player = context.source.playerOrException
                                             val data = PlayerDestinyDataApi.get(player)
+                                            ClassResonanceRuntime.unlockAllForAdmin(data, destinyClass)
                                             data.setClass(destinyClass)
                                             DestinyNetworking.syncPlayerData(player)
                                             val profile = DestinyClassRegistry.profileFor(destinyClass)
@@ -94,10 +98,63 @@ object DestinyPlayerCommands {
                                     }
                             )
                     )
+                    .then(
+                        Commands.literal("unlock")
+                            .requires { source -> source.hasPermission(2) }
+                            .then(
+                                Commands.argument("class", StringArgumentType.word())
+                                    .executes { context ->
+                                        val requested = StringArgumentType.getString(context, "class")
+                                        val destinyClass = DestinyClassType.findById(requested)
+                                            ?: return@executes 0
+                                        val player = context.source.playerOrException
+                                        val data = PlayerDestinyDataApi.get(player)
+                                        ClassResonanceRuntime.unlockAllForAdmin(data, destinyClass)
+                                        data.setClass(destinyClass)
+                                        DestinyNetworking.syncPlayerData(player)
+                                        context.source.sendSuccess(
+                                            { Component.literal("已为测试完整解锁并切换到 ${destinyClass.displayName}。") },
+                                            true
+                                        )
+                                        Command.SINGLE_SUCCESS
+                                    }
+                            )
+                    )
+                    .then(
+                        Commands.literal("lock")
+                            .requires { source -> source.hasPermission(2) }
+                            .then(
+                                Commands.argument("class", StringArgumentType.word())
+                                    .executes { context ->
+                                        val requested = StringArgumentType.getString(context, "class")
+                                        val destinyClass = DestinyClassType.findById(requested)
+                                            ?: return@executes 0
+                                        val player = context.source.playerOrException
+                                        ClassResonanceRuntime.lockForAdmin(player, destinyClass)
+                                        DestinyNetworking.syncPlayerData(player)
+                                        context.source.sendSuccess(
+                                            { Component.literal("已锁回 ${destinyClass.displayName}。") },
+                                            true
+                                        )
+                                        Command.SINGLE_SUCCESS
+                                    }
+                            )
+                    )
+                    .then(
+                        Commands.literal("reset_unlocks")
+                            .requires { source -> source.hasPermission(2) }
+                            .executes { context ->
+                                val player = context.source.playerOrException
+                                ClassResonanceRuntime.resetForAdmin(player)
+                                DestinyNetworking.syncPlayerData(player)
+                                context.source.sendSuccess({ Component.literal("已重置全部职业与能力解锁。") }, true)
+                                Command.SINGLE_SUCCESS
+                            }
+                    )
             )
 
-            dispatcher.register(
-                Commands.literal("destinysubclass")
+            root.then(
+                Commands.literal("subclass")
                     .executes { context ->
                         val data = PlayerDestinyDataApi.get(context.source.playerOrException)
                         val profile = DestinySubclassRegistry.profileFor(data.subclass)
@@ -158,13 +215,13 @@ object DestinyPlayerCommands {
                     )
             )
 
-            dispatcher.register(
-                Commands.literal("destinyaspect")
+            root.then(
+                Commands.literal("aspect")
                     .executes { context ->
                         val player = context.source.playerOrException
                         val data = PlayerDestinyDataApi.get(player)
                         val equipped = data.subclassConfig.selectedAspects.joinToString(", ").ifBlank { "无" }
-                        context.source.sendSuccess({ Component.literal("已装备星象: $equipped。用 /destinyaspect list 查看，用 /destinyaspect equip <id> 装备。") }, false)
+                        context.source.sendSuccess({ Component.literal("已装备星象: $equipped。用 /destiny aspect list 查看，用 /destiny aspect equip <id> 装备。") }, false)
                         Command.SINGLE_SUCCESS
                     }
                     .then(
@@ -186,7 +243,7 @@ object DestinyPlayerCommands {
                                     val option = DestinySubclassConfigRegistry.definitionFor(data.subclass).aspectOptions
                                         .firstOrNull { it.id == normalizeConfigId(StringArgumentType.getString(context, "id")) }
                                     if (option == null) {
-                                        context.source.sendFailure(Component.literal("未知或不属于当前子职业的星象。用 /destinyaspect list 查看。"))
+                                        context.source.sendFailure(Component.literal("未知或不属于当前子职业的星象。用 /destiny aspect list 查看。"))
                                         return@executes 0
                                     }
                                     if (!data.subclassConfig.selectedAspects.contains(option.id) &&
@@ -222,14 +279,14 @@ object DestinyPlayerCommands {
                     )
             )
 
-            dispatcher.register(
-                Commands.literal("destinyfragment")
+            root.then(
+                Commands.literal("fragment")
                     .executes { context ->
                         val player = context.source.playerOrException
                         val data = PlayerDestinyDataApi.get(player)
                         val equipped = data.subclassConfig.selectedFragments.joinToString(", ").ifBlank { "无" }
                         val capacity = DestinySubclassConfigRegistry.fragmentCapacity(data.subclass, data.subclassConfig)
-                        context.source.sendSuccess({ Component.literal("已装备碎片: $equipped（$capacity 槽）。用 /destinyfragment list 查看。") }, false)
+                        context.source.sendSuccess({ Component.literal("已装备碎片: $equipped（$capacity 槽）。用 /destiny fragment list 查看。") }, false)
                         Command.SINGLE_SUCCESS
                     }
                     .then(
@@ -251,7 +308,7 @@ object DestinyPlayerCommands {
                                     val option = DestinySubclassConfigRegistry.definitionFor(data.subclass).fragmentOptions
                                         .firstOrNull { it.id == normalizeConfigId(StringArgumentType.getString(context, "id")) }
                                     if (option == null) {
-                                        context.source.sendFailure(Component.literal("未知或不属于当前子职业的碎片。用 /destinyfragment list 查看。"))
+                                        context.source.sendFailure(Component.literal("未知或不属于当前子职业的碎片。用 /destiny fragment list 查看。"))
                                         return@executes 0
                                     }
                                     if (!data.subclassConfig.selectedFragments.contains(option.id) &&
@@ -286,8 +343,8 @@ object DestinyPlayerCommands {
                     )
             )
 
-            dispatcher.register(
-                Commands.literal("destinypower")
+            root.then(
+                Commands.literal("power")
                     .executes { context ->
                         val player = context.source.playerOrException
                         val data = PlayerDestinyDataApi.get(player)
@@ -332,8 +389,8 @@ object DestinyPlayerCommands {
                     )
             )
 
-            dispatcher.register(
-                Commands.literal("destinyroll")
+            root.then(
+                Commands.literal("roll")
                     .then(
                         Commands.literal("inspect")
                             .executes { context ->
@@ -373,11 +430,13 @@ object DestinyPlayerCommands {
                                     context.source.sendFailure(Component.literal("主手不是可 Roll 的命运武器。"))
                                     return@executes 0
                                 }
-                                context.source.sendSuccess({ Component.literal("已重铸主手武器 Roll。使用 /destinyroll inspect 查看实算属性。") }, true)
+                                context.source.sendSuccess({ Component.literal("已重铸主手武器 Roll。使用 /destiny roll inspect 查看实算属性。") }, true)
                                 Command.SINGLE_SUCCESS
                             }
                     )
             )
+
+            dispatcher.register(root)
         }
     }
 

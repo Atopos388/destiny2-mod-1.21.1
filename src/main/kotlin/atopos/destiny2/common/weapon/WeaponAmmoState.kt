@@ -187,6 +187,31 @@ object WeaponAmmoState {
         return true
     }
 
+    /** Echo of Domineering: immediately reload the equipped weapon from reserves. */
+    fun reloadFromReservesInstantly(
+        stack: ItemStack,
+        player: ServerPlayer,
+        profile: WeaponCombatProfile
+    ): Boolean {
+        val state = read(stack, profile.magazineSize)
+        if (state.magazine >= profile.magazineSize) return false
+        val needed = WeaponAmmoMath.needed(state.magazine, profile.magazineSize)
+        val loaded = consumeReserve(player, DestinyItems.ammoItem(profile.ammoType), needed)
+        if (loaded <= 0 && !player.abilities.instabuild) return false
+        write(
+            stack,
+            State(
+                magazine = WeaponAmmoMath.completedMagazine(state.magazine, profile.magazineSize, loaded),
+                reloadRemaining = 0,
+                reloadTotal = 0,
+                chamberEmpty = false,
+                reloadSequence = state.reloadSequence,
+                reloadBlockedUntil = player.level().gameTime
+            )
+        )
+        return true
+    }
+
     fun countReserve(player: ServerPlayer, ammoItem: Item): Int {
         if (player.abilities.instabuild) return Int.MAX_VALUE
         return (player.inventory.items + player.inventory.offhand)

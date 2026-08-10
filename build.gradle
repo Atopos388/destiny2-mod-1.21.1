@@ -73,6 +73,9 @@ dependencies {
     // Runtime animation libraries used by the existing models, renderers, and player actions.
     modImplementation include("software.bernie.geckolib:geckolib-fabric-1.21.1:${project.geckolib_version}")
     modImplementation include("dev.kosmx.player-anim:player-animation-lib-fabric:${project.player_animator_version}")
+    // PlayerAnimator discovers this optional client library by mod id and uses it to
+    // deform the vanilla player cuboids for seamless elbow, knee, torso, and cape bends.
+    modRuntimeOnly include("io.github.kosmx.bendy-lib:bendy-lib-fabric:${project.bendy_lib_version}")
     // LDLib2 registers an accessor for dev.architectury.fluid.FluidStack during startup.
     modImplementation include("maven.modrinth:architectury-api:${project.architectury_api_version}")
     modImplementation files("libs/ldlib-fabric-2.5-destinyfix-client.jar")

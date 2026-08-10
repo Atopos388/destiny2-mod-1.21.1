@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "destiny2-mod:gui/subclass/solar_warlock/fragment_ember_of_searing"
+  }
+}

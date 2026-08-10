@@ -1,0 +1,15 @@
+{
+  "id": "destiny2-mod:the_deicide",
+  "model": "destiny2-mod:geo/the_deicide.geo.json",
+  "texture": "destiny2-mod:textures/item/the_deicide.png",
+  "animation": "destiny2-mod:animations/the_deicide.animation.json",
+  "idle_view_bone": "iron_view",
+  "idle_view_pivot": [0.15, 15.93, 9.125],
+  "cycle_animation": "cycle",
+  "merge_cycle_into_shoot": true,
+  "additive_shoot": true,
+  "skin_bones": [
+    "lefthand_pos",
+    "righthand_pos"
+  ]
+}
