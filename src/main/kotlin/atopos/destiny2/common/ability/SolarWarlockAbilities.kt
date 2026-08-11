@@ -82,14 +82,7 @@ object SolarWarlockAbilities {
         override fun cast(context: DestinyAbilityContext): Boolean {
             val player = context.player
             val grenade = HealingGrenadeEntity(player.serverLevel(), player)
-            grenade.shootFromRotation(
-                player,
-                player.xRot,
-                player.yRot,
-                0.0f,
-                SolarWarlockAspectRules.MINECRAFT_CALIBRATION_GRENADE_PROJECTILE_SPEED,
-                SolarWarlockAspectRules.MINECRAFT_CALIBRATION_GRENADE_PROJECTILE_INACCURACY
-            )
+            DestinyGrenadeThrow.launch(grenade, player, DestinyGrenadeThrow.Profile.AREA)
             player.serverLevel().addFreshEntity(grenade)
             player.serverLevel().playSound(
                 null,
@@ -112,14 +105,7 @@ object SolarWarlockAbilities {
         override fun cast(context: DestinyAbilityContext): Boolean {
             val player = context.player
             val grenade = FireboltGrenadeEntity(player.serverLevel(), player)
-            grenade.shootFromRotation(
-                player,
-                player.xRot,
-                player.yRot,
-                0.0f,
-                SolarWarlockAspectRules.MINECRAFT_CALIBRATION_GRENADE_PROJECTILE_SPEED,
-                SolarWarlockAspectRules.MINECRAFT_CALIBRATION_GRENADE_PROJECTILE_INACCURACY
-            )
+            DestinyGrenadeThrow.launch(grenade, player, DestinyGrenadeThrow.Profile.SEEKING)
             player.serverLevel().addFreshEntity(grenade)
             player.serverLevel().playSound(
                 null,
@@ -142,14 +128,7 @@ object SolarWarlockAbilities {
         override fun cast(context: DestinyAbilityContext): Boolean {
             val player = context.player
             val grenade = FusionGrenadeEntity(player.serverLevel(), player)
-            grenade.shootFromRotation(
-                player,
-                player.xRot,
-                player.yRot,
-                0.0f,
-                SolarWarlockAspectRules.MINECRAFT_CALIBRATION_GRENADE_PROJECTILE_SPEED,
-                SolarWarlockAspectRules.MINECRAFT_CALIBRATION_GRENADE_PROJECTILE_INACCURACY
-            )
+            DestinyGrenadeThrow.launch(grenade, player, DestinyGrenadeThrow.Profile.ATTACHMENT)
             player.serverLevel().addFreshEntity(grenade)
             player.serverLevel().playSound(
                 null,

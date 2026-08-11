@@ -143,11 +143,12 @@ object ClientNetworking {
             context.client().execute {
                 val effectId = ResourceLocation.tryParse(payload.effectId)
                     ?: return@execute
-                if (effectId == THUNDERCLAP_GROUND_LIFT_EFFECT) {
+                if (effectId == THUNDERCLAP_GROUND_LIFT_EFFECT || effectId == THUNDERCLAP_RARE_IMPACT_EFFECT) {
                     val origin = Vec3(payload.x, payload.y, payload.z)
                     ThunderclapBlastRenderer.activate(
                         origin = origin,
-                        yawDegrees = payload.yaw
+                        yawDegrees = payload.yaw,
+                        handDrawnImpact = effectId == THUNDERCLAP_RARE_IMPACT_EFFECT
                     )
                     ThunderclapGroundLiftRenderer.activate(
                         origin = origin,
@@ -176,5 +177,9 @@ object ClientNetworking {
     private val THUNDERCLAP_GROUND_LIFT_EFFECT = ResourceLocation.fromNamespaceAndPath(
         "destiny2-mod",
         "vfx/thunderclap_ground_lift"
+    )
+    private val THUNDERCLAP_RARE_IMPACT_EFFECT = ResourceLocation.fromNamespaceAndPath(
+        "destiny2-mod",
+        "vfx/thunderclap_rare_impact"
     )
 }

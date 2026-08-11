@@ -1570,10 +1570,11 @@ object DestinyNetworking {
         origin: Vec3,
         yaw: Float,
         pitch: Float,
-        delayTicks: Int = 0
+        delayTicks: Int = 0,
+        trackingEffectId: ResourceLocation = effectId
     ) {
-        val payload = PlayWorldVfxPayload(
-            effectId = effectId.toString(),
+        fun payload(id: ResourceLocation) = PlayWorldVfxPayload(
+            effectId = id.toString(),
             x = origin.x,
             y = origin.y,
             z = origin.z,
@@ -1581,9 +1582,10 @@ object DestinyNetworking {
             pitch = pitch,
             delayTicks = delayTicks.coerceIn(0, 20 * 30)
         )
-        ServerPlayNetworking.send(player, payload)
+        ServerPlayNetworking.send(player, payload(effectId))
+        val observerPayload = payload(trackingEffectId)
         PlayerLookup.tracking(player).forEach { trackingPlayer ->
-            ServerPlayNetworking.send(trackingPlayer, payload)
+            ServerPlayNetworking.send(trackingPlayer, observerPayload)
         }
     }
 

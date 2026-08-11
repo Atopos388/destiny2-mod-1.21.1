@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 package atopos.destiny2.common.entity
 
+import atopos.destiny2.common.action.ThunderclapTiming
 import net.minecraft.nbt.CompoundTag
 import net.minecraft.world.entity.Entity
 import net.minecraft.world.entity.EntityType
@@ -19,9 +20,9 @@ class ThunderclapPlayerProxyEntity(
     entityType: EntityType<*>,
     level: Level
 ) : Entity(entityType, level), GeoEntity {
-    enum class Phase(val animationName: String) {
-        CHARGE("animation.destiny2.player.thunderclap_charge"),
-        RELEASE("animation.destiny2.player.thunderclap_release")
+    enum class Phase(val animationName: String, val playbackSpeed: Double) {
+        CHARGE("animation.destiny2.player.thunderclap_charge", 1.0),
+        RELEASE("animation.destiny2.player.thunderclap_release", ThunderclapTiming.RELEASE_PLAYBACK_SPEED)
     }
 
     private val animationCache: AnimatableInstanceCache = GeckoLibUtil.createInstanceCache(this)
@@ -33,6 +34,7 @@ class ThunderclapPlayerProxyEntity(
     private var phaseDurationTicks: Int = 1
     private var elapsedPhaseTicks: Int = 0
     private var lockedFacingYaw: Float = 0f
+    private var visualHitStopUntilNanos: Long = 0L
 
     init {
         noPhysics = true
@@ -54,9 +56,27 @@ class ThunderclapPlayerProxyEntity(
     fun phaseProgress(partialTick: Float): Float =
         ((elapsedPhaseTicks + partialTick) / phaseDurationTicks.toFloat()).coerceIn(0.0f, 1.0f)
 
-    fun phaseAge(partialTick: Float): Float = elapsedPhaseTicks + partialTick
+    fun phaseAge(partialTick: Float): Float =
+        ((elapsedPhaseTicks + partialTick) * phase.playbackSpeed).toFloat()
+
+    fun beginVisualHitStop(untilNanos: Long) {
+        visualHitStopUntilNanos = maxOf(visualHitStopUntilNanos, untilNanos)
+    }
 
     override fun tick() {
+        if (level().isClientSide && System.nanoTime() < visualHitStopUntilNanos) {
+            val target = targetPlayerId?.let(level()::getPlayerByUUID)
+            if (target == null || target.isRemoved) {
+                discard()
+                return
+            }
+            setPos(target.x, target.y, target.z)
+            yRot = lockedFacingYaw
+            yRotO = lockedFacingYaw
+            xRot = 0f
+            xRotO = 0f
+            return
+        }
         super.tick()
         if (!level().isClientSide || remainingTicks-- <= 0) {
             discard()
@@ -78,12 +98,12 @@ class ThunderclapPlayerProxyEntity(
     }
 
     override fun registerControllers(controllers: AnimatableManager.ControllerRegistrar) {
-        controllers.add(
-            AnimationController(this, "thunderclap_player", 0) { state ->
+        val controller = AnimationController(this, "thunderclap_player", 0) { state ->
                 state.controller.setAnimation(RawAnimation.begin().thenPlay(phase.animationName))
                 PlayState.CONTINUE
             }
-        )
+        controller.setAnimationSpeedHandler { it.phase.playbackSpeed }
+        controllers.add(controller)
     }
 
     override fun getAnimatableInstanceCache(): AnimatableInstanceCache = animationCache

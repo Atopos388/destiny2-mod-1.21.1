@@ -26,6 +26,7 @@ import atopos.destiny2.client.renderer.GeckoLibMultiTextureResources
 import atopos.destiny2.client.renderer.AmplifiedPlayerAuraClient
 import atopos.destiny2.client.renderer.AmplifiedSpeedLinesOverlay
 import atopos.destiny2.client.renderer.ArcTitanBarricadeWorldRenderer
+import atopos.destiny2.client.renderer.ArcPulseGrenadeWorldRenderer
 import atopos.destiny2.client.renderer.ThunderclapBlastRenderer
 import atopos.destiny2.client.renderer.ThunderclapGroundLiftRenderer
 import atopos.destiny2.client.renderer.ThunderclapPlayerProxyClient
@@ -63,6 +64,7 @@ object Destiny2MODClient : ClientModInitializer {
         AmplifiedPlayerAuraClient.register()
         AmplifiedSpeedLinesOverlay.register()
         ArcTitanBarricadeWorldRenderer.register()
+        ArcPulseGrenadeWorldRenderer.register()
         ThunderclapGroundLiftRenderer.register()
         HealingRiftWorldRenderer.register()
         HealingRiftScreenOverlay.register()

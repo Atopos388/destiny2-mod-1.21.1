@@ -7,6 +7,7 @@ import atopos.destiny2.common.entity.ArcLightningGrenadeEntity
 import atopos.destiny2.common.entity.ArcStormGrenadeEntity
 import atopos.destiny2.common.aspect.ArcTitanAspectRuntime
 import atopos.destiny2.common.action.DestinyActionRegistry
+import atopos.destiny2.common.action.ThunderclapTiming
 import atopos.destiny2.common.network.DestinyNetworking
 import atopos.destiny2.common.player.AbilitySlot
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents
@@ -36,7 +37,6 @@ object ArcTitanAbilities {
     private const val MOD_ID = "destiny2-mod"
     private const val THUNDERCLAP_MAX_CHARGE_TICKS = 40
     private const val THUNDERCLAP_MIN_RELEASE_TICKS = 4
-    private const val THUNDERCLAP_RELEASE_ANIMATION_TICKS = 36
     private const val THUNDERCRASH_MAX_FLIGHT_TICKS = 42
     private const val THUNDERCRASH_COLLISION_GRACE_TICKS = 5
     private const val THUNDERCRASH_SPEED = 1.55
@@ -51,7 +51,11 @@ object ArcTitanAbilities {
     private data class ThunderclapRecovery(
         val playerId: UUID,
         val anchor: Vec3,
-        var remainingTicks: Int = THUNDERCLAP_RELEASE_ANIMATION_TICKS
+        val chargeTicks: Int,
+        val impactYaw: Float,
+        var elapsedTicks: Int = 0,
+        var impactTriggered: Boolean = false,
+        var remainingTicks: Int = ThunderclapTiming.RELEASE_DURATION_TICKS
     )
 
     private data class ThundercrashFlight(
@@ -89,6 +93,11 @@ object ArcTitanAbilities {
                     return@forEach
                 }
                 lockThunderclapPosition(player, recovery.anchor)
+                if (!recovery.impactTriggered && ArcTitanRules.thunderclapImpactReady(recovery.elapsedTicks)) {
+                    recovery.impactTriggered = true
+                    impactThunderclap(player, recovery)
+                }
+                recovery.elapsedTicks++
                 recovery.remainingTicks--
                 if (recovery.remainingTicks <= 0) {
                     thunderclapRecoveries.remove(recovery.playerId)
@@ -118,7 +127,7 @@ object ArcTitanAbilities {
         override fun cast(context: DestinyAbilityContext): Boolean {
             val player = context.player
             val grenade = ArcPulseGrenadeEntity(player.serverLevel(), player)
-            grenade.shootFromRotation(player, player.xRot, player.yRot, 0.0f, 1.35f, 0.8f)
+            DestinyGrenadeThrow.launch(grenade, player, DestinyGrenadeThrow.Profile.AREA)
             player.serverLevel().addFreshEntity(grenade)
             player.serverLevel().playSound(
                 null,
@@ -140,7 +149,7 @@ object ArcTitanAbilities {
     ) {
         override fun cast(context: DestinyAbilityContext): Boolean {
             val grenade = ArcFlashbangGrenadeEntity(context.player.serverLevel(), context.player)
-            grenade.shootFromRotation(context.player, context.player.xRot, context.player.yRot, 0.0f, 1.35f, 0.8f)
+            DestinyGrenadeThrow.launch(grenade, context.player, DestinyGrenadeThrow.Profile.FRAG)
             context.player.serverLevel().addFreshEntity(grenade)
             return true
         }
@@ -154,7 +163,7 @@ object ArcTitanAbilities {
     ) {
         override fun cast(context: DestinyAbilityContext): Boolean {
             val grenade = ArcLightningGrenadeEntity(context.player.serverLevel(), context.player)
-            grenade.shootFromRotation(context.player, context.player.xRot, context.player.yRot, 0.0f, 1.35f, 0.75f)
+            DestinyGrenadeThrow.launch(grenade, context.player, DestinyGrenadeThrow.Profile.ATTACHMENT)
             context.player.serverLevel().addFreshEntity(grenade)
             ArcTitanAspectRuntime.noteLightningGrenadeCast(context.player)
             return true
@@ -169,7 +178,7 @@ object ArcTitanAbilities {
     ) {
         override fun cast(context: DestinyAbilityContext): Boolean {
             val grenade = ArcStormGrenadeEntity(context.player.serverLevel(), context.player)
-            grenade.shootFromRotation(context.player, context.player.xRot, context.player.yRot, 0.0f, 1.25f, 0.75f)
+            DestinyGrenadeThrow.launch(grenade, context.player, DestinyGrenadeThrow.Profile.AREA)
             context.player.serverLevel().addFreshEntity(grenade)
             return true
         }
@@ -351,20 +360,40 @@ object ArcTitanAbilities {
     private fun releaseThunderclap(player: ServerPlayer, charge: ThunderclapCharge) {
         player.removeEffect(MobEffects.MOVEMENT_SLOWDOWN)
         player.removeEffect(MobEffects.DAMAGE_RESISTANCE)
-        thunderclapRecoveries[player.uuid] = ThunderclapRecovery(player.uuid, charge.anchor)
+        thunderclapRecoveries[player.uuid] = ThunderclapRecovery(
+            playerId = player.uuid,
+            anchor = charge.anchor,
+            chargeTicks = charge.chargeTicks,
+            impactYaw = player.yRot
+        )
         DestinyNetworking.broadcastDestinyAction(player, DestinyActionRegistry.ARC_TITAN_THUNDERCLAP_RELEASE)
-        val chargeTicks = charge.chargeTicks
-        val ratio = ArcTitanRules.chargeRatio(chargeTicks, THUNDERCLAP_MAX_CHARGE_TICKS)
+    }
+
+    /**
+     * The authored fist reaches its contact pose at 0.25 s (release tick 5).
+     * Damage, world VFX, monochrome impact, and hit stop all begin here so the
+     * burst grows out of the locked punch endpoint instead of preceding it.
+     */
+    private fun impactThunderclap(player: ServerPlayer, recovery: ThunderclapRecovery) {
+        val ratio = ArcTitanRules.chargeRatio(recovery.chargeTicks, THUNDERCLAP_MAX_CHARGE_TICKS)
         val range = 4.0 + ratio * 3.0
-        val damage = (9.0 + ratio * 18.0).toFloat()
-        val forward = horizontalFacing(player)
+        val rareImpact = ArcTitanRules.isRareThunderclapImpact(player.random.nextDouble())
+        val damage = ArcTitanRules.thunderclapDamage((9.0 + ratio * 18.0).toFloat(), rareImpact)
+        val yawRadians = Math.toRadians(recovery.impactYaw.toDouble())
+        val forward = Vec3(-kotlin.math.sin(yawRadians), 0.0, kotlin.math.cos(yawRadians)).normalize()
         val origin = player.eyePosition.add(0.0, -0.55, 0.0)
         DestinyNetworking.broadcastWorldVfx(
             player = player,
-            effectId = id("vfx/thunderclap_ground_lift"),
+            effectId = id(
+                if (rareImpact) "vfx/thunderclap_rare_impact"
+                else "vfx/thunderclap_ground_lift"
+            ),
             origin = player.position(),
-            yaw = player.yRot,
-            pitch = 0.0f
+            yaw = recovery.impactYaw,
+            pitch = 0.0f,
+            // Observers still see the world-space Arc blast, but the rare
+            // first-person impact sequence belongs only to the caster.
+            trackingEffectId = id("vfx/thunderclap_ground_lift")
         )
         val proxy = ArcAbilityDamageEntity(player.serverLevel(), origin, player, AbilitySlot.MELEE)
         player.serverLevel().addFreshEntity(proxy)
@@ -507,10 +536,22 @@ object ArcTitanAbilities {
 }
 
 object ArcTitanRules {
+    const val THUNDERCLAP_RARE_IMPACT_CHANCE = 0.001
+    const val THUNDERCLAP_RARE_DAMAGE_MULTIPLIER = 5.0f
+
+    fun thunderclapImpactReady(releaseElapsedTicks: Int): Boolean =
+        releaseElapsedTicks >= ThunderclapTiming.RELEASE_CONTACT_TICK
+
     fun chargeRatio(chargeTicks: Int, maxChargeTicks: Int): Double {
         if (maxChargeTicks <= 0) return 1.0
         return chargeTicks.coerceIn(0, maxChargeTicks).toDouble() / maxChargeTicks.toDouble()
     }
+
+    fun isRareThunderclapImpact(randomRoll: Double): Boolean =
+        randomRoll >= 0.0 && randomRoll < THUNDERCLAP_RARE_IMPACT_CHANCE
+
+    fun thunderclapDamage(baseDamage: Float, rareImpact: Boolean): Float =
+        baseDamage * if (rareImpact) THUNDERCLAP_RARE_DAMAGE_MULTIPLIER else 1.0f
 
     fun directionForInput(forward: Vec3, input: Int): Vec3 {
         val normalizedForward = Vec3(forward.x, 0.0, forward.z).let {

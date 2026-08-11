@@ -1,6 +1,7 @@
 package atopos.destiny2.mixin.client
 
 import atopos.destiny2.client.cinematic.CinematicCameraClient
+import atopos.destiny2.client.renderer.ThunderclapBlastRenderer
 import net.minecraft.client.DeltaTracker
 import net.minecraft.client.gui.Gui
 import net.minecraft.client.gui.GuiGraphics
@@ -13,8 +14,11 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo
 abstract class CinematicGuiMixin {
     @Inject(method = ["render"], at = [At("HEAD")], cancellable = true)
     private fun hideHudDuringCinematic(graphics: GuiGraphics, deltaTracker: DeltaTracker, ci: CallbackInfo) {
-        if (!CinematicCameraClient.shouldHideHud()) return
-        CinematicCameraClient.renderOverlay(graphics, deltaTracker)
-        ci.cancel()
+        if (CinematicCameraClient.shouldHideHud()) {
+            CinematicCameraClient.renderOverlay(graphics, deltaTracker)
+            ci.cancel()
+            return
+        }
+        if (ThunderclapBlastRenderer.isHandDrawnImpactPlateActive()) ci.cancel()
     }
 }

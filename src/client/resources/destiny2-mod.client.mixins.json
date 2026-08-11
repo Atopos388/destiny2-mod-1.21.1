@@ -28,7 +28,8 @@
 		"LDLibTooltipSafetyMixin",
 		"LocalPlayerSwingMixin",
 		"MinecraftAttackMixin",
-		"MinecraftUseItemMixin"
+		"MinecraftUseItemMixin",
+		"ThunderclapImpactClientLevelMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

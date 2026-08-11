@@ -1,5 +1,6 @@
 package atopos.destiny2.common.entity
 
+import atopos.destiny2.common.ability.DestinyGrenadeThrow
 import atopos.destiny2.common.effect.DestinyStatusRules
 import atopos.destiny2.common.effect.SolarDamageKind
 import atopos.destiny2.common.aspect.DestinyAspectRuntime
@@ -84,7 +85,7 @@ class SolarGrenadeEntity : ThrowableItemProjectile, GeoEntity {
         noPhysics = false
         isNoGravity = false
         setPos(chargingPosition(currentOwner))
-        shootFromRotation(currentOwner, currentOwner.xRot, currentOwner.yRot, 0.0f, 1.5f, 1.0f)
+        DestinyGrenadeThrow.launch(this, currentOwner, DestinyGrenadeThrow.Profile.AREA)
     }
 
     override fun onHit(hitResult: HitResult) {

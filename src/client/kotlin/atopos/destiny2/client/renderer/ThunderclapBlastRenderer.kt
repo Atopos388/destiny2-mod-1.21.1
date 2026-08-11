@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
 package atopos.destiny2.client.renderer
 
+import atopos.destiny2.client.camera.ThunderclapCameraClient
+import atopos.destiny2.common.action.ThunderclapTiming
 import com.mojang.blaze3d.platform.GlStateManager
 import com.mojang.blaze3d.systems.RenderSystem
 import com.mojang.blaze3d.vertex.BufferBuilder
@@ -23,14 +25,17 @@ import net.minecraft.resources.ResourceLocation
 import net.minecraft.world.phys.Vec3
 import org.ladysnake.satin.api.event.ShaderEffectRenderCallback
 import org.ladysnake.satin.api.managed.ShaderEffectManager
+import org.slf4j.LoggerFactory
 import kotlin.math.PI
 import kotlin.math.cos
+import kotlin.math.floor
 import kotlin.math.sqrt
 import kotlin.math.sin
-import kotlin.random.Random
+import kotlin.math.tan
 
 /** Open-top Arc energy chamber erected from Thunderclap's compressed hand core. */
 object ThunderclapBlastRenderer : HudRenderCallback {
+    private val logger = LoggerFactory.getLogger("DestinyThunderclapVfx")
     private const val LIFETIME_TICKS = 12.0f
     private const val FIELD_START_TICK = 0.75f
     private const val CUP_HEIGHT = 3.35
@@ -39,7 +44,7 @@ object ThunderclapBlastRenderer : HudRenderCallback {
     private const val CUP_VERTICAL_SEGMENTS = 9
     private const val CUP_RADIAL_SEGMENTS = 40
     private const val MAX_EFFECTS = 8
-    private const val HAND_DRAWN_IMPACT_CHANCE = 0.125f
+    private const val ABSTRACT_PLATE_MS = 130.0
     private val UP = Vec3(0.0, 1.0, 0.0)
 
     @Volatile private var volumeShader: ShaderInstance? = null
@@ -50,11 +55,12 @@ object ThunderclapBlastRenderer : HudRenderCallback {
     private val worldInkEffect by lazy {
         ShaderEffectManager.getInstance().manage(
             ResourceLocation.fromNamespaceAndPath("destiny2-mod", "shaders/post/thunderclap_world_ink.json")
-        )
+        ) { logger.info("Thunderclap world ink post shader initialized") }
     }
 
     private data class Blast(
         val startGameTime: Double,
+        val startNanos: Long,
         val core: Vec3,
         val forward: Vec3,
         val right: Vec3,
@@ -69,6 +75,13 @@ object ThunderclapBlastRenderer : HudRenderCallback {
         val fieldScale: Double,
         val topActivity: Float,
         val impact: Float
+    )
+
+    private data class ScreenImpact(
+        val centerX: Float,
+        val centerY: Float,
+        val directionX: Float,
+        val directionY: Float
     )
 
     private val active = ArrayDeque<Blast>()
@@ -95,10 +108,12 @@ object ThunderclapBlastRenderer : HudRenderCallback {
         WorldRenderEvents.AFTER_TRANSLUCENT.register(::render)
         ShaderEffectRenderCallback.EVENT.register(::renderWorldInk)
         HudRenderCallback.EVENT.register(this)
-        ClientPlayConnectionEvents.DISCONNECT.register { _, _ -> active.clear() }
+        ClientPlayConnectionEvents.DISCONNECT.register { _, _ ->
+            active.clear()
+        }
     }
 
-    fun activate(origin: Vec3, yawDegrees: Float) {
+    fun activate(origin: Vec3, yawDegrees: Float, handDrawnImpact: Boolean = false) {
         val yaw = Math.toRadians(yawDegrees.toDouble())
         val forward = Vec3(-sin(yaw), 0.0, cos(yaw)).normalize()
         val right = Vec3(forward.z, 0.0, -forward.x)
@@ -108,17 +123,39 @@ object ThunderclapBlastRenderer : HudRenderCallback {
         // Preserve the fractional tick at packet arrival. Integer-only time can
         // begin a newly received blast near age 1.0 and skip the flash peak.
         val gameTime = level.gameTime + client.timer.getGameTimeDeltaPartialTick(false).toDouble()
+        val startNanos = System.nanoTime()
         while (active.size >= MAX_EFFECTS) active.removeFirst()
         active.addLast(
             Blast(
                 gameTime,
+                startNanos,
                 handCore,
                 forward,
                 right,
                 origin.y + 0.035,
-                Random.nextFloat() < HAND_DRAWN_IMPACT_CHANCE
+                handDrawnImpact
             )
         )
+        if (handDrawnImpact) {
+            logger.info("Server-confirmed rare Thunderclap hand-drawn impact")
+            ThunderclapCameraClient.beginImpactSequence(
+                ThunderclapTiming.IMPACT_HIT_STOP_MS,
+                ThunderclapTiming.IMPACT_SEQUENCE_END_MS
+            )
+            ThunderclapPlayerProxyClient.beginReleaseHitStop(ThunderclapTiming.IMPACT_HIT_STOP_MS)
+        }
+    }
+
+    /** Vanilla HUD is omitted only while an authored monochrome plate is visible. */
+    fun isHandDrawnImpactPlateActive(): Boolean {
+        val client = Minecraft.getInstance()
+        client.level ?: return false
+        if (active.isEmpty() || client.screen != null) return false
+        val nowNanos = System.nanoTime()
+        return active.any { blast ->
+            blast.handDrawnImpact && impactElapsedMillis(blast, nowNanos) in
+                0.0..ThunderclapTiming.IMPACT_SEQUENCE_END_MS.toDouble()
+        }
     }
 
     override fun onHudRender(graphics: GuiGraphics, tickCounter: DeltaTracker) {
@@ -147,7 +184,8 @@ object ThunderclapBlastRenderer : HudRenderCallback {
             if (blast.handDrawnImpact) {
                 // Suppress the later blue HUD exposure while the completed
                 // world framebuffer is being converted to inked monochrome.
-                val candidate = inkPulse(age) * distanceFade
+                val candidate = impactPlateStrength(impactElapsedMillis(blast, System.nanoTime())) *
+                    if (distanceFade > 0.0f) 1.0f else 0.0f
                 inkImpact = maxOf(inkImpact, candidate)
             }
         }
@@ -212,31 +250,121 @@ object ThunderclapBlastRenderer : HudRenderCallback {
     private fun renderWorldInk(tickDelta: Float) {
         val client = Minecraft.getInstance()
         val level = client.level ?: return
+        val nowNanos = System.nanoTime()
         if (active.isEmpty() || client.screen != null) return
-        val now = level.gameTime + tickDelta.toDouble()
         val camera = client.gameRenderer.mainCamera.position
         var strength = 0.0f
         var seed = 0.0f
+        var burstStrength = 0.0f
+        var platePhase = 0.0f
+        var phaseProgress = 0.0f
+        var plateIndex = 0.0f
+        var screenImpact = ScreenImpact(0.52f, 0.50f, 1.0f, 0.0f)
         active.forEach { blast ->
             if (!blast.handDrawnImpact) return@forEach
-            val age = (now - blast.startGameTime).toFloat()
-            if (age !in 0.0f..2.0f) return@forEach
-            val distanceFade = (1.0 - camera.distanceTo(blast.core) / 14.0).coerceIn(0.0, 1.0).toFloat()
-            // Roughly two to four displayed frames at normal frame rates, with
-            // a broad enough peak that an uneven frame cannot skip the event.
-            val candidate = inkPulse(age) * distanceFade
+            val elapsedMs = impactElapsedMillis(blast, nowNanos)
+            if (elapsedMs !in 0.0..ThunderclapTiming.IMPACT_SEQUENCE_END_MS.toDouble()) return@forEach
+            if (camera.distanceTo(blast.core) > 14.0) return@forEach
+            val candidate = impactPlateStrength(elapsedMs)
+            burstStrength = maxOf(burstStrength, impactBurst(elapsedMs))
             if (candidate > strength) {
                 strength = candidate
-                seed = (blast.startGameTime % 1024.0).toFloat()
+                seed = floor(elapsedMs / ABSTRACT_PLATE_MS + blast.startGameTime * 0.17).toFloat()
+                platePhase = impactPlatePhase(elapsedMs)
+                phaseProgress = ThunderclapTiming.impactPhaseProgress(elapsedMs)
+                plateIndex = floor(elapsedMs / ABSTRACT_PLATE_MS).toFloat() % 4.0f
+                screenImpact = screenImpact(blast, tickDelta)
             }
         }
         if (strength <= 0.002f) return
         worldInkEffect.setUniformValue("Strength", strength)
         worldInkEffect.setUniformValue("Seed", seed)
+        worldInkEffect.setUniformValue("PlatePhase", platePhase)
+        worldInkEffect.setUniformValue("PhaseProgress", phaseProgress)
+        worldInkEffect.setUniformValue("PlateIndex", plateIndex)
+        worldInkEffect.setUniformValue("ImpactCenter", screenImpact.centerX, screenImpact.centerY)
+        worldInkEffect.setUniformValue("ImpactDirection", screenImpact.directionX, screenImpact.directionY)
+        worldInkEffect.setUniformValue("BurstStrength", burstStrength)
         worldInkEffect.render(tickDelta)
     }
 
-    private fun inkPulse(age: Float): Float = pulse(age, 0.24f, 0.58f, 1.42f)
+    private fun impactPlateStrength(elapsedMs: Double): Float = when {
+        elapsedMs < 0.0 || elapsedMs > ThunderclapTiming.IMPACT_SEQUENCE_END_MS.toDouble() -> 0.0f
+        elapsedMs <= ThunderclapTiming.IMPACT_INK_CLOSE_END_MS.toDouble() -> 1.0f
+        else -> 1.0f - smoothstep(
+            ThunderclapTiming.IMPACT_INK_CLOSE_END_MS.toFloat(),
+            ThunderclapTiming.IMPACT_SEQUENCE_END_MS.toFloat(),
+            elapsedMs.toFloat()
+        )
+    }
+
+    private fun impactPlatePhase(elapsedMs: Double): Float = when (ThunderclapTiming.impactPhase(elapsedMs)) {
+        ThunderclapTiming.ImpactPhase.ABSTRACT -> 0.0f
+        ThunderclapTiming.ImpactPhase.LINE_ART -> 1.0f
+        ThunderclapTiming.ImpactPhase.INK_CLOSE -> 2.0f
+        ThunderclapTiming.ImpactPhase.RELEASE -> 3.0f
+        ThunderclapTiming.ImpactPhase.COMPLETE -> 4.0f
+    }
+
+    private fun impactBurst(elapsedMs: Double): Float =
+        1.0f - smoothstep(0.0f, 82.0f, elapsedMs.toFloat())
+
+    private fun impactElapsedMillis(blast: Blast, nowNanos: Long): Double =
+        (nowNanos - blast.startNanos).coerceAtLeast(0L) / 1_000_000.0
+
+    private fun screenImpact(blast: Blast, tickDelta: Float): ScreenImpact {
+        val client = Minecraft.getInstance()
+        val camera = client.gameRenderer.mainCamera
+        val width = client.window.width.coerceAtLeast(1)
+        val height = client.window.height.coerceAtLeast(1)
+        val fov = ThunderclapCameraClient.currentFov(tickDelta)
+            ?: client.options.fov().get().toDouble()
+        val center = projectToScreen(blast.core, camera.position, camera.yRot, camera.xRot, fov, width, height)
+            ?: return ScreenImpact(0.52f, 0.50f, 1.0f, 0.0f)
+        val endpoint = projectToScreen(
+            blast.core.add(blast.forward.scale(1.4)),
+            camera.position,
+            camera.yRot,
+            camera.xRot,
+            fov,
+            width,
+            height
+        )
+        val dx = (endpoint?.first ?: center.first + 0.25f) - center.first
+        val dy = (endpoint?.second ?: center.second) - center.second
+        val length = sqrt(dx * dx + dy * dy)
+        return ScreenImpact(
+            center.first.coerceIn(0.10f, 0.90f),
+            center.second.coerceIn(0.12f, 0.88f),
+            if (length > 0.001f) dx / length else 1.0f,
+            if (length > 0.001f) dy / length else 0.0f
+        )
+    }
+
+    private fun projectToScreen(
+        point: Vec3,
+        camera: Vec3,
+        yawDegrees: Float,
+        pitchDegrees: Float,
+        fovDegrees: Double,
+        width: Int,
+        height: Int
+    ): Pair<Float, Float>? {
+        val yaw = Math.toRadians(yawDegrees.toDouble())
+        val pitch = Math.toRadians(pitchDegrees.toDouble())
+        val cosPitch = cos(pitch)
+        val forward = Vec3(-sin(yaw) * cosPitch, -sin(pitch), cos(yaw) * cosPitch)
+        val right = Vec3(cos(yaw), 0.0, sin(yaw))
+        val up = forward.cross(right)
+        val relative = point.subtract(camera)
+        val depth = relative.dot(forward)
+        if (depth <= 0.05) return null
+        val tanHalfFov = tan(Math.toRadians(fovDegrees.coerceIn(20.0, 140.0) * 0.5))
+        val aspect = width.toDouble() / height.toDouble()
+        val ndcX = relative.dot(right) / (depth * tanHalfFov * aspect)
+        val ndcY = relative.dot(up) / (depth * tanHalfFov)
+        return (0.5 + ndcX * 0.5).toFloat() to (0.5 - ndcY * 0.5).toFloat()
+    }
 
     private fun render(context: WorldRenderContext) {
         if (active.isEmpty()) return
@@ -245,7 +373,14 @@ object ThunderclapBlastRenderer : HudRenderCallback {
         val partialTick = context.tickCounter().getGameTimeDeltaPartialTick(true)
         val now = context.world().gameTime + partialTick.toDouble()
         val iterator = active.iterator()
-        while (iterator.hasNext()) if (now - iterator.next().startGameTime > LIFETIME_TICKS) iterator.remove()
+        val cleanupNanos = System.nanoTime()
+        while (iterator.hasNext()) {
+            val blast = iterator.next()
+            val worldFinished = now - blast.startGameTime > LIFETIME_TICKS
+            val inkFinished = !blast.handDrawnImpact ||
+                impactElapsedMillis(blast, cleanupNanos) > ThunderclapTiming.IMPACT_SEQUENCE_END_MS
+            if (worldFinished && inkFinished) iterator.remove()
+        }
         if (active.isEmpty()) return
 
         val modelView = RenderSystem.getModelViewStack()

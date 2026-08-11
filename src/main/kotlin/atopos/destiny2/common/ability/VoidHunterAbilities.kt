@@ -197,7 +197,7 @@ object VoidHunterAbilities {
         val handOrigin = animatedHandOrigin ?: fallbackHandOrigin(player, GRENADE_LOCATOR_RIGHT)
         val grenade = VoidGrenadeEntity(level, player)
         grenade.setPos(handOrigin.x, handOrigin.y, handOrigin.z)
-        grenade.shootFromRotation(player, player.xRot, player.yRot, 0.0f, 1.5f, 1.0f)
+        DestinyGrenadeThrow.launch(grenade, player, DestinyGrenadeThrow.Profile.AREA)
         level.addFreshEntity(grenade)
         level.playSound(null, handOrigin.x, handOrigin.y, handOrigin.z, DestinySounds.VOID_GRENADE_CAST, SoundSource.PLAYERS, 1.0f, 1.0f)
     }

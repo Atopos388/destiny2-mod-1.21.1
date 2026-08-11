@@ -1,6 +1,7 @@
 package atopos.destiny2.common.player
 
 import atopos.destiny2.common.action.DestinyActionRegistry
+import atopos.destiny2.common.action.ThunderclapTiming
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import dev.kosmx.playerAnim.core.data.gson.GeckoLibSerializer
@@ -72,6 +73,11 @@ class ThunderclapAnimationContractTest {
 
         assertEquals(2.04167f, charge.get("animation_length").asFloat, 0.00001f)
         assertEquals(1.79167f, release.get("animation_length").asFloat, 0.00001f)
+        assertEquals(1.5, ThunderclapTiming.RELEASE_PLAYBACK_SPEED, 0.00001)
+        assertEquals(
+            ThunderclapTiming.RELEASE_DURATION_TICKS,
+            DestinyActionRegistry.definition(DestinyActionRegistry.ARC_TITAN_THUNDERCLAP_RELEASE)?.durationTicks
+        )
         assertEquals(
             DestinyActionRegistry.ARC_TITAN_THUNDERCLAP_CHARGE,
             DestinyActionRegistry.definitionForAbility(
@@ -81,6 +87,34 @@ class ThunderclapAnimationContractTest {
                 )
             )?.id
         )
+    }
+
+    @Test
+    fun `rare impact sequence keeps authored phase order and a distinct hit stop`() {
+        assertEquals(
+            ThunderclapTiming.ImpactPhase.ABSTRACT,
+            ThunderclapTiming.impactPhase(0.0)
+        )
+        assertEquals(
+            ThunderclapTiming.ImpactPhase.LINE_ART,
+            ThunderclapTiming.impactPhase(ThunderclapTiming.IMPACT_ABSTRACT_END_MS.toDouble())
+        )
+        assertEquals(
+            ThunderclapTiming.ImpactPhase.INK_CLOSE,
+            ThunderclapTiming.impactPhase(ThunderclapTiming.IMPACT_LINE_ART_END_MS.toDouble())
+        )
+        assertEquals(
+            ThunderclapTiming.ImpactPhase.RELEASE,
+            ThunderclapTiming.impactPhase(ThunderclapTiming.IMPACT_INK_CLOSE_END_MS.toDouble())
+        )
+        assertEquals(
+            ThunderclapTiming.ImpactPhase.COMPLETE,
+            ThunderclapTiming.impactPhase(ThunderclapTiming.IMPACT_SEQUENCE_END_MS + 1.0)
+        )
+        assertTrue(ThunderclapTiming.IMPACT_HIT_STOP_MS < ThunderclapTiming.IMPACT_ABSTRACT_END_MS)
+        assertTrue(ThunderclapTiming.IMPACT_SEQUENCE_END_MS >= 1_300L)
+        assertEquals(0.0f, ThunderclapTiming.impactPhaseProgress(0.0), 0.0001f)
+        assertTrue(ThunderclapTiming.impactPhaseProgress(900.0) in 0.0f..1.0f)
     }
 
     @Test

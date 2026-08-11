@@ -4,6 +4,7 @@ package atopos.destiny2.client.camera
 import atopos.destiny2.Destiny2MODClient
 import atopos.destiny2.client.cinematic.GeckoLibCameraTrackSampler
 import atopos.destiny2.client.renderer.ThunderclapPlayerProxyClient
+import atopos.destiny2.common.action.ThunderclapTiming
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents
 import net.minecraft.client.CameraType
@@ -27,10 +28,10 @@ object ThunderclapCameraClient {
 
     private enum class Phase(
         val animationName: String,
-        val fallbackDurationTicks: Int
+        val playbackSpeed: Double
     ) {
-        CHARGE("animation.destiny2.player.thunderclap_charge", 41),
-        RELEASE("animation.destiny2.player.thunderclap_release", 35)
+        CHARGE("animation.destiny2.player.thunderclap_charge", 1.0),
+        RELEASE("animation.destiny2.player.thunderclap_release", ThunderclapTiming.RELEASE_PLAYBACK_SPEED)
     }
 
     private data class BodyLock(
@@ -51,8 +52,17 @@ object ThunderclapCameraClient {
         val fovTrack: GeckoLibCameraTrackSampler?
     )
 
+    private data class ImpactSequence(
+        val startedAtNanos: Long,
+        val hitStopUntilNanos: Long,
+        val untilNanos: Long,
+        val pose: CameraPose,
+        val fov: Double?
+    )
+
     private val bodyLocks = WeakHashMap<AbstractClientPlayer, BodyLock>()
     private var localSession: Session? = null
+    private var impactSequence: ImpactSequence? = null
     private var perspectiveGuardUntilNanos = 0L
 
     fun register() {
@@ -86,32 +96,44 @@ object ThunderclapCameraClient {
     fun isMovementLocked(): Boolean = localSession != null
 
     fun isViewLocked(): Boolean {
+        if (activeImpactSequence() != null) return true
         val player = Minecraft.getInstance().player ?: return false
         val session = localSession ?: return false
         return session.phase == Phase.CHARGE && elapsedTicks(player, session, 0.0f) < CAMERA_ARRIVAL_TICKS
     }
 
+    /**
+     * Pauses client-side entity presentation during the impact hold. The server,
+     * particles, procedural Arc renderers, and post-processing keep advancing.
+     */
+    fun isImpactHitStopActive(): Boolean = activeImpactHitStop() != null
+
     fun shouldUseInstantPerspectiveChange(): Boolean =
-        localSession != null || System.nanoTime() < perspectiveGuardUntilNanos
+        localSession != null || activeImpactSequence() != null || System.nanoTime() < perspectiveGuardUntilNanos
 
     fun currentFov(partialTick: Float): Double? {
+        activeImpactHitStop()?.let { return it.fov }
         val player = Minecraft.getInstance().player ?: return null
         val session = localSession ?: return null
-        val elapsed = elapsedTicks(player, session, partialTick)
-        val sampleTick = elapsed.coerceIn(0.0, session.durationTicks.toDouble())
+        val elapsed = impactAdjustedElapsedTicks(player, session, partialTick)
+        val authoredDuration = session.durationTicks * session.phase.playbackSpeed
+        val sampleTick = (elapsed * session.phase.playbackSpeed).coerceIn(0.0, authoredDuration)
         val sampled = session.fovTrack?.sample(sampleTick)?.positionPixels?.x ?: DEFAULT_FOV
         return sampled.coerceIn(MIN_FOV, MAX_FOV)
     }
 
     fun currentPose(partialTick: Float): CameraPose? {
+        activeImpactHitStop()?.let { return it.pose }
         val player = Minecraft.getInstance().player ?: return null
         val session = localSession ?: return null
-        val elapsed = elapsedTicks(player, session, partialTick)
+        val elapsed = impactAdjustedElapsedTicks(player, session, partialTick)
         val track = session.cameraTrack ?: return null
+        val acceleratedElapsed = elapsed * session.phase.playbackSpeed
+        val authoredDuration = session.durationTicks * session.phase.playbackSpeed
         val authoredTick = when (session.phase) {
-            Phase.CHARGE -> minOf(elapsed, CAMERA_ARRIVAL_TICKS)
-            Phase.RELEASE -> elapsed
-        }.coerceIn(0.0, session.durationTicks.toDouble())
+            Phase.CHARGE -> minOf(acceleratedElapsed, CAMERA_ARRIVAL_TICKS)
+            Phase.RELEASE -> acceleratedElapsed
+        }.coerceIn(0.0, authoredDuration)
         val local = track.sample(authoredTick)
         val orbiting = session.phase == Phase.RELEASE || elapsed >= CAMERA_ARRIVAL_TICKS
         val orbitYaw = if (orbiting) player.yRot else session.phaseViewYaw
@@ -136,6 +158,38 @@ object ThunderclapCameraClient {
             roll = local.roll
         )
     }
+
+    /** Freezes only the authored impact pose and camera; world/VFX rendering keeps running. */
+    fun beginImpactSequence(hitStopMillis: Long, sequenceMillis: Long) {
+        val client = Minecraft.getInstance()
+        val camera = client.gameRenderer.mainCamera
+        impactSequence = null
+        val frozenPose = currentPose(0.0f) ?: CameraPose(
+            position = camera.position,
+            yaw = camera.yRot,
+            pitch = camera.xRot,
+            roll = 0.0f
+        )
+        val frozenFov = currentFov(0.0f)
+        val now = System.nanoTime()
+        impactSequence = ImpactSequence(
+            startedAtNanos = now,
+            hitStopUntilNanos = now + hitStopMillis.coerceAtLeast(1L) * 1_000_000L,
+            untilNanos = now + sequenceMillis.coerceAtLeast(hitStopMillis) * 1_000_000L,
+            pose = frozenPose,
+            fov = frozenFov
+        )
+    }
+
+    private fun activeImpactSequence(): ImpactSequence? {
+        val sequence = impactSequence ?: return null
+        if (System.nanoTime() < sequence.untilNanos) return sequence
+        impactSequence = null
+        return null
+    }
+
+    private fun activeImpactHitStop(): ImpactSequence? =
+        activeImpactSequence()?.takeIf { System.nanoTime() < it.hitStopUntilNanos }
 
     private fun startLocal(
         player: AbstractClientPlayer,
@@ -182,7 +236,7 @@ object ThunderclapCameraClient {
             clear(restorePerspective = true)
             return
         }
-        if (player.tickCount - session.startedAtPlayerTick >= session.durationTicks) {
+        if (player.tickCount - session.startedAtPlayerTick >= session.durationTicks && activeImpactSequence() == null) {
             finish(client, session)
             return
         }
@@ -198,6 +252,7 @@ object ThunderclapCameraClient {
     private fun finish(client: Minecraft, session: Session) {
         if (localSession !== session) return
         localSession = null
+        impactSequence = null
         perspectiveGuardUntilNanos = System.nanoTime() + PERSPECTIVE_GUARD_NANOS
         client.player?.uuid?.let(ThunderclapPlayerProxyClient::stop)
         client.options.cameraType = session.previousCameraType
@@ -217,6 +272,7 @@ object ThunderclapCameraClient {
     private fun clear(restorePerspective: Boolean) {
         val session = localSession
         localSession = null
+        impactSequence = null
         bodyLocks.clear()
         perspectiveGuardUntilNanos = 0L
         Minecraft.getInstance().player?.uuid?.let(ThunderclapPlayerProxyClient::stop)
@@ -232,6 +288,18 @@ object ThunderclapCameraClient {
     ): Double = (player.tickCount - session.startedAtPlayerTick).toDouble() +
         partialTick.coerceIn(0.0f, 1.0f).toDouble()
 
+    private fun impactAdjustedElapsedTicks(
+        player: AbstractClientPlayer,
+        session: Session,
+        partialTick: Float
+    ): Double {
+        val elapsed = elapsedTicks(player, session, partialTick)
+        val sequence = activeImpactSequence() ?: return elapsed
+        val pausedNanos = (minOf(System.nanoTime(), sequence.hitStopUntilNanos) - sequence.startedAtNanos)
+            .coerceAtLeast(0L)
+        return (elapsed - pausedNanos / NANOS_PER_TICK.toDouble()).coerceAtLeast(0.0)
+    }
+
     private val CAMERA_RESOURCE = ResourceLocation.fromNamespaceAndPath(
         "destiny2-mod",
         "animations/player/thunderclap.animation.json"
@@ -243,4 +311,5 @@ object ThunderclapCameraClient {
     private const val MAX_FOV = 110.0
     private const val FIRST_PERSON_RETURN_TRANSITION_MS = 300L
     private const val PERSPECTIVE_GUARD_NANOS = 250_000_000L
+    private const val NANOS_PER_TICK = 50_000_000L
 }

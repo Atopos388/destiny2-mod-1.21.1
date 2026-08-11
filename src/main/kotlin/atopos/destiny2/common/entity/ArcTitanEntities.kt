@@ -1,5 +1,6 @@
 package atopos.destiny2.common.entity
 
+import atopos.destiny2.common.ability.DestinyGrenadeThrow
 import atopos.destiny2.common.player.AbilitySlot
 import atopos.destiny2.common.player.DestinyAbilityDamageCarrier
 import atopos.destiny2.common.aspect.ArcTitanFragmentRuntime
@@ -38,6 +39,9 @@ class ArcPulseGrenadeEntity : ThrowableItemProjectile, ArcGrenadeDamageEntity {
     private var pulseLimit = TOTAL_PULSES
     private var touchOfThunder = false
     private var acceptedDamageEvents = 0
+    private var finishingAge = 0
+    private var clientPulseVisualAge = CLIENT_PULSE_VISUAL_TICKS
+    private var clientPulseSequence = 0
 
     constructor(entityType: EntityType<out ArcPulseGrenadeEntity>, level: Level) : super(entityType, level)
 
@@ -52,6 +56,15 @@ class ArcPulseGrenadeEntity : ThrowableItemProjectile, ArcGrenadeDamageEntity {
     override fun getDefaultItem(): Item = Items.PRISMARINE_CRYSTALS
 
     fun isAnchored(): Boolean = entityData.get(DATA_ANCHORED)
+
+    /**
+     * Local age of the most recent server-authoritative damage pulse.
+     * A negative value means no transient pulse should be rendered.
+     */
+    fun pulseVisualAge(partialTick: Float): Float =
+        if (clientPulseVisualAge < CLIENT_PULSE_VISUAL_TICKS) clientPulseVisualAge + partialTick else -1f
+
+    fun pulseVisualSequence(): Int = clientPulseSequence
 
     override fun defineSynchedData(builder: SynchedEntityData.Builder) {
         super.defineSynchedData(builder)
@@ -82,16 +95,33 @@ class ArcPulseGrenadeEntity : ThrowableItemProjectile, ArcGrenadeDamageEntity {
         isNoGravity = true
         deltaMovement = Vec3.ZERO
         super.tick()
-        if (level().isClientSide) return
+        if (level().isClientSide) {
+            if (clientPulseVisualAge < CLIENT_PULSE_VISUAL_TICKS) clientPulseVisualAge++
+            return
+        }
+
+        // Keep the entity alive briefly after its final damage pulse so every
+        // tracking client can render the authoritative impact event and tail.
+        if (pulsesReleased >= pulseLimit) {
+            finishingAge++
+            if (finishingAge >= FINISHING_TICKS) discard()
+            return
+        }
 
         pulseAge++
         if (pulseAge == 1 || pulseAge % PULSE_INTERVAL_TICKS == 0) {
             pulse()
             pulsesReleased++
-            if (pulsesReleased >= pulseLimit) {
-                discard()
-            }
         }
+    }
+
+    override fun handleEntityEvent(status: Byte) {
+        if (status == PULSE_EVENT) {
+            clientPulseVisualAge = 0
+            clientPulseSequence++
+            return
+        }
+        super.handleEntityEvent(status)
     }
 
     override fun onHit(hitResult: HitResult) {
@@ -117,6 +147,7 @@ class ArcPulseGrenadeEntity : ThrowableItemProjectile, ArcGrenadeDamageEntity {
 
     private fun pulse() {
         val level = level() as? ServerLevel ?: return
+        level.broadcastEntityEvent(this, PULSE_EVENT)
         val currentOwner = owner as? LivingEntity
         val source = currentOwner?.let { damageSources().indirectMagic(this, it) } ?: damageSources().magic()
         level.getEntitiesOfClass(
@@ -148,9 +179,9 @@ class ArcPulseGrenadeEntity : ThrowableItemProjectile, ArcGrenadeDamageEntity {
             }
         }
 
-        level.sendParticles(ParticleTypes.FLASH, x, y + 0.12, z, 1, 0.0, 0.0, 0.0, 0.0)
-        level.sendParticles(ParticleTypes.ELECTRIC_SPARK, x, y + 0.18, z, 46, 1.65, 0.42, 1.65, 0.13)
-        level.sendParticles(ParticleTypes.END_ROD, x, y + 0.12, z, 12, 0.85, 0.18, 0.85, 0.05)
+        // The dedicated renderer owns the core, plasma crown, ground response
+        // and pulse envelope. Vanilla particles remain only as sparse debris.
+        level.sendParticles(ParticleTypes.ELECTRIC_SPARK, x, y + 0.14, z, 10, 0.72, 0.18, 0.72, 0.055)
         level.playSound(null, blockPosition(), SoundEvents.TRIDENT_THUNDER.value(), SoundSource.PLAYERS, 0.48f, 1.55f)
     }
 
@@ -162,6 +193,7 @@ class ArcPulseGrenadeEntity : ThrowableItemProjectile, ArcGrenadeDamageEntity {
         compound.putInt("ArcPulseLimit", pulseLimit)
         compound.putBoolean("TouchOfThunder", touchOfThunder)
         compound.putInt("AcceptedDamageEvents", acceptedDamageEvents)
+        compound.putInt("ArcPulseFinishingAge", finishingAge)
     }
 
     override fun readAdditionalSaveData(compound: CompoundTag) {
@@ -176,14 +208,18 @@ class ArcPulseGrenadeEntity : ThrowableItemProjectile, ArcGrenadeDamageEntity {
         pulsesReleased = compound.getInt("ArcPulsesReleased").coerceIn(0, pulseLimit)
         touchOfThunder = compound.getBoolean("TouchOfThunder")
         acceptedDamageEvents = compound.getInt("AcceptedDamageEvents").coerceAtLeast(0)
+        finishingAge = compound.getInt("ArcPulseFinishingAge").coerceIn(0, FINISHING_TICKS)
     }
 
     companion object {
-        const val PULSE_INTERVAL_TICKS = 12
+        const val PULSE_INTERVAL_TICKS = 15
         const val TOTAL_PULSES = 7
         const val MAX_TOTAL_PULSES = 10
         const val PULSE_RADIUS = 4.0
         const val PULSE_DAMAGE = 3.5f
+        const val FINISHING_TICKS = 10
+        const val CLIENT_PULSE_VISUAL_TICKS = 11
+        const val PULSE_EVENT: Byte = 81
 
         private val DATA_ANCHORED: EntityDataAccessor<Boolean> =
             SynchedEntityData.defineId(ArcPulseGrenadeEntity::class.java, EntityDataSerializers.BOOLEAN)
@@ -230,12 +266,8 @@ class ArcFlashbangGrenadeEntity : ThrowableItemProjectile, ArcGrenadeDamageEntit
             return
         }
         val blockHit = hit as? BlockHitResult ?: return
-        val velocity = deltaMovement
-        deltaMovement = when (blockHit.direction.axis) {
-            net.minecraft.core.Direction.Axis.X -> Vec3(-velocity.x * 0.58, velocity.y * 0.58 + 0.08, velocity.z * 0.58)
-            net.minecraft.core.Direction.Axis.Y -> Vec3(velocity.x * 0.58, -velocity.y * 0.50 + 0.10, velocity.z * 0.58)
-            net.minecraft.core.Direction.Axis.Z -> Vec3(velocity.x * 0.58, velocity.y * 0.58 + 0.08, -velocity.z * 0.58)
-        }
+        val normal = Vec3.atLowerCornerOf(blockHit.direction.normal)
+        deltaMovement = DestinyGrenadeThrow.fragRicochet(deltaMovement, normal)
         setPos(hit.location.add(blockHit.direction.stepX * 0.04, blockHit.direction.stepY * 0.04, blockHit.direction.stepZ * 0.04))
         hasImpulse = true
     }

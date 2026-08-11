@@ -107,7 +107,7 @@ object DestinyActionRegistry {
                 id = ARC_TITAN_THUNDERCLAP_RELEASE,
                 animationId = id("thunderclap_release"),
                 backend = DestinyActionBackend.PLAYER_LAYER,
-                durationTicks = 36,
+                durationTicks = ThunderclapTiming.RELEASE_DURATION_TICKS,
                 cameraPolicy = DestinyActionCameraPolicy.THIRD_PERSON,
                 blendInTicks = 0,
                 blendOutTicks = 2

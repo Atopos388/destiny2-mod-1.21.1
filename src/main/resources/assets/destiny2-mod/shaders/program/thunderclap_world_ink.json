@@ -18,6 +18,12 @@
     {"name": "OutSize", "type": "float", "count": 2, "values": [1, 1]},
     {"name": "Strength", "type": "float", "count": 1, "values": [0]},
     {"name": "Seed", "type": "float", "count": 1, "values": [0]},
-    {"name": "CopyOnly", "type": "int", "count": 1, "values": [0]}
+    {"name": "PlatePhase", "type": "float", "count": 1, "values": [0]},
+    {"name": "PhaseProgress", "type": "float", "count": 1, "values": [0]},
+    {"name": "PlateIndex", "type": "float", "count": 1, "values": [0]},
+    {"name": "ImpactCenter", "type": "float", "count": 2, "values": [0.52, 0.50]},
+    {"name": "ImpactDirection", "type": "float", "count": 2, "values": [1, 0]},
+    {"name": "BurstStrength", "type": "float", "count": 1, "values": [0]},
+    {"name": "CopyOnly", "type": "float", "count": 1, "values": [0]}
   ]
 }

@@ -11,6 +11,7 @@ import java.util.UUID
 object ThunderclapPlayerProxyClient {
     private val proxies = mutableMapOf<UUID, ThunderclapPlayerProxyEntity>()
     private var nextClientEntityId = -2_000_000
+    private var releaseHitStopUntilNanos = 0L
 
     fun register() {
         ClientPlayConnectionEvents.DISCONNECT.register { _, _ -> clear() }
@@ -28,10 +29,20 @@ object ThunderclapPlayerProxyClient {
         // Capture once per phase. Camera orbit during charge must not rotate the authored pose;
         // the release action creates a new proxy after the server samples the live view direction.
         proxy.configure(player.uuid, phase, durationTicks, player.yRot)
+        if (phase == ThunderclapPlayerProxyEntity.Phase.RELEASE) {
+            proxy.beginVisualHitStop(releaseHitStopUntilNanos)
+        }
         proxy.setPos(player.x, player.y, player.z)
         level.addEntity(proxy)
         proxies[player.uuid] = proxy
         return true
+    }
+
+    fun beginReleaseHitStop(durationMillis: Long) {
+        releaseHitStopUntilNanos = System.nanoTime() + durationMillis.coerceAtLeast(1L) * 1_000_000L
+        proxies.values
+            .filter { it.phase == ThunderclapPlayerProxyEntity.Phase.RELEASE }
+            .forEach { it.beginVisualHitStop(releaseHitStopUntilNanos) }
     }
 
     fun isReplacing(playerId: UUID): Boolean {
@@ -51,5 +62,6 @@ object ThunderclapPlayerProxyClient {
     private fun clear() {
         proxies.values.forEach { it.discard() }
         proxies.clear()
+        releaseHitStopUntilNanos = 0L
     }
 }
