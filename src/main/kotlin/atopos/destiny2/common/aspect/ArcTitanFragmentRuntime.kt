@@ -5,6 +5,7 @@ import atopos.destiny2.common.effect.DestinyStatusRules
 import atopos.destiny2.common.entity.ArcAbilityDamageEntity
 import atopos.destiny2.common.entity.ArcPulseGrenadeEntity
 import atopos.destiny2.common.entity.ArcGrenadeDamageEntity
+import atopos.destiny2.common.entity.OrbOfPowerEntity
 import atopos.destiny2.common.gear.GearRegistry
 import atopos.destiny2.common.item.DestinyItems
 import atopos.destiny2.common.network.DestinyNetworking
@@ -262,9 +263,7 @@ object ArcTitanFragmentRuntime {
         )
         state.amplitudeState = amplitude.state
         if (amplitude.shouldSpawnOrb) {
-            attacker.serverLevel().addFreshEntity(
-                ItemEntity(attacker.serverLevel(), defeated.x, defeated.y + 0.35, defeated.z, ItemStack(DestinyItems.ORB_OF_POWER))
-            )
+            OrbOfPowerEntity.spawn(attacker.serverLevel(), defeated.position().add(0.0, 0.35, 0.0))
         }
 
         val finisherFinalBlow = direct === attacker && attacker.distanceToSqr(defeated) <= 9.0

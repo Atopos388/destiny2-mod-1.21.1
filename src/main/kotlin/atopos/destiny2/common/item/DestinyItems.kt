@@ -2,6 +2,8 @@ package atopos.destiny2.common.item
 
 import atopos.destiny2.common.weapon.DestinyAmmoType
 import atopos.destiny2.common.player.DestinyClassType
+import atopos.destiny2.common.player.DestinySubclassType
+import atopos.destiny2.common.player.GrenadeMemoryRules
 import atopos.destiny2.common.entity.DestinyEntities
 import net.minecraft.core.Registry
 import net.minecraft.core.registries.BuiltInRegistries
@@ -13,7 +15,15 @@ import net.minecraft.world.item.Rarity
 import net.minecraft.world.item.SpawnEggItem
 
 object DestinyItems {
-    val GHOST_CORE = registerSimple("ghost_core", Item.Properties().stacksTo(1).rarity(Rarity.RARE).fireResistant())
+    val GHOST_CORE = register(
+        "ghost_core",
+        GhostCoreItem(Item.Properties().stacksTo(1).rarity(Rarity.RARE).fireResistant())
+    )
+
+    val LIGHT_CRYSTAL = register(
+        "light_crystal",
+        LightCrystalItem(Item.Properties().stacksTo(64).rarity(Rarity.RARE))
+    )
 
     val GLIMMER = registerSimple("glimmer", Item.Properties().stacksTo(64).rarity(Rarity.COMMON))
 
@@ -35,14 +45,8 @@ object DestinyItems {
 
     val HEAVY_AMMO = registerSimple("heavy_ammo", Item.Properties().stacksTo(64).rarity(Rarity.RARE))
 
-    /** World pickup consumed directly by ArmorModRuntime; it never enters normal inventory. */
-    val ORB_OF_POWER = registerSimple("orb_of_power", Item.Properties().stacksTo(1).rarity(Rarity.RARE))
-
     /** Void subclass pickup; grants class-ability energy and is consumed on contact. */
     val VOID_BREACH = registerSimple("void_breach", Item.Properties().stacksTo(1).rarity(Rarity.RARE))
-
-    /** Solar subclass pickup; grants grenade energy and is consumed on contact. */
-    val FIRESPRITE = registerSimple("firesprite", Item.Properties().stacksTo(1).rarity(Rarity.RARE).fireResistant())
 
     /** Temporary world marker used by the server-owned ally revive flow. */
     val REVIVE_GHOST = registerSimple("revive_ghost", Item.Properties().stacksTo(1).rarity(Rarity.RARE).fireResistant())
@@ -153,6 +157,38 @@ object DestinyItems {
         DestinyClassItem(DestinyClassType.TITAN, Item.Properties().stacksTo(1).rarity(Rarity.RARE))
     )
 
+    val GRENADE_MEMORY = register(
+        "grenade_memory",
+        GrenadeMemoryItem(
+            properties = Item.Properties().stacksTo(16).rarity(Rarity.RARE)
+        )
+    )
+
+    /** Hidden compatibility registrations for existing development saves. */
+    val VOID_GRENADE_MEMORY = register(
+        "void_grenade_memory",
+        GrenadeMemoryItem(
+            GrenadeMemoryRules.Target(DestinySubclassType.VOID_HUNTER, GrenadeMemoryRules.VOID_HUNTER_GRENADE_ID),
+            properties = Item.Properties().stacksTo(16).rarity(Rarity.RARE)
+        )
+    )
+
+    val ARC_GRENADE_MEMORY = register(
+        "arc_grenade_memory",
+        GrenadeMemoryItem(
+            GrenadeMemoryRules.Target(DestinySubclassType.ARC_TITAN, GrenadeMemoryRules.ARC_TITAN_GRENADE_ID),
+            properties = Item.Properties().stacksTo(16).rarity(Rarity.RARE)
+        )
+    )
+
+    val SOLAR_GRENADE_MEMORY = register(
+        "solar_grenade_memory",
+        GrenadeMemoryItem(
+            GrenadeMemoryRules.Target(DestinySubclassType.SOLAR_WARLOCK, GrenadeMemoryRules.SOLAR_WARLOCK_GRENADE_ID),
+            properties = Item.Properties().stacksTo(16).rarity(Rarity.RARE).fireResistant()
+        )
+    )
+
     fun register() {
         // Touching this object registers all item constants above.
     }
@@ -160,6 +196,7 @@ object DestinyItems {
     fun creativeTabItems(): List<Item> {
         return buildList {
             add(GHOST_CORE)
+            add(LIGHT_CRYSTAL)
             add(FORGOTTEN_NAME)
             add(PERFECT_RETROGRADE)
             add(STRYKERS_SURE_HAND)
@@ -183,6 +220,7 @@ object DestinyItems {
             add(HUNTER_CLOAK)
             add(WARLOCK_BOND)
             add(TITAN_MARK)
+            add(GRENADE_MEMORY)
         }
     }
 

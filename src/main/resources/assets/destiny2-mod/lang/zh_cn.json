@@ -18,6 +18,12 @@
   "item.destiny2-mod.exotic_engram": "异域记忆水晶",
   "block.destiny2-mod.shimmering_crystal_ore": "微光水晶矿簇",
   "block.destiny2-mod.sphere_model_block": "球形模型方块",
+  "block.destiny2-mod.light_capacitor": "光能电容器",
+  "block.destiny2-mod.glimmer_refinery": "微光精炼器",
+  "block.destiny2-mod.memory_foundry": "记忆铸造台",
+  "container.destiny2-mod.light_capacitor": "光能电容器 · %s/%s 光能",
+  "container.destiny2-mod.glimmer_refinery": "微光精炼器 · 进度 %s/%s",
+  "container.destiny2-mod.memory_foundry": "记忆铸造台 · 进度 %s/%s",
   "item.destiny2-mod.perfect_retrograde": "完美逆行",
   "item.destiny2-mod.forgotten_name": "被遗忘之名",
   "entity.destiny2-mod.forgotten_name_bullet": "被遗忘之名子弹",
@@ -80,7 +86,7 @@
   "item.destiny2-mod.hunter_cloak": "猎人披风",
   "item.destiny2-mod.warlock_bond": "术士臂环",
   "item.destiny2-mod.titan_mark": "泰坦印记"
-  ,"item.destiny2-mod.orb_of_power": "能量球"
+  ,"entity.destiny2-mod.orb_of_power": "力量球"
   ,"navigation.destiny2-mod.title": "导航模式"
   ,"navigation.destiny2-mod.dimension.overworld": "主世界"
   ,"navigation.destiny2-mod.dimension.nether": "下界"
@@ -108,7 +114,7 @@
   ,"entity.destiny2-mod.jiling": "机灵"
   ,"item.destiny2-mod.jiling_spawn_egg": "机灵刷怪蛋"
   ,"item.destiny2-mod.void_breach": "虚空裂口"
-  ,"item.destiny2-mod.firesprite": "焰灵"
+  ,"entity.destiny2-mod.firesprite": "焰灵"
   ,"class.destiny2-mod.hunter": "猎人"
   ,"class.destiny2-mod.titan": "泰坦"
   ,"class.destiny2-mod.warlock": "术士"
@@ -150,4 +156,25 @@
   ,"entity.destiny2-mod.arc_lightning_grenade": "闪电手雷"
   ,"entity.destiny2-mod.arc_storm_grenade": "风暴手雷"
   ,"item.destiny2-mod.strykers_sure_hand": "史赛克的老练"
+  ,"item.destiny2-mod.grenade_memory": "手雷记忆"
+  ,"item.destiny2-mod.void_grenade_memory": "虚空手雷记忆"
+  ,"item.destiny2-mod.arc_grenade_memory": "电弧手雷记忆"
+  ,"item.destiny2-mod.solar_grenade_memory": "烈日手雷记忆"
+  ,"tooltip.destiny2-mod.grenade_memory.universal": "通用记忆 · 适配当前职业"
+  ,"tooltip.destiny2-mod.grenade_memory.use": "使用：永久寻回当前职业的默认手雷"
+  ,"tooltip.destiny2-mod.grenade_memory.consumed": "仅在能力成功寻回时消耗"
+  ,"message.destiny2-mod.grenade_memory.not_awakened": "你尚未被机灵唤醒，这份记忆没有回应。"
+  ,"message.destiny2-mod.grenade_memory.class_locked": "需要先解锁并启用一个职业，才能读取这份记忆。"
+  ,"message.destiny2-mod.grenade_memory.already_unlocked": "你已经寻回了这份记忆记录的手雷。"
+  ,"message.destiny2-mod.grenade_memory.unlocked": "%s已寻回，并永久开放使用。"
+  ,"grenade_memory.target.void_hunter": "涡流手雷"
+  ,"grenade_memory.target.arc_titan": "脉冲手雷"
+  ,"grenade_memory.target.solar_warlock": "烈日手雷"
+  ,"item.destiny2-mod.light_crystal": "光能结晶"
+  ,"message.destiny2-mod.light_crystal.not_awakened": "机灵尚未将你唤醒，核心没有回应。"
+  ,"message.destiny2-mod.light_crystal.requires_sunlight": "紫水晶块必须在白昼中直接看见天空。"
+  ,"message.destiny2-mod.light_crystal.already_charging": "这块紫水晶正在凝聚光能。"
+  ,"message.destiny2-mod.light_crystal.charging": "机灵开始引导阳光，光能正在向紫水晶聚集……"
+  ,"message.destiny2-mod.light_crystal.interrupted": "光能聚集被打断，紫水晶没有被转化。"
+  ,"message.destiny2-mod.light_crystal.created": "阳光与紫水晶产生共鸣，凝结出一枚光能结晶。"
 }

@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": ["QAQ", "RER", "ICI"],
+  "key": {
+    "Q": { "item": "minecraft:smooth_quartz" },
+    "A": { "item": "minecraft:amethyst_block" },
+    "R": { "item": "minecraft:redstone" },
+    "E": { "item": "minecraft:enchanting_table" },
+    "I": { "item": "minecraft:iron_ingot" },
+    "C": { "item": "minecraft:comparator" }
+  },
+  "result": { "id": "destiny2-mod:memory_foundry", "count": 1 }
+}

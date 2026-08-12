@@ -1,5 +1,11 @@
 {
   "item.destiny2-mod.ghost_core": "Ghost Core",
+  "block.destiny2-mod.light_capacitor": "Light Capacitor",
+  "block.destiny2-mod.glimmer_refinery": "Glimmer Refinery",
+  "block.destiny2-mod.memory_foundry": "Memory Foundry",
+  "container.destiny2-mod.light_capacitor": "Light Capacitor · %s/%s Light",
+  "container.destiny2-mod.glimmer_refinery": "Glimmer Refinery · Progress %s/%s",
+  "container.destiny2-mod.memory_foundry": "Memory Foundry · Progress %s/%s",
   "item.destiny2-mod.izanagis_burden": "Izanagi's Burden",
   "item.destiny2-mod.gun": "Gun Pack Weapon",
   "gun.destiny2-mod.izanagis_burden": "Izanagi's Burden",
@@ -37,7 +43,7 @@
   ,"navigation.destiny2-mod.director.footer": "SELECT A SECTION FOR DETAILS   //   WORLD REMAINS ACTIVE"
   ,"navigation.destiny2-mod.director.close": "TAB / ESC CLOSE"
   ,"item.destiny2-mod.void_breach": "Void Breach"
-  ,"item.destiny2-mod.firesprite": "Firesprite"
+  ,"entity.destiny2-mod.firesprite": "Firesprite"
   ,"class.destiny2-mod.hunter": "Hunter"
   ,"class.destiny2-mod.titan": "Titan"
   ,"class.destiny2-mod.warlock": "Warlock"
@@ -80,4 +86,26 @@
   ,"entity.destiny2-mod.arc_lightning_grenade": "Lightning Grenade"
   ,"entity.destiny2-mod.arc_storm_grenade": "Storm Grenade"
   ,"item.destiny2-mod.strykers_sure_hand": "Stryker's Sure-Hand"
+  ,"item.destiny2-mod.grenade_memory": "Grenade Memory"
+  ,"item.destiny2-mod.void_grenade_memory": "Void Grenade Memory"
+  ,"item.destiny2-mod.arc_grenade_memory": "Arc Grenade Memory"
+  ,"item.destiny2-mod.solar_grenade_memory": "Solar Grenade Memory"
+  ,"tooltip.destiny2-mod.grenade_memory.universal": "Universal Memory · Adapts to your active class"
+  ,"tooltip.destiny2-mod.grenade_memory.use": "Use: permanently recover your active class's default grenade"
+  ,"tooltip.destiny2-mod.grenade_memory.consumed": "Consumed only when the ability is successfully recovered"
+  ,"message.destiny2-mod.grenade_memory.not_awakened": "Your Ghost has not awakened you. This memory does not answer."
+  ,"message.destiny2-mod.grenade_memory.class_locked": "Recover and activate a class before using this memory."
+  ,"message.destiny2-mod.grenade_memory.already_unlocked": "You have already recovered the grenade recorded in this memory."
+  ,"message.destiny2-mod.grenade_memory.unlocked": "%s recovered. The ability is now permanently available."
+  ,"grenade_memory.target.void_hunter": "Vortex Grenade"
+  ,"grenade_memory.target.arc_titan": "Pulse Grenade"
+  ,"grenade_memory.target.solar_warlock": "Solar Grenade"
+  ,"item.destiny2-mod.light_crystal": "Light Crystal"
+  ,"message.destiny2-mod.light_crystal.not_awakened": "The Ghost has not awakened you. The core does not answer."
+  ,"message.destiny2-mod.light_crystal.requires_sunlight": "The amethyst block must see the open sky during daytime."
+  ,"message.destiny2-mod.light_crystal.already_charging": "This amethyst is already gathering Light."
+  ,"message.destiny2-mod.light_crystal.charging": "The Ghost begins guiding sunlight as Light gathers around the amethyst..."
+  ,"message.destiny2-mod.light_crystal.interrupted": "The gathering Light was interrupted. The amethyst was not transformed."
+  ,"message.destiny2-mod.light_crystal.created": "Sunlight resonates with the amethyst and condenses into a Light Crystal."
+  ,"entity.destiny2-mod.orb_of_power": "Orb of Power"
 }

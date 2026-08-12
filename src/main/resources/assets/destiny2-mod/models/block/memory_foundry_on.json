@@ -1,0 +1,4 @@
+{
+  "parent": "destiny2-mod:block/memory_foundry",
+  "textures": { "core": "minecraft:block/crying_obsidian" }
+}

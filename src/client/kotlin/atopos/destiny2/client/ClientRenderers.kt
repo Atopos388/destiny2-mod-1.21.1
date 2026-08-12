@@ -5,6 +5,7 @@ import atopos.destiny2.client.renderer.HealingRiftRenderer
 import atopos.destiny2.client.renderer.FallenCaptainRenderer
 import atopos.destiny2.client.renderer.HuntingMarkRenderer
 import atopos.destiny2.client.renderer.IncineratorSnapProjectileRenderer
+import atopos.destiny2.client.renderer.OrbOfPowerRenderer
 import atopos.destiny2.client.renderer.JilingRenderer
 import atopos.destiny2.client.renderer.TaczGunPackItemRenderer
 import atopos.destiny2.client.renderer.GenericGunPackItemRenderer
@@ -36,6 +37,8 @@ object ClientRenderers {
     }
 
     private fun registerEntityRenderers() {
+        EntityRendererRegistry.register(DestinyEntities.FIRESPRITE, ::NoopRenderer)
+        EntityRendererRegistry.register(DestinyEntities.ORB_OF_POWER, ::OrbOfPowerRenderer)
         EntityRendererRegistry.register(DestinyEntities.THUNDERCLAP_PLAYER_PROXY, ::ThunderclapPlayerProxyRenderer)
         EntityRendererRegistry.register(DestinyEntities.SOLAR_GRENADE, ::NoopRenderer)
         EntityRendererRegistry.register(DestinyEntities.HEALING_GRENADE, ::ThrownItemRenderer)

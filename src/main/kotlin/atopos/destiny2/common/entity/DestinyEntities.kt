@@ -14,6 +14,26 @@ import net.fabricmc.fabric.api.`object`.builder.v1.entity.FabricDefaultAttribute
  * 实体注册表 (Entity Registry)
  */
 object DestinyEntities {
+    val FIRESPRITE: EntityType<FirespriteEntity> = Registry.register(
+        BuiltInRegistries.ENTITY_TYPE,
+        ResourceLocation.fromNamespaceAndPath("destiny2-mod", "firesprite"),
+        FabricEntityTypeBuilder.create(MobCategory.MISC) { type, world -> FirespriteEntity(type, world) }
+            .dimensions(EntityDimensions.fixed(0.34f, 0.58f))
+            .trackRangeChunks(8)
+            .trackedUpdateRate(1)
+            .build()
+    )
+
+    val ORB_OF_POWER: EntityType<OrbOfPowerEntity> = Registry.register(
+        BuiltInRegistries.ENTITY_TYPE,
+        ResourceLocation.fromNamespaceAndPath("destiny2-mod", "orb_of_power"),
+        FabricEntityTypeBuilder.create(MobCategory.MISC) { type, world -> OrbOfPowerEntity(type, world) }
+            .dimensions(EntityDimensions.fixed(0.42f, 0.42f))
+            .trackRangeChunks(8)
+            .trackedUpdateRate(1)
+            .build()
+    )
+
     val THUNDERCLAP_PLAYER_PROXY: EntityType<ThunderclapPlayerProxyEntity> = Registry.register(
         BuiltInRegistries.ENTITY_TYPE,
         ResourceLocation.fromNamespaceAndPath("destiny2-mod", "thunderclap_player_proxy"),

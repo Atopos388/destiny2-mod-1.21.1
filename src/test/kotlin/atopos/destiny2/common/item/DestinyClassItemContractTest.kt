@@ -49,13 +49,10 @@ class DestinyClassItemContractTest {
     }
 
     @Test
-    fun `light crystal tag keeps multiple world progression routes open`() {
+    fun `light crystal tag requires the resonated crystal item`() {
         val tag = readJson(namespaceData.resolve(Path.of("tags", "item", "light_crystals.json")))
         val values = tag.getAsJsonArray("values").map { it.asString }.toSet()
-        assertEquals(
-            setOf("minecraft:amethyst_shard", "minecraft:diamond", "minecraft:ender_pearl"),
-            values
-        )
+        assertEquals(setOf("destiny2-mod:light_crystal"), values)
     }
 
     @Test

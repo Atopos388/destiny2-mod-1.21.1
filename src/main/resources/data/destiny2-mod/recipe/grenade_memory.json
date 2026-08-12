@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    " A ",
+    "GXG",
+    " B "
+  ],
+  "key": {
+    "A": { "item": "minecraft:amethyst_shard" },
+    "B": { "item": "minecraft:book" },
+    "G": { "item": "minecraft:gunpowder" },
+    "X": { "tag": "destiny2-mod:light_crystals" }
+  },
+  "result": {
+    "id": "destiny2-mod:grenade_memory",
+    "count": 1
+  }
+}

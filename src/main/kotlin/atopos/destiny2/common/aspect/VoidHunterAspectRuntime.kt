@@ -5,6 +5,7 @@ import atopos.destiny2.common.combat.DestinyExplosionRuntime
 import atopos.destiny2.common.effect.DestinyEffects
 import atopos.destiny2.common.effect.DestinyStatusRules
 import atopos.destiny2.common.gear.ArmorModRuntime
+import atopos.destiny2.common.entity.OrbOfPowerEntity
 import atopos.destiny2.common.item.DestinyItems
 import atopos.destiny2.common.network.DestinyNetworking
 import atopos.destiny2.common.player.AbilitySlot
@@ -721,7 +722,7 @@ object VoidHunterAspectRuntime {
     }
 
     private fun spawnOrb(level: ServerLevel, position: Vec3) {
-        level.addFreshEntity(ItemEntity(level, position.x, position.y + 0.35, position.z, net.minecraft.world.item.ItemStack(DestinyItems.ORB_OF_POWER)))
+        OrbOfPowerEntity.spawn(level, position.add(0.0, 0.35, 0.0))
     }
 
     private fun spawnVoidBreach(level: ServerLevel, position: Vec3) {

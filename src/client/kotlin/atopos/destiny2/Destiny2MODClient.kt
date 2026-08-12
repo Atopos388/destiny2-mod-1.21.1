@@ -32,6 +32,7 @@ import atopos.destiny2.client.renderer.ThunderclapGroundLiftRenderer
 import atopos.destiny2.client.renderer.ThunderclapPlayerProxyClient
 import atopos.destiny2.client.renderer.SnareBombWorldRenderer
 import atopos.destiny2.client.renderer.SolarGrenadeWorldRenderer
+import atopos.destiny2.client.renderer.FirespriteWorldRenderer
 import atopos.destiny2.client.renderer.VoidGrenadeWorldRenderer
 import atopos.destiny2.client.renderer.VoidHunterSuperAuraClient
 import atopos.destiny2.client.renderer.WellOfRadianceScreenOverlay
@@ -70,6 +71,7 @@ object Destiny2MODClient : ClientModInitializer {
         HealingRiftScreenOverlay.register()
         SnareBombWorldRenderer.register()
         SolarGrenadeWorldRenderer.register()
+        FirespriteWorldRenderer.register()
         VoidGrenadeWorldRenderer.register()
         VoidHunterSuperAuraClient.register()
         WellOfRadianceWorldRenderer.register()

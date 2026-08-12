@@ -1,0 +1,18 @@
+{
+  "textures": {
+    "frame": "minecraft:block/deepslate_tiles",
+    "armor": "minecraft:block/smooth_quartz",
+    "metal": "minecraft:block/iron_block",
+    "core": "minecraft:block/purple_concrete",
+    "particle": "minecraft:block/deepslate_tiles"
+  },
+  "elements": [
+    { "from": [0, 0, 0], "to": [16, 3, 16], "faces": { "down":{"texture":"#frame"},"up":{"texture":"#frame"},"north":{"texture":"#frame"},"south":{"texture":"#frame"},"west":{"texture":"#frame"},"east":{"texture":"#frame"} } },
+    { "from": [2, 3, 4], "to": [14, 9, 15], "faces": { "down":{"texture":"#armor"},"up":{"texture":"#armor"},"north":{"texture":"#frame"},"south":{"texture":"#armor"},"west":{"texture":"#armor"},"east":{"texture":"#armor"} } },
+    { "from": [4, 5, -1], "to": [12, 11, 5], "faces": { "down":{"texture":"#metal"},"up":{"texture":"#metal"},"north":{"texture":"#core"},"south":{"texture":"#metal"},"west":{"texture":"#metal"},"east":{"texture":"#metal"} } },
+    { "from": [1, 9, 10], "to": [4, 17, 14], "faces": { "down":{"texture":"#frame"},"up":{"texture":"#armor"},"north":{"texture":"#armor"},"south":{"texture":"#armor"},"west":{"texture":"#armor"},"east":{"texture":"#armor"} } },
+    { "from": [12, 9, 10], "to": [15, 17, 14], "faces": { "down":{"texture":"#frame"},"up":{"texture":"#armor"},"north":{"texture":"#armor"},"south":{"texture":"#armor"},"west":{"texture":"#armor"},"east":{"texture":"#armor"} } },
+    { "from": [4, 14, 11], "to": [12, 17, 14], "faces": { "down":{"texture":"#metal"},"up":{"texture":"#metal"},"north":{"texture":"#core"},"south":{"texture":"#metal"},"west":{"texture":"#metal"},"east":{"texture":"#metal"} } },
+    { "from": [6, 9, 7], "to": [10, 15, 11], "faces": { "down":{"texture":"#core"},"up":{"texture":"#core"},"north":{"texture":"#core"},"south":{"texture":"#core"},"west":{"texture":"#core"},"east":{"texture":"#core"} } }
+  ]
+}

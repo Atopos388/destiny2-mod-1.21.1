@@ -1,8 +1,6 @@
 {
   "replace": false,
   "values": [
-    "minecraft:amethyst_shard",
-    "minecraft:diamond",
-    "minecraft:ender_pearl"
+    "destiny2-mod:light_crystal"
   ]
 }

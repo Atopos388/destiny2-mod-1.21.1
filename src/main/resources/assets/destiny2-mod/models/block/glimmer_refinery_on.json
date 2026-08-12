@@ -1,0 +1,4 @@
+{
+  "parent": "destiny2-mod:block/glimmer_refinery",
+  "textures": { "core": "minecraft:block/sea_lantern" }
+}

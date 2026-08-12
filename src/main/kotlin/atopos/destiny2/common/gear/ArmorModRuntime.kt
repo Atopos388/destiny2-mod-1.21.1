@@ -3,10 +3,11 @@ package atopos.destiny2.common.gear
 import atopos.destiny2.common.aspect.VoidHunterAspectRuntime
 import atopos.destiny2.common.aspect.ArcTitanFragmentRuntime
 import atopos.destiny2.common.aspect.ArcBoltChargeRuntime
-import atopos.destiny2.common.aspect.SolarWarlockFragmentRuntime
 import atopos.destiny2.common.aspect.SolarReviveRuntime
 import atopos.destiny2.common.item.DestinyClassItem
 import atopos.destiny2.common.item.DestinyItems
+import atopos.destiny2.common.entity.OrbOfPowerEntity
+import atopos.destiny2.common.entity.OrbOfPowerRules
 import atopos.destiny2.common.network.DestinyNetworking
 import atopos.destiny2.common.player.AbilitySlot
 import atopos.destiny2.common.player.DestinyAbilityDamageCarrier
@@ -15,6 +16,8 @@ import atopos.destiny2.common.player.PlayerDestinyDataApi
 import atopos.destiny2.common.weapon.DestinyRangedWeapon
 import atopos.destiny2.common.weapon.WeaponAmmoState
 import net.minecraft.server.level.ServerPlayer
+import net.minecraft.sounds.SoundEvents
+import net.minecraft.sounds.SoundSource
 import net.minecraft.world.damagesource.DamageSource
 import net.minecraft.world.effect.MobEffectInstance
 import net.minecraft.world.effect.MobEffects
@@ -87,7 +90,7 @@ object ArmorModRuntime {
         val key = owner.uuid to effect
         if (now - (lastOrbTick[key] ?: Long.MIN_VALUE / 2) < 200L) return
         lastOrbTick[key] = now
-        owner.serverLevel().addFreshEntity(ItemEntity(owner.serverLevel(), target.x, target.y + 0.35, target.z, ItemStack(DestinyItems.ORB_OF_POWER)))
+        OrbOfPowerEntity.spawn(owner.serverLevel(), target.position().add(0.0, 0.35, 0.0))
     }
 
     /** Returns true when the item was consumed without entering inventory. */
@@ -103,25 +106,23 @@ object ArmorModRuntime {
             VoidHunterAspectRuntime.onVoidBreachPickup(player)
             return true
         }
-        if (entity.item.`is`(DestinyItems.FIRESPRITE)) {
-            entity.discard()
-            SolarWarlockFragmentRuntime.onFirespritePickup(player)
-            return true
+        val isAmmo = entity.item.`is`(DestinyItems.SPECIAL_AMMO) || entity.item.`is`(DestinyItems.HEAVY_AMMO)
+        if (isAmmo) ArcTitanFragmentRuntime.onAmmoPickup(player, entity)
+        val key = player.uuid to entity.uuid
+        if (isAmmo && scavengedEntities.add(key)) {
+            val copies = count(player, ArmorModEffect.SCAVENGER)
+            val reserves = count(player, ArmorModEffect.AMMO_RESERVES)
+            entity.item.grow((diminishing(copies) + diminishing(reserves)).toInt())
         }
-        if (!entity.item.`is`(DestinyItems.ORB_OF_POWER)) {
-            val isAmmo = entity.item.`is`(DestinyItems.SPECIAL_AMMO) || entity.item.`is`(DestinyItems.HEAVY_AMMO)
-            if (isAmmo) ArcTitanFragmentRuntime.onAmmoPickup(player, entity)
-            val key = player.uuid to entity.uuid
-            if (isAmmo && scavengedEntities.add(key)) {
-                val copies = count(player, ArmorModEffect.SCAVENGER)
-                val reserves = count(player, ArmorModEffect.AMMO_RESERVES)
-                entity.item.grow((diminishing(copies) + diminishing(reserves)).toInt())
-            }
-            return false
-        }
-        entity.discard()
+        return false
+    }
+
+    /** Applies the base super-energy reward and every installed Orb of Power interaction. */
+    fun onOrbPickup(player: ServerPlayer): Boolean {
+        if (!player.isAlive || player.isSpectator) return false
         VoidHunterAspectRuntime.onOrbPickup(player)
         val data = PlayerDestinyDataApi.get(player)
+        data.combatState.superEnergy = OrbOfPowerRules.addSuperEnergy(data.combatState.superEnergy)
         addArmorCharge(player, if (count(player, ArmorModEffect.STACKS_ON_STACKS) > 0) 2 else 1)
         if (count(player, ArmorModEffect.ORB_HEAL) > 0) {
             player.heal((3 * diminishing(count(player, ArmorModEffect.ORB_HEAL))).toFloat())
@@ -135,6 +136,14 @@ object ArmorModRuntime {
         if (absolution > 0) AbilitySlot.entries.filterNot { it == AbilitySlot.SUPER }.forEach { reduceCooldown(player, it, 25 * diminishing(absolution)) }
         DestinyNetworking.syncCooldowns(player)
         DestinyNetworking.syncStatState(player)
+        player.serverLevel().playSound(
+            null,
+            player.blockPosition(),
+            SoundEvents.EXPERIENCE_ORB_PICKUP,
+            SoundSource.PLAYERS,
+            0.55f,
+            1.35f
+        )
         return true
     }
 
@@ -190,8 +199,8 @@ object ArmorModRuntime {
                 kickstart(player, AbilitySlot.CLASS_ABILITY, ArmorModEffect.UTILITY_KICKSTART)
                 if (count(player, ArmorModEffect.REAPER) > 0) reaperArmed += player.uuid
                 if (count(player, ArmorModEffect.POWERFUL_ATTRACTION) > 0) {
-                    player.serverLevel().getEntitiesOfClass(ItemEntity::class.java, player.boundingBox.inflate(6.0)) { it.item.`is`(DestinyItems.ORB_OF_POWER) }
-                        .forEach { onItemPickup(player, it) }
+                    player.serverLevel().getEntitiesOfClass(OrbOfPowerEntity::class.java, player.boundingBox.inflate(6.0))
+                        .forEach { orb -> if (onOrbPickup(player)) orb.discard() }
                 }
                 grantSuper(player, (0.8 * diminishing(count(player, ArmorModEffect.SUPER_FROM_CLASS))).toFloat())
             }

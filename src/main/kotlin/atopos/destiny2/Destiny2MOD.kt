@@ -12,6 +12,7 @@ import atopos.destiny2.common.network.DestinyNetworking
 import atopos.destiny2.common.player.DestinyPlayerCommands
 import atopos.destiny2.common.player.GuardianAwakeningRuntime
 import atopos.destiny2.common.player.ClassResonanceRuntime
+import atopos.destiny2.common.player.LightCrystalRuntime
 import atopos.destiny2.common.sound.DestinySounds
 import atopos.destiny2.common.ability.DestinyAbilityRegistry
 import atopos.destiny2.common.ability.ArcTitanAbilities
@@ -59,6 +60,7 @@ object Destiny2MOD : ModInitializer {
         DestinyPlayerCommands.register()
         GuardianAwakeningRuntime.register()
         ClassResonanceRuntime.register()
+        LightCrystalRuntime.register()
         
         logger.info("Destiny 2 Mod Initialized!")
 	}

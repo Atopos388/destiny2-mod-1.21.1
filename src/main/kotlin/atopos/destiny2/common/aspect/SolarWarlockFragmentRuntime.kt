@@ -5,8 +5,9 @@ import atopos.destiny2.common.effect.DestinyEffects
 import atopos.destiny2.common.effect.SolarDamageKind
 import atopos.destiny2.common.effect.SolarIgnitionRuntime
 import atopos.destiny2.common.effect.SolarScorchContext
+import atopos.destiny2.common.entity.OrbOfPowerEntity
+import atopos.destiny2.common.entity.FirespriteEntity
 import atopos.destiny2.common.gear.GearRegistry
-import atopos.destiny2.common.item.DestinyItems
 import atopos.destiny2.common.network.DestinyNetworking
 import atopos.destiny2.common.player.AbilitySlot
 import atopos.destiny2.common.player.DestinyAbilityDamageCarrier
@@ -25,11 +26,9 @@ import net.minecraft.world.effect.MobEffectInstance
 import net.minecraft.world.entity.LivingEntity
 import net.minecraft.world.entity.boss.enderdragon.EnderDragon
 import net.minecraft.world.entity.boss.wither.WitherBoss
-import net.minecraft.world.entity.item.ItemEntity
 import net.minecraft.world.entity.monster.Enemy
 import net.minecraft.world.entity.monster.warden.Warden
 import net.minecraft.world.entity.player.Player
-import net.minecraft.world.item.ItemStack
 import java.util.UUID
 import kotlin.math.ceil
 
@@ -266,15 +265,7 @@ object SolarWarlockFragmentRuntime {
         )
         wonderStates[source.uuid] = update.state
         if (update.shouldGenerateOrb) {
-            source.serverLevel().addFreshEntity(
-                ItemEntity(
-                    source.serverLevel(),
-                    defeated.x,
-                    defeated.y + 0.35,
-                    defeated.z,
-                    ItemStack(DestinyItems.ORB_OF_POWER)
-                )
-            )
+            OrbOfPowerEntity.spawn(source.serverLevel(), defeated.position().add(0.0, 0.35, 0.0))
         }
         val fragmentSource = when (context?.sourceKind) {
             SolarDamageKind.GRENADE -> SolarFragmentCombatSource.SOLAR_GRENADE
@@ -480,17 +471,11 @@ object SolarWarlockFragmentRuntime {
         val now = owner.serverLevel().gameTime
         if (now < (nextFirespriteEligibleTick[owner.uuid] ?: Long.MIN_VALUE)) return false
         nextFirespriteEligibleTick[owner.uuid] = now + MINECRAFT_CALIBRATION_FIRESPRITE_COOLDOWN_TICKS
-        val pickup = ItemEntity(
+        FirespriteEntity.spawn(
             owner.serverLevel(),
-            defeated.x,
-            defeated.y + 0.35,
-            defeated.z,
-            ItemStack(DestinyItems.FIRESPRITE)
+            defeated.position().add(0.0, 0.18, 0.0),
+            owner
         )
-        pickup.setTarget(owner.uuid)
-        pickup.setPickUpDelay(10)
-        owner.serverLevel().addFreshEntity(pickup)
-        owner.serverLevel().sendParticles(ParticleTypes.FLAME, pickup.x, pickup.y, pickup.z, 18, 0.22, 0.22, 0.22, 0.025)
         return true
     }
 

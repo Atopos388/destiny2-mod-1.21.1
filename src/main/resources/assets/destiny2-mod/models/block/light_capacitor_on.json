@@ -1,0 +1,4 @@
+{
+  "parent": "destiny2-mod:block/light_capacitor",
+  "textures": { "core": "minecraft:block/sea_lantern" }
+}
