@@ -2,14 +2,15 @@
 	"schemaVersion": 1,
 	"id": "destiny2-mod",
 	"version": "${version}",
-	"name": "destiny2 MOD",
+	"name": "Destiny 2 Inspired Mod",
 	"description": "Destiny-inspired weapons, abilities, armor, loot, and custom model experiments for Minecraft.",
 	"authors": [
-		"Me!"
+		"Atopos388"
 	],
 	"contact": {
-		"homepage": "",
-		"sources": ""
+		"homepage": "https://github.com/Atopos388/destiny2-mod-1.21.1-backup",
+		"sources": "https://github.com/Atopos388/destiny2-mod-1.21.1-backup",
+		"issues": "https://github.com/Atopos388/destiny2-mod-1.21.1-backup/issues"
 	},
 	"license": "GPL-3.0-only",
 	"icon": "assets/destiny2-mod/icon.png",

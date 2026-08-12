@@ -1,0 +1,27 @@
+name: Feature proposal
+description: Propose a focused gameplay, technical, documentation, or contributor-experience improvement
+title: "[Proposal]: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    attributes:
+      label: Problem or opportunity
+      description: What user or maintainer need would this address?
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Proposed outcome
+      description: Describe observable behavior, not only an implementation.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Alternatives and risks
+      description: Note alternatives, balance, networking, performance, compatibility, and asset-rights concerns.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Evidence or references
+      description: Link specifications, tests, recordings, or permitted reference material where useful.
