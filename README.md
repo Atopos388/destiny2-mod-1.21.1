@@ -1,6 +1,6 @@
 # Destiny 2 Inspired Mod for Fabric
 
-[![Build](https://github.com/Atopos388/destiny2-mod-1.21.1-backup/actions/workflows/build.yml/badge.svg)](https://github.com/Atopos388/destiny2-mod-1.21.1-backup/actions/workflows/build.yml)
+[![Build](https://github.com/Atopos388/destiny2-mod-1.21.1/actions/workflows/build.yml/badge.svg)](https://github.com/Atopos388/destiny2-mod-1.21.1/actions/workflows/build.yml)
 [![License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0-blue.svg)](LICENSE)
 ![Minecraft 1.21.1](https://img.shields.io/badge/Minecraft-1.21.1-62B47A)
 ![Fabric](https://img.shields.io/badge/Loader-Fabric-DBD0B4)
@@ -90,8 +90,8 @@ Bug reports, focused fixes, tests, documentation, and well-scoped feature propos
 
 Please use the provided issue forms:
 
-- [Report a bug](https://github.com/Atopos388/destiny2-mod-1.21.1-backup/issues/new?template=bug_report.yml)
-- [Propose a feature](https://github.com/Atopos388/destiny2-mod-1.21.1-backup/issues/new?template=feature_request.yml)
+- [Report a bug](https://github.com/Atopos388/destiny2-mod-1.21.1/issues/new?template=bug_report.yml)
+- [Propose a feature](https://github.com/Atopos388/destiny2-mod-1.21.1/issues/new?template=feature_request.yml)
 - [Report a security issue](SECURITY.md)
 
 See [ROADMAP.md](ROADMAP.md) for current priorities and [CHANGELOG.md](CHANGELOG.md) for notable changes.
@@ -101,4 +101,3 @@ See [ROADMAP.md](ROADMAP.md) for current priorities and [CHANGELOG.md](CHANGELOG
 Original project code is licensed under [GPL-3.0-only](LICENSE). Additional attribution and third-party notices are listed in [NOTICE.md](NOTICE.md).
 
 This is an independent, non-commercial fan project. It is not affiliated with, endorsed, or sponsored by Bungie or Sony Interactive Entertainment. Destiny, Destiny 2, and related names and marks belong to their respective owners. Contributors must only submit code and assets they have the right to redistribute; do not submit ripped or proprietary game assets.
-

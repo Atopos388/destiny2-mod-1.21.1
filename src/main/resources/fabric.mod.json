@@ -8,9 +8,9 @@
 		"Atopos388"
 	],
 	"contact": {
-		"homepage": "https://github.com/Atopos388/destiny2-mod-1.21.1-backup",
-		"sources": "https://github.com/Atopos388/destiny2-mod-1.21.1-backup",
-		"issues": "https://github.com/Atopos388/destiny2-mod-1.21.1-backup/issues"
+		"homepage": "https://github.com/Atopos388/destiny2-mod-1.21.1",
+		"sources": "https://github.com/Atopos388/destiny2-mod-1.21.1",
+		"issues": "https://github.com/Atopos388/destiny2-mod-1.21.1/issues"
 	},
 	"license": "GPL-3.0-only",
 	"icon": "assets/destiny2-mod/icon.png",
