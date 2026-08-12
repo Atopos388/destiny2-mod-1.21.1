@@ -85,7 +85,7 @@ dependencies {
     compileOnly files("libs/taffy-1.1.4.jar", "libs/yoga-1.0.0.jar")
 
     // Sandstorm-compatible particle expressions. Fabric Loader already supplies ASM.
-    implementation include("gg.moonflower:molang-compiler:3.1.0.18") {
+    implementation include("gg.moonflower:molang-compiler:3.1.1.19") {
         exclude group: "org.ow2.asm", module: "asm-tree"
     }
 
