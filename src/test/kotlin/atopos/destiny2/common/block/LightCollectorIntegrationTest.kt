@@ -24,7 +24,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 class LightCollectorIntegrationTest {
-    private val source = Path.of("source_assets/blockbench/light_collector_20260906/game_integration")
+    private val source = Path.of("src/test/resources/fixtures/light_collector")
     private val assets = Path.of("src/main/resources/assets/destiny2-mod")
     private fun json(path: Path): JsonObject = Files.newBufferedReader(path).use(JsonParser::parseReader).asJsonObject
     companion object {

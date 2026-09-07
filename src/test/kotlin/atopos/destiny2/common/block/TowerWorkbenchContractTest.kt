@@ -29,7 +29,7 @@ class TowerWorkbenchContractTest {
 
     @Test
     fun `source geometry keeps width height and face UVs with depth fitted into one cell`() {
-        val approved = json(Path.of("source_assets/blockbench/tower_workbench_20260906/tower_workbench.bbmodel"))
+        val approved = json(Path.of("src/test/resources/fixtures/tower_workbench/tower_workbench.bbmodel"))
         val originals = approved.getAsJsonArray("elements")
         val elements = full().getAsJsonArray("elements")
         assertEquals(153, elements.size())
@@ -82,7 +82,7 @@ class TowerWorkbenchContractTest {
 
     @Test
     fun `approved texture is byte identical`() {
-        assertArrayEquals(Files.readAllBytes(Path.of("source_assets/blockbench/tower_workbench_20260906/tower_workbench.png")),
+        assertArrayEquals(Files.readAllBytes(Path.of("src/test/resources/fixtures/tower_workbench/tower_workbench.png")),
             Files.readAllBytes(assets.resolve("textures/block/tower_workbench.png")))
     }
 

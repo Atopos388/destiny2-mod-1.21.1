@@ -27,7 +27,7 @@ class WeaponGuiRenderContractTest {
 
     @Test
     fun `imported guns retain authored non first person scales`() {
-        val adapterRoot = Path.of("run", "destiny_gunpacks", "asc-destiny-adapter", "assets", "ascgun", "destiny_gunpacks")
+        val adapterRoot = Path.of("src/test/resources/fixtures/asc_adapter")
         listOf("ace", "outbreakprefected", "riskrunner", "summit", "whisper", "xeno").forEach { gun ->
             val definition = Files.newBufferedReader(adapterRoot.resolve("$gun.json")).use {
                 JsonParser.parseReader(it).asJsonObject

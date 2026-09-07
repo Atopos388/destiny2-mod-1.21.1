@@ -1,0 +1,21 @@
+{
+  "id": "ascgun:summit",
+  "model": "ascgun:geo_models/gun/summit_geo.json",
+  "texture": "ascgun:textures/gun/uv/summit.png",
+  "animation": "ascgun:animations/summit.animation.json",
+  "sounds": {
+    "shoot": "ascgun:tacz_sounds/summit/summit_shoot.ogg",
+    "shoot_3p": "ascgun:tacz_sounds/summit/summit_shoot_3p.ogg",
+    "reload_empty": "ascgun:tacz_sounds/summit/summit_reload_empty.ogg",
+    "reload_tactical": "ascgun:tacz_sounds/summit/summit_reload_tactical.ogg",
+    "inspect": "ascgun:tacz_sounds/summit/summit_inspect.ogg",
+    "inspect_empty": "ascgun:tacz_sounds/summit/summit_inspect_empty.ogg",
+    "draw": "ascgun:tacz_sounds/summit/summit_draw.ogg",
+    "put_away": "ascgun:tacz_sounds/summit/summit_put_away.ogg"
+  },
+  "apply_gecko_positioning": true,
+  "third_person_scale": [0.6, 0.6, 0.6],
+  "ground_scale": [0.6, 0.6, 0.6],
+  "fixed_scale": [1.2, 1.2, 1.2],
+  "skin_bones": ["lefthand_pos", "righthand_pos"]
+}
