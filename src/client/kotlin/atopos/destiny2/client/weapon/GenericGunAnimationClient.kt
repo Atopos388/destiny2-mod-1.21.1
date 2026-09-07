@@ -274,6 +274,7 @@ object GenericGunAnimationClient {
         if (stack.item !is GenericGunPackItem) return
 
         val gunId = GenericGunPackItem.id(stack)
+        if (payload.weaponId != null && payload.weaponId != gunId) return
         val animation = when (payload.action) {
             WeaponThirdPersonAction.RELOAD ->
                 if (DestinyWeaponHUDState.snapshot?.chamberEmpty == true) {
@@ -555,6 +556,21 @@ object GenericGunAnimationClient {
             }
         }
         DestinyWeaponAimClient.publishTaczCamera(authoredCameraRotation)
+    }
+
+    /**
+     * Applies a deterministic bind/idle pose for inventory and other GUI previews.
+     * Gameplay action tracks are deliberately ignored so a reload, inspect, or shot
+     * cannot move an icon outside its slot.
+     */
+    fun applyStatic(
+        gunId: ResourceLocation,
+        animationResource: ResourceLocation,
+        model: TaczBedrockGunModel
+    ) {
+        val clips = load(gunId, animationResource) ?: return
+        model.resetAnimation()
+        clips[TaczWeaponAnimationContract.STATIC_IDLE]?.apply(model, 0.0f)
     }
 
     fun reset(model: TaczBedrockGunModel) {

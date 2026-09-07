@@ -17,12 +17,15 @@ import atopos.destiny2.common.weapon.WeaponAccuracyRuntime
 import atopos.destiny2.common.weapon.WeaponRecoilMath
 import atopos.destiny2.common.weapon.WeaponAimProfile
 import atopos.destiny2.common.weapon.WeaponAmmoState
+import atopos.destiny2.common.weapon.AscWeaponRuntime
+import atopos.destiny2.common.gear.GearRolls
 import atopos.destiny2.common.weapon.WeaponCombatProfile
 import atopos.destiny2.common.weapon.WeaponFireMode
 import atopos.destiny2.common.weapon.WeaponFireModeState
 import atopos.destiny2.common.weapon.WeaponHudStatus
 import atopos.destiny2.common.weapon.WeaponHudSync
 import atopos.destiny2.common.weapon.WeaponThirdPersonAction
+import atopos.destiny2.common.weapon.WeaponLoadoutRuntime
 import net.fabricmc.fabric.api.networking.v1.PlayerLookup
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking
 import net.minecraft.core.component.DataComponents
@@ -38,6 +41,7 @@ import net.minecraft.world.item.ItemStack
 import net.minecraft.world.item.component.CustomData
 import net.minecraft.world.level.Level
 import net.minecraft.world.phys.Vec3
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * A single registered item for every data-driven gun definition.
@@ -60,10 +64,11 @@ class GenericGunPackItem(properties: Properties) : Item(properties), TaczGunPack
     ): Boolean {
         if (level.isClientSide || level !is ServerLevel) return false
         val stack = shooter.getItemInHand(hand)
-        if (stack.item !== this || level.gameTime < nextShotTick(stack)) return false
+        if (hand != InteractionHand.MAIN_HAND || !WeaponLoadoutRuntime.isEquipped(shooter, stack)) return false
+        if (stack.item !== this || level.gameTime.toDouble() < nextShotTime(stack)) return false
 
         val profile = combatProfile(stack)
-        val state = WeaponAmmoState.read(stack, profile.magazineSize)
+        val state = WeaponAmmoState.read(stack, profile)
         if (state.isReloading || state.isCycling) return false
         if (state.magazine <= 0) {
             requestReload(level, shooter, stack)
@@ -75,7 +80,7 @@ class GenericGunPackItem(properties: Properties) : Item(properties), TaczGunPack
         val damageMultiplier = when (weaponId) {
             IZANAGI_ID -> IzanagiBurdenRules.damageMultiplier(honedRounds)
             MonteCarloExoticRuntime.ID -> MonteCarloExoticRuntime.damageMultiplier(shooter)
-            else -> 1.0f
+            else -> AscWeaponRuntime.outgoingDamageMultiplier(shooter, stack)
         }
         val rangeMultiplier = if (weaponId == IZANAGI_ID) {
             IzanagiBurdenRules.rangeMultiplier(honedRounds)
@@ -101,8 +106,13 @@ class GenericGunPackItem(properties: Properties) : Item(properties), TaczGunPack
             TaczProjectileDirection.validated(shooter.lookAngle, clientDirection),
             level.random
         )
-        val bullets = List(profile.projectilesPerShot) {
-            val direction = if (profile.projectilesPerShot == 1) {
+        val shotProjectileCount = if (weaponId == AscWeaponRuntime.OUTBREAK) {
+            minOf(3, state.magazine)
+        } else {
+            profile.projectilesPerShot
+        }
+        val bullets = List(shotProjectileCount) {
+            val direction = if (shotProjectileCount == 1 || weaponId == AscWeaponRuntime.OUTBREAK) {
                 centerDirection
             } else {
                 WeaponAccuracyRuntime.spread(
@@ -122,9 +132,21 @@ class GenericGunPackItem(properties: Properties) : Item(properties), TaczGunPack
             ).also(level::addFreshEntity)
         }
         val bullet = bullets.first()
-        WeaponAmmoState.consumeRound(stack, profile.magazineSize, profile.boltTicks)
+        repeat(if (weaponId == AscWeaponRuntime.OUTBREAK) shotProjectileCount else 1) {
+            WeaponAmmoState.consumeRound(stack, profile, profile.boltTicks)
+        }
+        AscWeaponRuntime.onShot(stack)
         clearHonedEdge(stack)
-        setNextShotTick(stack, level.gameTime + fireCooldownTicks(profile.roundsPerMinute))
+        val cadenceMultiplier = if (weaponId == AscWeaponRuntime.OUTBREAK) 3 else 1
+        setNextShotTime(
+            stack,
+            nextFireTime(
+                level.gameTime,
+                nextShotTime(stack),
+                profile.roundsPerMinute,
+                cadenceMultiplier
+            )
+        )
 
         val recoil = profile.recoil
         val recoilSequence = advanceRecoilSequence(
@@ -153,23 +175,27 @@ class GenericGunPackItem(properties: Properties) : Item(properties), TaczGunPack
         DestinyNetworking.broadcastWeaponThirdPersonAction(
             shooter,
             WeaponThirdPersonAction.SHOOT,
-            profile.boltTicks.coerceAtLeast(6)
+            profile.boltTicks.coerceAtLeast(6),
+            weaponId,
+            "shoot"
         )
         val fireSound = if (weaponId == THE_DEICIDE_ID) {
             DestinySounds.THE_DEICIDE_FIRE
         } else {
             DestinySounds.FORGOTTEN_NAME_FIRE
         }
-        level.playSound(
-            null,
-            shooter.x,
-            shooter.y,
-            shooter.z,
-            fireSound,
-            SoundSource.PLAYERS,
-            if (weaponId == THE_DEICIDE_ID || honedRounds >= 2) 1.0f else 0.82f,
-            if (weaponId == THE_DEICIDE_ID) 1.0f else if (honedRounds >= 2) 0.78f else 0.9f
-        )
+        if (weaponId.namespace == BUILTIN_NAMESPACE) {
+            level.playSound(
+                null,
+                shooter.x,
+                shooter.y,
+                shooter.z,
+                fireSound,
+                SoundSource.PLAYERS,
+                if (weaponId == THE_DEICIDE_ID || honedRounds >= 2) 1.0f else 0.82f,
+                if (weaponId == THE_DEICIDE_ID) 1.0f else if (honedRounds >= 2) 0.78f else 0.9f
+            )
+        }
         WeaponHudSync.syncNow(shooter)
         return true
     }
@@ -178,14 +204,40 @@ class GenericGunPackItem(properties: Properties) : Item(properties), TaczGunPack
         if (level.isClientSide) return
         val player = entity as? ServerPlayer ?: return
         val profile = combatProfile(stack)
-        if (isSelected) {
+        if (isSelected && WeaponLoadoutRuntime.isEquipped(player, stack)) {
+            val weaponId = id(stack)
+            if (selectedGunIds.put(player.uuid, weaponId) != weaponId) {
+                DestinyNetworking.broadcastWeaponThirdPersonAction(
+                    player,
+                    WeaponThirdPersonAction.DRAW,
+                    DRAW_TICKS,
+                    weaponId,
+                    "draw"
+                )
+            }
+            val beforeReload = WeaponAmmoState.read(stack, profile)
             WeaponAmmoState.tickReload(
                 stack,
                 player,
                 profile.copy(reloadTicks = reloadTicks(player, profile.reloadTicks))
             )
+            val afterReload = WeaponAmmoState.read(stack, profile)
+            if (beforeReload.isReloading && !afterReload.isReloading) {
+                AscWeaponRuntime.onReloadCompleted(stack)
+            }
+            AscWeaponRuntime.tickSelected(player, stack)
         } else {
-            WeaponAmmoState.cancelReload(stack, profile.magazineSize)
+            val weaponId = id(stack)
+            if (selectedGunIds.remove(player.uuid, weaponId)) {
+                DestinyNetworking.broadcastWeaponThirdPersonAction(
+                    player,
+                    WeaponThirdPersonAction.PUT_AWAY,
+                    PUT_AWAY_TICKS,
+                    weaponId,
+                    "put_away"
+                )
+            }
+            WeaponAmmoState.cancelReload(stack, profile)
         }
     }
 
@@ -198,31 +250,32 @@ class GenericGunPackItem(properties: Properties) : Item(properties), TaczGunPack
     override fun requestReload(level: Level, player: ServerPlayer, stack: ItemStack): Boolean {
         if (level.isClientSide || level !is ServerLevel || stack.item !== this) return false
         val profile = combatProfile(stack)
-        val state = WeaponAmmoState.read(stack, profile.magazineSize)
+        val state = WeaponAmmoState.read(stack, profile)
         if (
             state.isReloading ||
             state.isCycling ||
             state.magazine >= profile.magazineSize ||
             WeaponAmmoState.isReloadBlocked(state, level.gameTime)
         ) return false
-        if (!player.abilities.instabuild && WeaponAmmoState.reserveCount(player, profile.ammoType) <= 0) return false
+        if (WeaponAmmoState.reserveCount(stack, profile, player.abilities.instabuild) <= 0) return false
 
         clearHonedEdge(stack)
         val missingRounds = (profile.magazineSize - state.magazine).coerceAtLeast(1)
         val availableRounds = if (player.abilities.instabuild) {
             missingRounds
         } else {
-            WeaponAmmoState.reserveCount(player, profile.ammoType).coerceAtLeast(1)
+            WeaponAmmoState.reserveCount(stack, profile, player.abilities.instabuild).coerceAtLeast(1)
         }
         val authoredReloadTicks = if (id(stack) == THE_DEICIDE_ID) {
             theDeicideReloadTicks(minOf(missingRounds, availableRounds))
         } else {
             profile.reloadTicks
         }
-        val duration = reloadTicks(player, authoredReloadTicks)
+        val duration = (reloadTicks(player, authoredReloadTicks) * AscWeaponRuntime.reloadMultiplier(stack))
+            .toInt().coerceAtLeast(1)
         val started = WeaponAmmoState.startReload(
             stack,
-            profile.magazineSize,
+            profile,
             duration,
             profile.emptyReloadBonusTicks,
             profile.reloadFeedFraction
@@ -231,37 +284,45 @@ class GenericGunPackItem(properties: Properties) : Item(properties), TaczGunPack
             clearRecoilSequence(stack)
             player.inventoryMenu.broadcastChanges()
             WeaponHudSync.syncNow(player)
-            DestinyNetworking.broadcastWeaponThirdPersonAction(player, WeaponThirdPersonAction.RELOAD, duration)
+            DestinyNetworking.broadcastWeaponThirdPersonAction(
+                player,
+                WeaponThirdPersonAction.RELOAD,
+                duration,
+                id(stack),
+                if (state.magazine <= 0) "reload_empty" else "reload_tactical"
+            )
         }
         return started
     }
 
     override fun requestInspect(level: Level, player: ServerPlayer, stack: ItemStack): Boolean {
         if (level.isClientSide || level !is ServerLevel || stack.item !== this) return false
-        val state = WeaponAmmoState.read(stack, combatProfile(stack).magazineSize)
+        val state = WeaponAmmoState.read(stack, combatProfile(stack))
         if (state.isReloading || state.isCycling) return false
         val inspectTicks = if (id(stack) == IZANAGI_ID) IZANAGI_INSPECT_TICKS else DEFAULT_INSPECT_TICKS
         DestinyNetworking.broadcastWeaponThirdPersonAction(
             player,
             WeaponThirdPersonAction.INSPECT,
-            inspectTicks
+            inspectTicks,
+            id(stack),
+            if (state.magazine <= 0) "inspect_empty" else "inspect"
         )
         return true
     }
 
     override fun cycleFireMode(player: ServerPlayer, stack: ItemStack): WeaponFireMode {
         val profile = combatProfile(stack)
-        val state = WeaponAmmoState.read(stack, profile.magazineSize)
+        val state = WeaponAmmoState.read(stack, profile)
         if (
             id(stack) == IZANAGI_ID &&
             !state.isReloading &&
             !state.isCycling &&
             IzanagiBurdenRules.canLoadHonedEdge(state.magazine) &&
-            player.level().gameTime >= nextShotTick(stack)
+            player.level().gameTime.toDouble() >= nextShotTime(stack)
         ) {
             setHonedRounds(stack, state.magazine)
-            WeaponAmmoState.setMagazine(stack, profile.magazineSize, 1)
-            setNextShotTick(stack, player.level().gameTime + HONED_EDGE_LOAD_TICKS)
+            WeaponAmmoState.setMagazine(stack, profile, 1)
+            setNextShotTime(stack, player.level().gameTime + HONED_EDGE_LOAD_TICKS.toDouble())
             DestinyNetworking.broadcastWeaponThirdPersonAction(
                 player,
                 WeaponThirdPersonAction.RELOAD,
@@ -275,7 +336,7 @@ class GenericGunPackItem(properties: Properties) : Item(properties), TaczGunPack
 
     override fun weaponHudStatus(player: ServerPlayer, stack: ItemStack): WeaponHudStatus {
         val profile = combatProfile(stack)
-        val state = WeaponAmmoState.read(stack, profile.magazineSize)
+        val state = WeaponAmmoState.read(stack, profile)
         val honed = honedRounds(stack)
         val weaponName = id(stack).path.replace('_', ' ')
         return WeaponHudStatus(
@@ -283,7 +344,7 @@ class GenericGunPackItem(properties: Properties) : Item(properties), TaczGunPack
             ammoType = profile.ammoType,
             magazine = state.magazine,
             capacity = profile.magazineSize,
-            reserve = WeaponAmmoState.reserveCount(player, profile.ammoType),
+            reserve = WeaponAmmoState.reserveCount(stack, profile, player.abilities.instabuild),
             reloadRemaining = state.reloadRemaining,
             reloadTotal = state.reloadTotal,
             precisionMultiplier = profile.precisionMultiplier,
@@ -327,16 +388,21 @@ class GenericGunPackItem(properties: Properties) : Item(properties), TaczGunPack
         private const val HONED_EDGE_LOAD_TICKS = 48
         private const val IZANAGI_INSPECT_TICKS = 88
         private const val DEFAULT_INSPECT_TICKS = 50
+        private const val DRAW_TICKS = 12
+        private const val PUT_AWAY_TICKS = 10
+        private const val BUILTIN_NAMESPACE = "destiny2-mod"
         private const val THE_DEICIDE_MAGAZINE_SIZE = 7
         private const val THE_DEICIDE_RELOAD_FIXED_SECONDS = 1.8166667
         private const val THE_DEICIDE_INSERT_SECONDS = 0.5666667
         private const val TICKS_PER_SECOND = 20.0
+        private val selectedGunIds = ConcurrentHashMap<java.util.UUID, ResourceLocation>()
 
         fun stack(id: ResourceLocation): ItemStack =
             ItemStack(DestinyItems.GENERIC_GUN).also { stack ->
                 stack.update(DataComponents.CUSTOM_DATA, CustomData.EMPTY) { data ->
                     data.update { tag -> tag.putString(GUN_ID, id.toString()) }
                 }
+                GearRolls.ensureRoll(stack)
             }
 
         fun id(stack: ItemStack): ResourceLocation {
@@ -346,12 +412,12 @@ class GenericGunPackItem(properties: Properties) : Item(properties), TaczGunPack
                 ?: FALLBACK_ID
         }
 
-        private fun nextShotTick(stack: ItemStack): Long =
-            stack.get(DataComponents.CUSTOM_DATA)?.copyTag()?.getLong(NEXT_SHOT_TICK) ?: 0L
+        private fun nextShotTime(stack: ItemStack): Double =
+            stack.get(DataComponents.CUSTOM_DATA)?.copyTag()?.getDouble(NEXT_SHOT_TICK) ?: 0.0
 
-        private fun setNextShotTick(stack: ItemStack, tick: Long) {
+        private fun setNextShotTime(stack: ItemStack, tick: Double) {
             stack.update(DataComponents.CUSTOM_DATA, CustomData.EMPTY) { data ->
-                data.update { tag -> tag.putLong(NEXT_SHOT_TICK, tick) }
+                data.update { tag -> tag.putDouble(NEXT_SHOT_TICK, tick) }
             }
         }
 
@@ -380,7 +446,7 @@ class GenericGunPackItem(properties: Properties) : Item(properties), TaczGunPack
         }
 
         private fun recoilResetTicks(profile: WeaponCombatProfile): Long {
-            val cadenceTicks = fireCooldownTicks(profile.roundsPerMinute) * 3L
+            val cadenceTicks = kotlin.math.ceil(fireCooldownTicks(profile.roundsPerMinute) * 3.0).toLong()
             val settleTicks = (profile.recoil.recoverDurationMs + 49L) / 50L +
                 profile.accuracy.settleDelayTicks
             return maxOf(cadenceTicks, settleTicks, 6L)
@@ -405,8 +471,23 @@ class GenericGunPackItem(properties: Properties) : Item(properties), TaczGunPack
             }
         }
 
-        private fun fireCooldownTicks(roundsPerMinute: Int): Long =
-            (1200.0 / roundsPerMinute.coerceAtLeast(1)).toLong().coerceAtLeast(1L)
+        private fun fireCooldownTicks(roundsPerMinute: Int): Double =
+            (1200.0 / roundsPerMinute.coerceAtLeast(1)).coerceAtLeast(1.0)
+
+        internal fun nextFireTime(
+            currentTick: Long,
+            scheduledTick: Double,
+            roundsPerMinute: Int,
+            cadenceMultiplier: Int = 1
+        ): Double {
+            val lateByTicks = currentTick.toDouble() - scheduledTick
+            val cadenceAnchor = if (scheduledTick > 0.0 && lateByTicks in 0.0..1.0) {
+                scheduledTick
+            } else {
+                currentTick.toDouble()
+            }
+            return cadenceAnchor + fireCooldownTicks(roundsPerMinute) * cadenceMultiplier.coerceAtLeast(1)
+        }
 
         private val MISSING_PROFILE = WeaponCombatProfile(
             ammoType = DestinyAmmoType.PRIMARY,

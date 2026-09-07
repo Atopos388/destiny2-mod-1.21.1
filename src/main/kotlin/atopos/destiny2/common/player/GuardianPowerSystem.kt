@@ -5,6 +5,7 @@ import atopos.destiny2.common.gear.GearCategory
 import atopos.destiny2.common.gear.GearRegistry
 import atopos.destiny2.common.gear.GearRolls
 import atopos.destiny2.common.item.DestinyClassItem
+import atopos.destiny2.common.weapon.DestinyWeaponSlot
 import net.minecraft.server.level.ServerPlayer
 import net.minecraft.world.entity.LivingEntity
 import net.minecraft.world.entity.boss.enderdragon.EnderDragon
@@ -54,7 +55,7 @@ object GuardianPowerSystem {
     const val SOFT_CAP = 150
     const val POWERFUL_CAP = 180
     const val PINNACLE_CAP = 200
-    private const val EQUIPMENT_SLOT_COUNT = 6
+    private const val EQUIPMENT_SLOT_COUNT = 8
 
     fun calculate(
         awakened: Boolean,
@@ -167,7 +168,11 @@ object GuardianPowerSystem {
         start + (end - start) * progress.coerceIn(0.0f, 1.0f)
 
     private fun equippedSlotPower(player: ServerPlayer, data: PlayerDestinyData): List<Int> = buildList {
-        add(GearRolls.power(player.mainHandItem))
+        DestinyWeaponSlot.entries.forEach { slot ->
+            val stack = player.inventory.getItem(slot.hotbarIndex)
+                .takeIf { DestinyWeaponSlot.forStack(it) == slot } ?: ItemStack.EMPTY
+            add(GearRolls.power(stack))
+        }
         addAll(player.inventory.armor.map(GearRolls::power))
         val classItem = data.classItem.takeIf {
             (it.item as? DestinyClassItem)?.requiredClass == data.destinyClass
@@ -176,20 +181,23 @@ object GuardianPowerSystem {
     }
 
     private fun highestAvailableSlotPower(player: ServerPlayer, data: PlayerDestinyData): List<Int> {
-        var weapon = BASE_POWER
+        val weapons = DestinyWeaponSlot.entries.associateWith { BASE_POWER }.toMutableMap()
         val armor = DestinyArmorSlot.entries.associateWith { BASE_POWER }.toMutableMap()
         val candidates = buildList {
             addAll(player.inventory.items)
             addAll(player.inventory.armor)
             addAll(player.inventory.offhand)
             add(data.classItem)
+            DestinyWeaponSlot.entries.forEach { slot -> addAll(data.weaponReserves.stacks(slot)) }
         }
         candidates.forEach { stack ->
             if (stack.isEmpty) return@forEach
             val definition = GearRegistry.definitionFor(stack) ?: return@forEach
             val power = GearRolls.power(stack).takeIf { it > 0 } ?: return@forEach
             when (definition.category) {
-                GearCategory.WEAPON -> weapon = maxOf(weapon, power)
+                GearCategory.WEAPON -> DestinyWeaponSlot.forStack(stack)?.let { slot ->
+                    weapons[slot] = maxOf(weapons.getValue(slot), power)
+                }
                 GearCategory.ARMOR -> DestinyArmorSlot.from(stack)?.let { slot ->
                     if (slot != DestinyArmorSlot.CLASS_ITEM ||
                         (stack.item as? DestinyClassItem)?.requiredClass == data.destinyClass
@@ -198,7 +206,9 @@ object GuardianPowerSystem {
             }
         }
         return listOf(
-            weapon,
+            weapons.getValue(DestinyWeaponSlot.KINETIC),
+            weapons.getValue(DestinyWeaponSlot.ENERGY),
+            weapons.getValue(DestinyWeaponSlot.POWER),
             armor.getValue(DestinyArmorSlot.HELMET),
             armor.getValue(DestinyArmorSlot.CHEST),
             armor.getValue(DestinyArmorSlot.LEGS),

@@ -1,6 +1,6 @@
 {
   "parent": "minecraft:item/generated",
   "textures": {
-    "layer0": "destiny2-mod:gui/ability/arc_titan_grenade"
+    "layer0": "destiny2-mod:item/arc_grenade_memory"
   }
 }

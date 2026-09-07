@@ -24,6 +24,7 @@ import atopos.destiny2.common.aspect.SolarWarlockFragmentRuntime
 import atopos.destiny2.common.aspect.ArcTitanFragmentRuntime
 import atopos.destiny2.common.worldgen.DestinyWorldgen
 import atopos.destiny2.common.weapon.WeaponHudSync
+import atopos.destiny2.common.weapon.WeaponLoadoutRuntime
 import atopos.destiny2.common.weapon.ForgottenNameExoticRuntime
 import atopos.destiny2.common.weapon.DestinyWeaponDataRegistry
 import net.fabricmc.api.ModInitializer
@@ -55,6 +56,7 @@ object Destiny2MOD : ModInitializer {
         DestinyWorldgen.register()
         DestinyNetworking.register()
         DestinyWeaponDataRegistry.register()
+        WeaponLoadoutRuntime.register()
         WeaponHudSync.register()
         ForgottenNameExoticRuntime.register()
         DestinyPlayerCommands.register()

@@ -42,7 +42,7 @@ object MonteCarloExoticRuntime {
         if (!isMonteCarlo(stack)) return
         setMarkovStacks(player, MAX_MARKOV_STACKS)
         val profile = DestinyWeaponDataRegistry.profile(ID) ?: return
-        WeaponAmmoState.setMagazine(stack, profile.magazineSize, profile.magazineSize)
+        WeaponAmmoState.setMagazine(stack, profile, profile.magazineSize)
         player.inventoryMenu.broadcastChanges()
         WeaponHudSync.syncNow(player)
     }

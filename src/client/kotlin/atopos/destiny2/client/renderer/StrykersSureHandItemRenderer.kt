@@ -15,7 +15,15 @@ import org.slf4j.LoggerFactory
 
 /** Renders the authored poly-mesh sword without routing melee input through the gun runtime. */
 class StrykersSureHandItemRenderer : BuiltinItemRendererRegistry.DynamicItemRenderer {
-    override fun render(
+    override fun render(stack: ItemStack, mode: ItemDisplayContext, matrices: PoseStack, vertexConsumers: MultiBufferSource, light: Int, overlay: Int) {
+        if (mode == ItemDisplayContext.GUI) {
+            GuiItemModelFit.render("StrykersSureHandItemRenderer:" + stack.item.toString() + ":" + stack.components.toString(), matrices, vertexConsumers) { pose, buffers ->
+                renderUnfitted(stack, mode, pose, buffers, light, overlay)
+            }
+        } else renderUnfitted(stack, mode, matrices, vertexConsumers, light, overlay)
+    }
+
+    private fun renderUnfitted(
         stack: ItemStack,
         mode: ItemDisplayContext,
         matrices: PoseStack,

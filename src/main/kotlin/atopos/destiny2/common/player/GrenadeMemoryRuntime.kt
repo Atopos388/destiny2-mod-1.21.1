@@ -50,12 +50,6 @@ object GrenadeMemoryRuntime {
             0.85f,
             pitch(target.subclass)
         )
-        player.sendSystemMessage(
-            Component.translatable(
-                "message.destiny2-mod.grenade_memory.unlocked",
-                Component.translatable("grenade_memory.target.${target.subclass.id}")
-            )
-        )
         DestinyNetworking.syncPlayerData(player)
         player.inventory.setChanged()
         player.inventoryMenu.broadcastChanges()

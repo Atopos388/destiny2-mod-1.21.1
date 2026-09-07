@@ -37,6 +37,9 @@ object DestinyItems {
 
     val LEGENDARY_SHARD = registerSimple("legendary_shard", Item.Properties().stacksTo(64).rarity(Rarity.RARE))
 
+    val FORGOTTEN_HEART = registerSimple("forgotten_heart", Item.Properties().stacksTo(64).rarity(Rarity.RARE))
+    val ANCIENT_SHARD = registerSimple("ancient_shard", Item.Properties().stacksTo(64).rarity(Rarity.UNCOMMON))
+
     val EXOTIC_ENGRAM = registerSimple("exotic_engram", Item.Properties().stacksTo(16).rarity(Rarity.EPIC))
 
     val PRIMARY_AMMO = registerSimple("primary_ammo", Item.Properties().stacksTo(64).rarity(Rarity.COMMON))
@@ -164,31 +167,11 @@ object DestinyItems {
         )
     )
 
-    /** Hidden compatibility registrations for existing development saves. */
-    val VOID_GRENADE_MEMORY = register(
-        "void_grenade_memory",
-        GrenadeMemoryItem(
-            GrenadeMemoryRules.Target(DestinySubclassType.VOID_HUNTER, GrenadeMemoryRules.VOID_HUNTER_GRENADE_ID),
-            properties = Item.Properties().stacksTo(16).rarity(Rarity.RARE)
-        )
-    )
-
-    val ARC_GRENADE_MEMORY = register(
-        "arc_grenade_memory",
-        GrenadeMemoryItem(
-            GrenadeMemoryRules.Target(DestinySubclassType.ARC_TITAN, GrenadeMemoryRules.ARC_TITAN_GRENADE_ID),
-            properties = Item.Properties().stacksTo(16).rarity(Rarity.RARE)
-        )
-    )
-
-    val SOLAR_GRENADE_MEMORY = register(
-        "solar_grenade_memory",
-        GrenadeMemoryItem(
-            GrenadeMemoryRules.Target(DestinySubclassType.SOLAR_WARLOCK, GrenadeMemoryRules.SOLAR_WARLOCK_GRENADE_ID),
-            properties = Item.Properties().stacksTo(16).rarity(Rarity.RARE).fireResistant()
-        )
-    )
-
+    // Keep registry IDs so existing stacks become beacon materials instead of disappearing.
+    val VOID_SUPER_MEMORY = register("void_grenade_memory", Item(Item.Properties().stacksTo(16).rarity(Rarity.RARE)))
+    val ARC_SUPER_MEMORY = register("arc_grenade_memory", Item(Item.Properties().stacksTo(16).rarity(Rarity.RARE)))
+    val SOLAR_SUPER_MEMORY = register("solar_grenade_memory", Item(Item.Properties().stacksTo(16).rarity(Rarity.RARE).fireResistant()))
+    val COMBAT_MEMORY = register("combat_memory", Item(Item.Properties().stacksTo(16).rarity(Rarity.RARE)))
     fun register() {
         // Touching this object registers all item constants above.
     }
@@ -203,9 +186,6 @@ object DestinyItems {
             add(MICRO_MISSILE_TEST)
             add(FALLEN_CAPTAIN_SPAWN_EGG)
             add(JILING_SPAWN_EGG)
-            add(PRIMARY_AMMO)
-            add(SPECIAL_AMMO)
-            add(HEAVY_AMMO)
             add(VOID_BREACH)
             add(GLIMMER)
             add(STRANGE_COIN)
@@ -213,6 +193,8 @@ object DestinyItems {
             add(SYNTHWEAVE_PLATE)
             add(SLEEK_SYNTHCORD)
             add(LEGENDARY_SHARD)
+            add(FORGOTTEN_HEART)
+            add(ANCIENT_SHARD)
             add(EXOTIC_ENGRAM)
             add(OVERLOAD_HELMET)
             add(YANYANG_CHESTPLATE)
@@ -221,6 +203,10 @@ object DestinyItems {
             add(WARLOCK_BOND)
             add(TITAN_MARK)
             add(GRENADE_MEMORY)
+            add(COMBAT_MEMORY)
+            add(VOID_SUPER_MEMORY)
+            add(ARC_SUPER_MEMORY)
+            add(SOLAR_SUPER_MEMORY)
         }
     }
 
@@ -242,3 +228,4 @@ object DestinyItems {
         )
     }
 }
+

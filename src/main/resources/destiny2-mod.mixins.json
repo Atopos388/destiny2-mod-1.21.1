@@ -9,7 +9,7 @@
 		"MixinProjectile",
 		"MixinServerPlayerDestinyData",
 		"InventoryMenuClassItemMixin"
-		,"ItemEntityArmorModMixin"
+		,"ItemEntityArmorModMixin", "TowerWorkbenchMenuCleanupMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1
@@ -18,3 +18,4 @@
 		"requireAnnotations": true
 	}
 }
+

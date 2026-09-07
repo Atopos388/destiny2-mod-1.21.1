@@ -8,6 +8,7 @@ import atopos.destiny2.common.gear.GearCategory
 import atopos.destiny2.common.gear.GearRegistry
 import atopos.destiny2.common.gear.GearPerk
 import atopos.destiny2.common.item.DestinyClassItem
+import atopos.destiny2.common.item.GenericGunPackItem
 import atopos.destiny2.common.player.DestinyClassType
 import atopos.destiny2.common.player.DestinySubclassConfigRegistry
 import atopos.destiny2.common.player.DestinySubclassType
@@ -84,12 +85,20 @@ object DestinyCollectionsDataAdapter {
 
         val weapons = GearRegistry.allDefinitions().asSequence()
             .filter { it.category == GearCategory.WEAPON }
-            .map { ItemStack(it.item) to it }
+            .map { definition ->
+                val stack = if (definition.item is GenericGunPackItem) {
+                    GenericGunPackItem.stack(definition.id)
+                } else {
+                    ItemStack(definition.item)
+                }
+                stack to definition
+            }
             .groupBy { it.second.ammoType }
             .map { (ammoType, values) -> DestinyCollectionSection(
                 ammoType.name.lowercase(), ammoType.displayName, "使用${ammoType.displayName}的武器",
                 values.map { (stack, definition) -> DestinyCollectionEntry(
-                    definition.id.toString(), stack.hoverName.string, definition.frame.description,
+                    definition.id.toString(), stack.hoverName.string,
+                    definition.lore.ifBlank { definition.frame.description },
                     "${definition.rarity.displayName}  //  ${definition.frame.displayName}", stack,
                     weapon = weaponData(definition, stack)
                 ) }

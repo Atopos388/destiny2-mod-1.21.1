@@ -1,16 +1,15 @@
 package atopos.destiny2.common.weapon
 
-import atopos.destiny2.common.item.DestinyItems
 import net.minecraft.core.component.DataComponents
 import net.minecraft.nbt.CompoundTag
 import net.minecraft.server.level.ServerPlayer
-import net.minecraft.world.item.Item
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.item.component.CustomData
 
 object WeaponAmmoState {
     private const val ROOT = "DestinyWeaponAmmo"
     private const val MAGAZINE = "magazine"
+    private const val RESERVE = "reserve"
     private const val RELOAD_REMAINING = "reloadRemaining"
     private const val RELOAD_TOTAL = "reloadTotal"
     private const val RELOAD_COMMIT_REMAINING = "reloadCommitRemaining"
@@ -23,6 +22,7 @@ object WeaponAmmoState {
 
     data class State(
         val magazine: Int,
+        val reserve: Int = 0,
         val reloadRemaining: Int,
         val reloadTotal: Int,
         val reloadCommitRemaining: Int = 0,
@@ -37,11 +37,38 @@ object WeaponAmmoState {
         val isCycling: Boolean get() = boltRemaining > 0
     }
 
-    fun read(stack: ItemStack, capacity: Int): State {
+    fun read(
+        stack: ItemStack,
+        profile: WeaponCombatProfile,
+        magazineLimit: Int = profile.magazineSize,
+        initialMagazine: Int = profile.magazineSize
+    ): State = read(
+        stack,
+        magazineLimit,
+        profile.ammoType,
+        profile.reserveCapacity,
+        initialMagazine
+    )
+
+    fun read(stack: ItemStack, capacity: Int): State =
+        read(stack, capacity, DestinyAmmoType.SPECIAL, 0, capacity)
+
+    private fun read(
+        stack: ItemStack,
+        capacity: Int,
+        ammoType: DestinyAmmoType,
+        reserveCapacity: Int,
+        initialMagazine: Int
+    ): State {
         val root = stack.get(DataComponents.CUSTOM_DATA)?.copyTag()?.getCompound(ROOT)
-        if (root == null || !root.contains(MAGAZINE)) return State(capacity, 0, 0)
+        val reserve = if (ammoType == DestinyAmmoType.PRIMARY) Int.MAX_VALUE else
+            root?.takeIf { it.contains(RESERVE) }?.getInt(RESERVE)?.coerceIn(0, reserveCapacity) ?: 0
+        if (root == null || !root.contains(MAGAZINE)) {
+            return State(initialMagazine.coerceIn(0, capacity), reserve, 0, 0)
+        }
         return State(
             root.getInt(MAGAZINE).coerceIn(0, capacity),
+            reserve,
             root.getInt(RELOAD_REMAINING).coerceAtLeast(0),
             root.getInt(RELOAD_TOTAL).coerceAtLeast(0),
             root.getInt(RELOAD_COMMIT_REMAINING).coerceAtLeast(0),
@@ -61,6 +88,18 @@ object WeaponAmmoState {
         }
     }
 
+    fun setMagazine(
+        stack: ItemStack,
+        profile: WeaponCombatProfile,
+        value: Int,
+        magazineLimit: Int = profile.magazineSize
+    ) {
+        write(stack, read(stack, profile, magazineLimit).let {
+            val magazine = value.coerceIn(0, magazineLimit)
+            it.copy(magazine = magazine, chamberEmpty = magazine <= 0)
+        })
+    }
+
     fun consumeRound(stack: ItemStack, capacity: Int, boltTicks: Int = 0): Boolean {
         val state = read(stack, capacity)
         if (state.isReloading || state.isCycling || state.magazine <= 0) return false
@@ -76,15 +115,23 @@ object WeaponAmmoState {
         return true
     }
 
+    fun consumeRound(stack: ItemStack, profile: WeaponCombatProfile, boltTicks: Int = 0): Boolean {
+        val state = read(stack, profile)
+        if (state.isReloading || state.isCycling || state.magazine <= 0) return false
+        val magazine = state.magazine - 1
+        write(stack, state.copy(magazine = magazine, chamberEmpty = magazine <= 0, boltRemaining = boltTicks.coerceAtLeast(0)))
+        return true
+    }
+
     fun startReload(
         stack: ItemStack,
-        capacity: Int,
+        profile: WeaponCombatProfile,
         ticks: Int,
         emptyBonusTicks: Int = 0,
         feedFraction: Float = 0.72f
     ): Boolean {
-        val state = read(stack, capacity)
-        if (state.isReloading || state.magazine >= capacity) return false
+        val state = read(stack, profile)
+        if (state.isReloading || state.magazine >= profile.magazineSize) return false
         val duration = (ticks + if (state.chamberEmpty) emptyBonusTicks else 0).coerceAtLeast(1)
         val commitRemaining = (duration * (1.0f - feedFraction.coerceIn(0.05f, 0.95f))).toInt()
             .coerceIn(1, duration)
@@ -102,8 +149,8 @@ object WeaponAmmoState {
         return true
     }
 
-    fun cancelReload(stack: ItemStack, capacity: Int): Boolean {
-        val state = read(stack, capacity)
+    fun cancelReload(stack: ItemStack, profile: WeaponCombatProfile): Boolean {
+        val state = read(stack, profile)
         if (!state.isReloading) return false
         write(
             stack,
@@ -123,7 +170,7 @@ object WeaponAmmoState {
 
     /** Returns true when a reload completes on this tick. */
     fun tickReload(stack: ItemStack, player: ServerPlayer, profile: WeaponCombatProfile): Boolean {
-        val state = read(stack, profile.magazineSize)
+        val state = read(stack, profile)
         if (state.boltRemaining > 0) {
             write(stack, state.copy(boltRemaining = state.boltRemaining - 1))
             return false
@@ -131,7 +178,7 @@ object WeaponAmmoState {
         if (!state.isReloading) return false
         if (!state.reloadCommitted && state.reloadRemaining <= state.reloadCommitRemaining) {
             val needed = WeaponAmmoMath.needed(state.magazine, profile.magazineSize)
-            val loaded = consumeReserve(player, DestinyItems.ammoItem(profile.ammoType), needed)
+            val loaded = consumeReserve(stack, profile, needed, player.abilities.instabuild)
             write(
                 stack,
                 state.copy(
@@ -159,15 +206,18 @@ object WeaponAmmoState {
         var magazine = state.magazine
         if (!state.reloadCommitted) {
             val needed = WeaponAmmoMath.needed(magazine, profile.magazineSize)
-            val loaded = consumeReserve(player, DestinyItems.ammoItem(profile.ammoType), needed)
+            val loaded = consumeReserve(stack, profile, needed, player.abilities.instabuild)
             magazine = WeaponAmmoMath.completedMagazine(magazine, profile.magazineSize, loaded)
         }
         write(
             stack,
-            State(
+            read(stack, profile).copy(
                 magazine = magazine,
                 reloadRemaining = 0,
                 reloadTotal = 0,
+                reloadCommitRemaining = 0,
+                reloadCommitted = false,
+                reloadPhase = WeaponReloadPhase.NONE,
                 chamberEmpty = magazine <= 0,
                 reloadSequence = state.reloadSequence,
                 reloadBlockedUntil = player.level().gameTime + POST_RELOAD_LOCK_TICKS
@@ -176,14 +226,22 @@ object WeaponAmmoState {
         return true
     }
 
-    fun reserveCount(player: ServerPlayer, type: DestinyAmmoType): Int =
-        countReserve(player, DestinyItems.ammoItem(type))
+    fun reserveCount(stack: ItemStack, profile: WeaponCombatProfile, creative: Boolean = false): Int =
+        if (creative || profile.ammoType == DestinyAmmoType.PRIMARY) Int.MAX_VALUE else read(stack, profile).reserve
+
+    fun addReserve(stack: ItemStack, profile: WeaponCombatProfile, amount: Int): Int {
+        if (amount <= 0 || profile.ammoType == DestinyAmmoType.PRIMARY) return 0
+        val state = read(stack, profile)
+        val accepted = WeaponAmmoMath.acceptedReserve(state.reserve, profile.reserveCapacity, amount)
+        if (accepted > 0) write(stack, state.copy(reserve = state.reserve + accepted))
+        return accepted
+    }
 
     fun holsterRound(stack: ItemStack, player: ServerPlayer, profile: WeaponCombatProfile): Boolean {
-        val state = read(stack, profile.magazineSize)
+        val state = read(stack, profile)
         if (state.isReloading || state.magazine >= profile.magazineSize) return false
-        if (consumeReserve(player, DestinyItems.ammoItem(profile.ammoType), 1) <= 0) return false
-        setMagazine(stack, profile.magazineSize, state.magazine + 1)
+        if (consumeReserve(stack, profile, 1, player.abilities.instabuild) <= 0) return false
+        setMagazine(stack, profile, state.magazine + 1)
         return true
     }
 
@@ -193,17 +251,20 @@ object WeaponAmmoState {
         player: ServerPlayer,
         profile: WeaponCombatProfile
     ): Boolean {
-        val state = read(stack, profile.magazineSize)
+        val state = read(stack, profile)
         if (state.magazine >= profile.magazineSize) return false
         val needed = WeaponAmmoMath.needed(state.magazine, profile.magazineSize)
-        val loaded = consumeReserve(player, DestinyItems.ammoItem(profile.ammoType), needed)
+        val loaded = consumeReserve(stack, profile, needed, player.abilities.instabuild)
         if (loaded <= 0 && !player.abilities.instabuild) return false
         write(
             stack,
-            State(
+            read(stack, profile).copy(
                 magazine = WeaponAmmoMath.completedMagazine(state.magazine, profile.magazineSize, loaded),
                 reloadRemaining = 0,
                 reloadTotal = 0,
+                reloadCommitRemaining = 0,
+                reloadCommitted = false,
+                reloadPhase = WeaponReloadPhase.NONE,
                 chamberEmpty = false,
                 reloadSequence = state.reloadSequence,
                 reloadBlockedUntil = player.level().gameTime
@@ -212,26 +273,18 @@ object WeaponAmmoState {
         return true
     }
 
-    fun countReserve(player: ServerPlayer, ammoItem: Item): Int {
-        if (player.abilities.instabuild) return Int.MAX_VALUE
-        return (player.inventory.items + player.inventory.offhand)
-            .filter { it.`is`(ammoItem) }
-            .sumOf(ItemStack::getCount)
-    }
-
-    private fun consumeReserve(player: ServerPlayer, ammoItem: Item, requested: Int): Int {
+    fun consumeReserve(
+        stack: ItemStack,
+        profile: WeaponCombatProfile,
+        requested: Int,
+        creative: Boolean = false
+    ): Int {
         if (requested <= 0) return 0
-        if (player.abilities.instabuild) return requested
-        var remaining = requested
-        for (ammo in player.inventory.items + player.inventory.offhand) {
-            if (remaining <= 0) break
-            if (ammo.`is`(ammoItem) && !ammo.isEmpty) {
-                val consumed = ammo.count.coerceAtMost(remaining)
-                ammo.shrink(consumed)
-                remaining -= consumed
-            }
-        }
-        return requested - remaining
+        if (creative || profile.ammoType == DestinyAmmoType.PRIMARY) return requested
+        val state = read(stack, profile)
+        val consumed = requested.coerceAtMost(state.reserve)
+        if (consumed > 0) write(stack, state.copy(reserve = state.reserve - consumed))
+        return consumed
     }
 
     private fun update(stack: ItemStack, capacity: Int, transform: (State) -> State) {
@@ -243,6 +296,7 @@ object WeaponAmmoState {
             data.update { tag ->
                 val root = CompoundTag()
                 root.putInt(MAGAZINE, state.magazine)
+                if (state.reserve != Int.MAX_VALUE) root.putInt(RESERVE, state.reserve.coerceAtLeast(0))
                 root.putInt(RELOAD_REMAINING, state.reloadRemaining)
                 root.putInt(RELOAD_TOTAL, state.reloadTotal)
                 root.putInt(RELOAD_COMMIT_REMAINING, state.reloadCommitRemaining)

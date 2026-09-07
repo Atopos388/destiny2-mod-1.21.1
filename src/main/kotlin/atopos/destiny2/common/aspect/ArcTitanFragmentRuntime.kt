@@ -209,7 +209,7 @@ object ArcTitanFragmentRuntime {
         val weapon = stack.item as? DestinyRangedWeapon
         if (weapon != null) {
             val profile = weapon.combatProfile(stack)
-            WeaponAmmoState.setMagazine(stack, profile.magazineSize, profile.magazineSize)
+            WeaponAmmoState.setMagazine(stack, profile, profile.magazineSize)
         }
         ArcBoltChargeRuntime.addBoltCharge(
             player,

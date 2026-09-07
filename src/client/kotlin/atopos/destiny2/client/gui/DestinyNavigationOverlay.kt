@@ -247,8 +247,6 @@ object DestinyNavigationOverlay : HudRenderCallback {
         visibility: Float,
         fontScale: Float
     ) {
-        val hint = Component.translatable("navigation.destiny2-mod.footer").string
-        drawText(graphics, hint, rect.x, rect.y, 0xFF83919B.toInt(), fontScale * 0.78f, visibility)
         graphics.fill(rect.x, rect.y - 6, rect.x + rect.width, rect.y - 5, fade(0x365F6E78, visibility))
     }
 

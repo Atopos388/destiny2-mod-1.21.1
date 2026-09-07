@@ -1,111 +1,107 @@
 {
   "item.destiny2-mod.ghost_core": "Ghost Core",
-  "block.destiny2-mod.light_capacitor": "Light Capacitor",
-  "block.destiny2-mod.glimmer_refinery": "Glimmer Refinery",
-  "block.destiny2-mod.memory_foundry": "Memory Foundry",
-  "container.destiny2-mod.light_capacitor": "Light Capacitor · %s/%s Light",
-  "container.destiny2-mod.glimmer_refinery": "Glimmer Refinery · Progress %s/%s",
-  "container.destiny2-mod.memory_foundry": "Memory Foundry · Progress %s/%s",
+  "gui.destiny2-mod.machine.crystal_input": "Light crystal input",
   "item.destiny2-mod.izanagis_burden": "Izanagi's Burden",
   "item.destiny2-mod.gun": "Gun Pack Weapon",
   "gun.destiny2-mod.izanagis_burden": "Izanagi's Burden",
   "gun.destiny2-mod.monte_carlo": "Monte Carlo",
   "gun.destiny2-mod.the_deicide": "The Deicide",
+  "gun.ascgun.ace": "Ace of Spades",
+  "gun.ascgun.outbreakprefected": "Outbreak Perfected",
+  "gun.ascgun.riskrunner": "Riskrunner",
+  "gun.ascgun.summit": "The Mountaintop",
+  "gun.ascgun.whisper": "Whisper of the Worm",
+  "gun.ascgun.xeno": "Xenophage",
   "subtitles.destiny2-mod.the_deicide_fire": "The Deicide fires",
   "journey.destiny2-mod.awakening.title": "Guardian",
   "journey.destiny2-mod.awakening.subtitle": "Eyes up. The Light is answering you.",
   "journey.destiny2-mod.awakening.message": "A Ghost found you and brought you back from death.",
-  "journey.destiny2-mod.awakening.next_objective": "New objective: keep the Ghost Core and gather copper, redstone, iron, and amethyst."
-  ,"subtitles.destiny2-mod.fallen_shock_rifle_fire": "Fallen Shock Rifle fires"
-  ,"entity.destiny2-mod.fallen_captain": "Fallen Captain"
-  ,"entity.destiny2-mod.fallen_captain_pellet": "Fallen Shotgun Pellet"
-  ,"item.destiny2-mod.fallen_captain_spawn_egg": "Fallen Captain Spawn Egg"
-  ,"entity.destiny2-mod.jiling": "Jiling Ghost"
-  ,"item.destiny2-mod.jiling_spawn_egg": "Jiling Ghost Spawn Egg"
-  ,"navigation.destiny2-mod.title": "NAV MODE"
-  ,"navigation.destiny2-mod.dimension.overworld": "Overworld"
-  ,"navigation.destiny2-mod.dimension.nether": "Nether"
-  ,"navigation.destiny2-mod.dimension.end": "The End"
-  ,"navigation.destiny2-mod.location.unknown": "Unknown region"
-  ,"navigation.destiny2-mod.objective.label": "CURRENT OBJECTIVE"
-  ,"navigation.destiny2-mod.objective.mortal.title": "SIGNAL LOST"
-  ,"navigation.destiny2-mod.objective.mortal.description": "No Ghost connection has been established. The Light is waiting for an answer."
-  ,"navigation.destiny2-mod.objective.awakened.title": "NEW GUARDIAN"
-  ,"navigation.destiny2-mod.objective.awakened.description": "Keep the Ghost Core and gather materials for your first equipment network."
-  ,"navigation.destiny2-mod.fireteam": "FIRETEAM"
-  ,"navigation.destiny2-mod.weapon.empty": "No weapon equipped"
-  ,"navigation.destiny2-mod.footer": "TAP TAB: PIN NAV   //   HOLD TAB: OPEN DIRECTOR   //   /destinyui nav edit: EDIT TEMPLATE"
-  ,"navigation.destiny2-mod.director.title": "DIRECTOR"
-  ,"navigation.destiny2-mod.director.overview": "OVERVIEW"
-  ,"navigation.destiny2-mod.director.objectives": "OBJECTIVES"
-  ,"navigation.destiny2-mod.director.fireteam": "FIRETEAM"
-  ,"navigation.destiny2-mod.director.journey": "GUARDIAN JOURNEY"
-  ,"navigation.destiny2-mod.director.footer": "SELECT A SECTION FOR DETAILS   //   WORLD REMAINS ACTIVE"
-  ,"navigation.destiny2-mod.director.close": "TAB / ESC CLOSE"
-  ,"item.destiny2-mod.void_breach": "Void Breach"
-  ,"entity.destiny2-mod.firesprite": "Firesprite"
-  ,"class.destiny2-mod.hunter": "Hunter"
-  ,"class.destiny2-mod.titan": "Titan"
-  ,"class.destiny2-mod.warlock": "Warlock"
-  ,"tooltip.destiny2-mod.class_item.type": "Class Item · %s"
-  ,"tooltip.destiny2-mod.class_item.identity.hunter": "A cloak that records the path and the choice."
-  ,"tooltip.destiny2-mod.class_item.identity.titan": "Its forging scars are proof of where this mark came from."
-  ,"tooltip.destiny2-mod.class_item.identity.warlock": "The bond keeps the material's energy stable."
-  ,"tooltip.destiny2-mod.class_item.unattuned": "Use: requires a Ghost Core to establish Light resonance"
-  ,"message.destiny2-mod.class_resonance.not_awakened": "Your Ghost has not awakened you. The Light does not answer."
-  ,"message.destiny2-mod.class_resonance.missing_ghost_core": "A Ghost Core must be in your inventory to establish resonance."
-  ,"message.destiny2-mod.class_resonance.already_unlocked": "This path is already in resonance with you."
-  ,"message.destiny2-mod.class_resonance.first_unlocked": "The Light answers. The path of the %s is open."
-  ,"message.destiny2-mod.class_resonance.additional_unlocked": "%s resonance has been recorded. Your active class has not changed."
-  ,"message.destiny2-mod.class_resonance.complete": "Light resonance complete"
-  ,"message.destiny2-mod.class_switch.denied": "That class is locked, or you are still in combat."
-  ,"message.destiny2-mod.subclass_option.locked": "This ability has not yet been recovered."
-  ,"dialogue.destiny2-mod.speaker.ghost": "GHOST"
-  ,"dialogue.destiny2-mod.awakening.eyes_up": "Guardian... Guardian? Eyes up, Guardian!"
-  ,"dialogue.destiny2-mod.awakening.eyes_up.1": "Guardian..."
-  ,"dialogue.destiny2-mod.awakening.eyes_up.2": "Guardian?"
-  ,"dialogue.destiny2-mod.awakening.eyes_up.3": "Eyes up, Guardian!"
-  ,"dialogue.destiny2-mod.awakening.searched": "You don't know how long I've been looking for you."
-  ,"dialogue.destiny2-mod.awakening.searched.1": "You don't know how long I've been looking for you."
-  ,"dialogue.destiny2-mod.awakening.ghost": "I'm a Ghost. Actually, now I'm your Ghost. And you... well, you've been dead a long time. So you're going to see a lot of things you won't understand."
-  ,"dialogue.destiny2-mod.awakening.ghost.1": "I'm a Ghost."
-  ,"dialogue.destiny2-mod.awakening.ghost.2": "Actually, now I'm your Ghost."
-  ,"dialogue.destiny2-mod.awakening.ghost.3": "And you..."
-  ,"dialogue.destiny2-mod.awakening.ghost.4": "Well, you've been dead a long time."
-  ,"dialogue.destiny2-mod.awakening.ghost.5": "So you're going to see a lot of things you won't understand."
-  ,"dialogue.destiny2-mod.awakening.wait": "Oh, wait."
-  ,"dialogue.destiny2-mod.awakening.wait.1": "Oh, wait."
-  ,"dialogue.destiny2-mod.awakening.move": "Don't worry, I'm still with you. We need to move, fast."
-  ,"dialogue.destiny2-mod.awakening.move.1": "Don't worry, I'm still with you."
-  ,"dialogue.destiny2-mod.awakening.move.2": "We need to move, fast."
-  ,"key.destiny2-mod.icarus_dash": "Icarus Dash"
-  ,"item.destiny2-mod.revive_ghost": "Revive Ghost"
-  ,"item.destiny2-mod.ionic_trace": "Ionic Trace"
-  ,"effect.destiny2-mod.arc_blind": "Arc Blind"
-  ,"entity.destiny2-mod.arc_flashbang_grenade": "Flashbang Grenade"
-  ,"entity.destiny2-mod.arc_lightning_grenade": "Lightning Grenade"
-  ,"entity.destiny2-mod.arc_storm_grenade": "Storm Grenade"
-  ,"item.destiny2-mod.strykers_sure_hand": "Stryker's Sure-Hand"
-  ,"item.destiny2-mod.grenade_memory": "Grenade Memory"
-  ,"item.destiny2-mod.void_grenade_memory": "Void Grenade Memory"
-  ,"item.destiny2-mod.arc_grenade_memory": "Arc Grenade Memory"
-  ,"item.destiny2-mod.solar_grenade_memory": "Solar Grenade Memory"
-  ,"tooltip.destiny2-mod.grenade_memory.universal": "Universal Memory · Adapts to your active class"
-  ,"tooltip.destiny2-mod.grenade_memory.use": "Use: permanently recover your active class's default grenade"
-  ,"tooltip.destiny2-mod.grenade_memory.consumed": "Consumed only when the ability is successfully recovered"
-  ,"message.destiny2-mod.grenade_memory.not_awakened": "Your Ghost has not awakened you. This memory does not answer."
-  ,"message.destiny2-mod.grenade_memory.class_locked": "Recover and activate a class before using this memory."
-  ,"message.destiny2-mod.grenade_memory.already_unlocked": "You have already recovered the grenade recorded in this memory."
-  ,"message.destiny2-mod.grenade_memory.unlocked": "%s recovered. The ability is now permanently available."
-  ,"grenade_memory.target.void_hunter": "Vortex Grenade"
-  ,"grenade_memory.target.arc_titan": "Pulse Grenade"
-  ,"grenade_memory.target.solar_warlock": "Solar Grenade"
-  ,"item.destiny2-mod.light_crystal": "Light Crystal"
-  ,"message.destiny2-mod.light_crystal.not_awakened": "The Ghost has not awakened you. The core does not answer."
-  ,"message.destiny2-mod.light_crystal.requires_sunlight": "The amethyst block must see the open sky during daytime."
-  ,"message.destiny2-mod.light_crystal.already_charging": "This amethyst is already gathering Light."
-  ,"message.destiny2-mod.light_crystal.charging": "The Ghost begins guiding sunlight as Light gathers around the amethyst..."
-  ,"message.destiny2-mod.light_crystal.interrupted": "The gathering Light was interrupted. The amethyst was not transformed."
-  ,"message.destiny2-mod.light_crystal.created": "Sunlight resonates with the amethyst and condenses into a Light Crystal."
-  ,"entity.destiny2-mod.orb_of_power": "Orb of Power"
+  "journey.destiny2-mod.awakening.next_objective": "New objective: keep the Ghost Core and gather copper, redstone, iron, and amethyst.",
+  "subtitles.destiny2-mod.fallen_shock_rifle_fire": "Fallen Shock Rifle fires",
+  "entity.destiny2-mod.fallen_captain": "Fallen Captain",
+  "entity.destiny2-mod.fallen_captain_pellet": "Fallen Shotgun Pellet",
+  "item.destiny2-mod.fallen_captain_spawn_egg": "Fallen Captain Spawn Egg",
+  "entity.destiny2-mod.jiling": "Jiling Ghost",
+  "item.destiny2-mod.jiling_spawn_egg": "Jiling Ghost Spawn Egg",
+  "navigation.destiny2-mod.title": "NAV MODE",
+  "navigation.destiny2-mod.dimension.overworld": "Overworld",
+  "navigation.destiny2-mod.dimension.nether": "Nether",
+  "navigation.destiny2-mod.dimension.end": "The End",
+  "navigation.destiny2-mod.location.unknown": "Unknown region",
+  "navigation.destiny2-mod.objective.label": "CURRENT OBJECTIVE",
+  "navigation.destiny2-mod.objective.mortal.title": "SIGNAL LOST",
+  "navigation.destiny2-mod.objective.mortal.description": "No Ghost connection has been established. The Light is waiting for an answer.",
+  "navigation.destiny2-mod.objective.awakened.title": "NEW GUARDIAN",
+  "navigation.destiny2-mod.objective.awakened.description": "Keep the Ghost Core and gather materials for your first equipment network.",
+  "navigation.destiny2-mod.fireteam": "FIRETEAM",
+  "navigation.destiny2-mod.weapon.empty": "No weapon equipped",
+  "navigation.destiny2-mod.director.title": "DIRECTOR",
+  "navigation.destiny2-mod.director.overview": "OVERVIEW",
+  "navigation.destiny2-mod.director.objectives": "OBJECTIVES",
+  "navigation.destiny2-mod.director.fireteam": "FIRETEAM",
+  "navigation.destiny2-mod.director.journey": "GUARDIAN JOURNEY",
+  "navigation.destiny2-mod.director.footer": "SELECT A SECTION FOR DETAILS   //   WORLD REMAINS ACTIVE",
+  "navigation.destiny2-mod.director.close": "TAB / ESC CLOSE",
+  "item.destiny2-mod.void_breach": "Void Breach",
+  "entity.destiny2-mod.firesprite": "Firesprite",
+  "class.destiny2-mod.hunter": "Hunter",
+  "class.destiny2-mod.titan": "Titan",
+  "class.destiny2-mod.warlock": "Warlock",
+  "tooltip.destiny2-mod.class_item.type": "Class Item · %s",
+  "tooltip.destiny2-mod.class_item.identity.hunter": "A cloak that records the path and the choice.",
+  "tooltip.destiny2-mod.class_item.identity.titan": "Its forging scars are proof of where this mark came from.",
+  "tooltip.destiny2-mod.class_item.identity.warlock": "The bond keeps the material's energy stable.",
+  "tooltip.destiny2-mod.class_item.unattuned": "Use: requires a Ghost Core to establish Light resonance",
+  "message.destiny2-mod.class_resonance.not_awakened": "Your Ghost has not awakened you. The Light does not answer.",
+  "message.destiny2-mod.class_resonance.missing_ghost_core": "A Ghost Core must be in your inventory to establish resonance.",
+  "message.destiny2-mod.class_resonance.already_unlocked": "This path is already in resonance with you.",
+  "message.destiny2-mod.class_switch.denied": "That class is locked, or you are still in combat.",
+  "message.destiny2-mod.subclass_option.locked": "This ability has not yet been recovered.",
+  "dialogue.destiny2-mod.speaker.ghost": "GHOST",
+  "dialogue.destiny2-mod.awakening.eyes_up": "Guardian... Guardian? Eyes up, Guardian!",
+  "dialogue.destiny2-mod.awakening.eyes_up.1": "Guardian...",
+  "dialogue.destiny2-mod.awakening.eyes_up.2": "Guardian?",
+  "dialogue.destiny2-mod.awakening.eyes_up.3": "Eyes up, Guardian!",
+  "dialogue.destiny2-mod.awakening.searched": "You don't know how long I've been looking for you.",
+  "dialogue.destiny2-mod.awakening.searched.1": "You don't know how long I've been looking for you.",
+  "dialogue.destiny2-mod.awakening.ghost": "I'm a Ghost. Actually, now I'm your Ghost. And you... well, you've been dead a long time. So you're going to see a lot of things you won't understand.",
+  "dialogue.destiny2-mod.awakening.ghost.1": "I'm a Ghost.",
+  "dialogue.destiny2-mod.awakening.ghost.2": "Actually, now I'm your Ghost.",
+  "dialogue.destiny2-mod.awakening.ghost.3": "And you...",
+  "dialogue.destiny2-mod.awakening.ghost.4": "Well, you've been dead a long time.",
+  "dialogue.destiny2-mod.awakening.ghost.5": "So you're going to see a lot of things you won't understand.",
+  "dialogue.destiny2-mod.awakening.wait": "Oh, wait.",
+  "dialogue.destiny2-mod.awakening.wait.1": "Oh, wait.",
+  "dialogue.destiny2-mod.awakening.move": "Don't worry, I'm still with you. We need to move, fast.",
+  "dialogue.destiny2-mod.awakening.move.1": "Don't worry, I'm still with you.",
+  "dialogue.destiny2-mod.awakening.move.2": "We need to move, fast.",
+  "key.destiny2-mod.icarus_dash": "Icarus Dash",
+  "item.destiny2-mod.revive_ghost": "Revive Ghost",
+  "item.destiny2-mod.ionic_trace": "Ionic Trace",
+  "effect.destiny2-mod.arc_blind": "Arc Blind",
+  "entity.destiny2-mod.arc_flashbang_grenade": "Flashbang Grenade",
+  "entity.destiny2-mod.arc_lightning_grenade": "Lightning Grenade",
+  "entity.destiny2-mod.arc_storm_grenade": "Storm Grenade",
+  "item.destiny2-mod.strykers_sure_hand": "Stryker's Sure-Hand",
+  "item.destiny2-mod.combat_memory": "Combat Memory",
+  "item.destiny2-mod.grenade_memory": "Grenade Memory",
+  "item.destiny2-mod.void_grenade_memory": "Void Super Memory",
+  "item.destiny2-mod.arc_grenade_memory": "Arc Super Memory",
+  "item.destiny2-mod.solar_grenade_memory": "Solar Super Memory",
+  "message.destiny2-mod.grenade_memory.not_awakened": "Your Ghost has not awakened you. This memory does not answer.",
+  "message.destiny2-mod.grenade_memory.class_locked": "Recover and activate a class before using this memory.",
+  "message.destiny2-mod.grenade_memory.already_unlocked": "You have already recovered the grenade recorded in this memory.",
+  "grenade_memory.target.void_hunter": "Vortex Grenade",
+  "grenade_memory.target.arc_titan": "Pulse Grenade",
+  "grenade_memory.target.solar_warlock": "Solar Grenade",
+  "item.destiny2-mod.light_crystal": "Light Crystal",
+  "message.destiny2-mod.light_crystal.not_awakened": "The Ghost has not awakened you. The core does not answer.",
+  "message.destiny2-mod.light_crystal.requires_sunlight": "The amethyst block must see the open sky during daytime.",
+  "message.destiny2-mod.light_crystal.already_charging": "This amethyst is already gathering Light.",
+  "entity.destiny2-mod.orb_of_power": "Orb of Power",
+  "entity.destiny2-mod.fallen_soldier": "Fallen Soldier",
+  "block.destiny2-mod.tower_workbench": "Tower Gunsmith Workbench",
+  "block.destiny2-mod.light_collector": "Light Collector",
+  "item.destiny2-mod.forgotten_heart": "Forgotten Heart",
+  "item.destiny2-mod.ancient_shard": "Ancient Shard"
 }

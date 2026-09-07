@@ -1,6 +1,6 @@
 {
   "parent": "minecraft:item/generated",
   "textures": {
-    "layer0": "destiny2-mod:gui/subclass/arc_titan/fragment_spark_of_ions"
+    "layer0": "destiny2-mod:item/ionic_trace"
   }
 }

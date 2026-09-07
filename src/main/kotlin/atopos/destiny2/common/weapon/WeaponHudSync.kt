@@ -25,8 +25,9 @@ object WeaponHudSync {
     }
 
     private fun sync(player: net.minecraft.server.level.ServerPlayer, force: Boolean = false) {
+        WeaponAmmoPickupSystem.migrateLegacyInventory(player)
         val stack = player.mainHandItem
-        val weapon = stack.item as? DestinyRangedWeapon
+        val weapon = (stack.item as? DestinyRangedWeapon)?.takeIf { WeaponLoadoutRuntime.isEquipped(player, stack) }
         val status = weapon?.weaponHudStatus(player, stack)?.copy(
             weaponId = BuiltInRegistries.ITEM.getKey(stack.item).toString()
         ) ?: WeaponHudStatus.INACTIVE

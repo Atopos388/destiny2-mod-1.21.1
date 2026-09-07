@@ -47,6 +47,8 @@ object TaczGunPackResources : SimpleSynchronousResourceReloadListener {
         val idleViewPivot: Vector3f?,
         val aimViewPivot: Vector3f?,
         val animationBoneAliases: Map<String, String>,
+        val sounds: Map<String, ResourceLocation>,
+        val displayScales: Map<String, Vector3f>,
         val boneNames: Set<String>,
         val positioning: Map<String, Matrix4f>,
         val loadErrors: List<String>
@@ -55,6 +57,8 @@ object TaczGunPackResources : SimpleSynchronousResourceReloadListener {
             positioning.containsKey(IDLE_VIEW) && positioning.containsKey(IRON_VIEW)
 
         fun matrix(name: String): Matrix4f? = positioning[name]?.let(::Matrix4f)
+
+        fun displayScale(name: String): Vector3f? = displayScales[name]?.let(::Vector3f)
     }
 
     private data class RawBone(
@@ -133,7 +137,7 @@ object TaczGunPackResources : SimpleSynchronousResourceReloadListener {
 
         loaded.values
             .flatMap { definition ->
-                listOf(definition.model, definition.texture, definition.animation)
+                listOf(definition.model, definition.texture, definition.animation) + definition.sounds.values
             }
             .distinct()
             .forEach(::resolveResource)
@@ -199,7 +203,11 @@ object TaczGunPackResources : SimpleSynchronousResourceReloadListener {
             ?.trim()
             ?.takeIf(String::isNotEmpty)
         val idleViewBone = configuredIdleViewBone ?: IDLE_VIEW
-        val additiveShoot = root.get("additive_shoot")?.asBoolean ?: false
+        // Native TaCZ state machines run `shoot` on a blending gun-kick track.
+        // Keep legacy built-in definitions opt-in, but preserve that native
+        // default for imported namespaces when the compatibility field is absent.
+        val additiveShoot = root.get("additive_shoot")?.asBoolean
+            ?: (id.namespace != BUILTIN_NAMESPACE)
         val applyGeckoPositioning = root.get("apply_gecko_positioning")?.asBoolean ?: false
         val skinBones = root.stringSet("skin_bones").ifEmpty { DEFAULT_SKIN_BONES }
         val firstPersonOnlyBones = root.stringSet("first_person_only_bones") + skinBones
@@ -208,6 +216,12 @@ object TaczGunPackResources : SimpleSynchronousResourceReloadListener {
         val idleViewPivot = root.floatVector3("idle_view_pivot")
         val aimViewPivot = root.floatVector3("aim_view_pivot")
         val animationBoneAliases = root.stringMap("animation_bone_aliases")
+        val sounds = root.resourceMap("sounds")
+        val displayScales = mapOfNotNull(
+            THIRD_PERSON_SCALE to root.floatVector3("third_person_scale"),
+            GROUND_SCALE to root.floatVector3("ground_scale"),
+            FIXED_SCALE to root.floatVector3("fixed_scale")
+        )
         val errors = mutableListOf<String>()
 
         val rawBones = runCatching {
@@ -223,6 +237,9 @@ object TaczGunPackResources : SimpleSynchronousResourceReloadListener {
 
         if (readResource(texture) == null) errors += "missing texture $texture"
         if (readResource(animation) == null) errors += "missing animation $animation"
+        sounds.forEach { (action, sound) ->
+            if (readResource(sound) == null) errors += "missing $action sound $sound"
+        }
 
         val indexed = rawBones.associateBy(RawBone::name)
         if (configuredIdleViewBone != null && idleViewBone !in indexed) {
@@ -267,6 +284,8 @@ object TaczGunPackResources : SimpleSynchronousResourceReloadListener {
             idleViewPivot,
             aimViewPivot,
             animationBoneAliases,
+            sounds,
+            displayScales,
             indexed.keys,
             positioning,
             errors
@@ -344,16 +363,25 @@ object TaczGunPackResources : SimpleSynchronousResourceReloadListener {
     private fun JsonObject.stringMap(key: String): Map<String, String> =
         getAsJsonObject(key)?.entrySet()?.associate { (name, value) -> name to value.asString }.orEmpty()
 
+    private fun JsonObject.resourceMap(key: String): Map<String, ResourceLocation> =
+        getAsJsonObject(key)?.entrySet()?.mapNotNull { (name, value) ->
+            runCatching { name to ResourceLocation.parse(value.asString) }.getOrNull()
+        }?.toMap().orEmpty()
+
     private fun JsonObject.floatVector3(key: String): Vector3f? {
         val values = getAsJsonArray(key) ?: return null
         if (values.size() < 3) return null
         return Vector3f(values[0].asFloat, values[1].asFloat, values[2].asFloat)
     }
 
+    private fun <K, V : Any> mapOfNotNull(vararg pairs: Pair<K, V?>): Map<K, V> =
+        pairs.mapNotNull { (key, value) -> value?.let { key to it } }.toMap()
+
     private fun com.google.gson.JsonArray?.floatOrZero(index: Int): Float =
         if (this != null && index in 0 until size()) get(index).asFloat else 0f
 
     private const val PACK_DIRECTORY = "destiny_gunpacks"
+    private const val BUILTIN_NAMESPACE = "destiny2-mod"
     const val IDLE_VIEW = "idle_view"
     const val IRON_VIEW = "iron_view"
     const val THIRD_PERSON_HAND = "thirdperson_hand"
@@ -361,6 +389,9 @@ object TaczGunPackResources : SimpleSynchronousResourceReloadListener {
     const val GROUND = "ground"
     const val CAMERA = "camera"
     const val CONSTRAINT = "constraint"
+    const val THIRD_PERSON_SCALE = "thirdperson"
+    const val GROUND_SCALE = "ground"
+    const val FIXED_SCALE = "fixed"
 
     private val DEFAULT_SKIN_BONES = setOf("lefthand_pos", "righthand_pos")
     private val POSITIONING_BONES = setOf(

@@ -13,10 +13,10 @@ import atopos.destiny2.common.equipment.DestinyClassItemSlot
 import atopos.destiny2.common.item.DestinyClassItem
 import atopos.destiny2.common.item.DestinyItems
 import atopos.destiny2.common.gear.GearRarity
-import atopos.destiny2.common.gear.GearCategory
 import atopos.destiny2.common.gear.GearRegistry
 import atopos.destiny2.common.network.DestinyNetworking
-import atopos.destiny2.common.weapon.DestinyAmmoType
+import atopos.destiny2.common.weapon.DestinyWeaponReserves
+import atopos.destiny2.common.weapon.DestinyWeaponSlot
 import com.lowdragmc.lowdraglib2.gui.texture.ColorBorderTexture
 import com.lowdragmc.lowdraglib2.gui.texture.ColorRectTexture
 import com.lowdragmc.lowdraglib2.gui.texture.GuiTextureGroup
@@ -61,7 +61,12 @@ object DestinyDirectorViewBinder {
         val stack: ItemStack,
         val sourceIndex: Int
     )
-    private data class EquipmentChoice(val stack: ItemStack, val sourceIndex: Int, val equipped: Boolean)
+    private data class EquipmentChoice(
+        val stack: ItemStack,
+        val sourceIndex: Int,
+        val equipped: Boolean,
+        val reserveIndex: Int = -1
+    )
     private data class EquipmentStatInfo(
         val title: String,
         val category: String,
@@ -222,8 +227,18 @@ object DestinyDirectorViewBinder {
             openEquipmentTarget = entry.target
             val choices = equipmentChoices(player, entry)
             showEquipmentChoiceTray(ui, entry, choices, alignRight) { choice ->
-                select(choice.stack)
-                if (!choice.equipped && choice.sourceIndex >= 0) {
+                if (choice.stack.isEmpty) return@showEquipmentChoiceTray
+                if (alignRight) select(choice.stack)
+                if (choice.reserveIndex >= 0) {
+                    ClientPlayNetworking.send(
+                        DestinyNetworking.EquipDirectorReserveWeaponPayload(
+                            choice.reserveIndex,
+                            entry.target,
+                            BuiltInRegistries.ITEM.getKey(choice.stack.item).toString(),
+                            choice.stack.components.hashCode()
+                        )
+                    )
+                } else if (!choice.equipped && choice.sourceIndex >= 0) {
                     ClientPlayNetworking.send(
                         DestinyNetworking.EquipDirectorItemPayload(
                             choice.sourceIndex,
@@ -237,12 +252,17 @@ object DestinyDirectorViewBinder {
             }
         }
 
+        fun openEquipmentChoices(entry: EquipmentEntry) {
+            if (openEquipmentTarget == entry.target) return
+            toggleEquipmentChoices(entry, false)
+        }
+
         fun showEquipmentDetails(entry: EquipmentEntry) {
             if (entry.stack.isEmpty) return
             closeEquipmentChoices()
             select(entry.stack)
             val menuSlot = when (entry.target) {
-                "weapon_primary", "weapon_special", "weapon_heavy" ->
+                "weapon_kinetic", "weapon_energy", "weapon_power" ->
                     entry.sourceIndex.takeIf { it >= 0 }?.let { -it - 1 }
                 "armor_head" -> -40
                 "armor_chest" -> -39
@@ -267,7 +287,7 @@ object DestinyDirectorViewBinder {
             text(ui, "guardian_meta")?.setText(
                 listOf(data.className, data.subclassName, "光等 ${data.power}", data.location).filter(String::isNotBlank).joinToString("  //  ")
             )
-            bindEquipment(ui, player, ::select, ::toggleEquipmentChoices, ::showEquipmentDetails)
+            bindEquipment(ui, player, ::select, ::toggleEquipmentChoices, ::showEquipmentDetails, ::openEquipmentChoices)
             bindEquipmentOrnaments(ui, player)
             bindInventory(ui, player, ::select)
             bindJourney(ui, data)
@@ -288,7 +308,8 @@ object DestinyDirectorViewBinder {
             val classItemKey = "${classItem.item.hashCode()}:${classItem.count}:${classItem.components.hashCode()}"
             val key = "$stacks|$classItemKey|${data?.superEnergy}|${data?.power}|${data?.location}|${data?.fireteam?.size}|" +
                 "${DestinyHUDState.subclassName}|${DestinyHUDState.weapons}|${DestinyHUDState.health}|" +
-                "${DestinyHUDState.classAbility}|${DestinyHUDState.grenade}|${DestinyHUDState.superStat}|${DestinyHUDState.melee}"
+                "${DestinyHUDState.classAbility}|${DestinyHUDState.grenade}|${DestinyHUDState.superStat}|${DestinyHUDState.melee}|" +
+                DestinyWeaponLoadoutState.revision
             if (key != stateKey) {
                 stateKey = key
                 refresh()
@@ -344,7 +365,7 @@ object DestinyDirectorViewBinder {
             ItemStack(Items.NETHERITE_SWORD), ItemStack(Items.CROSSBOW), ItemStack(Items.GOLDEN_APPLE),
             ItemStack(Items.AMETHYST_SHARD, 16), ItemStack(Items.ENDER_PEARL, 8), ItemStack(Items.COMPASS)
         )
-        val previewWeapons = listOf("主武器", "特殊武器", "威能武器").mapIndexed { index, label ->
+        val previewWeapons = listOf("动能武器", "能量武器", "威能武器").mapIndexed { index, label ->
             EquipmentEntry("preview_weapon_$index", label, preview[index], -1)
         }
         val previewArmor = listOf("头盔", "胸甲", "护腿", "靴子", "职业物品").mapIndexed { index, label ->
@@ -358,12 +379,15 @@ object DestinyDirectorViewBinder {
                 alignRight
             ) { closeEquipmentChoiceTray(ui) }
         }
-        populateEquipmentRows(element(ui, "equipment_weapon_slots"), previewWeapons, false, {}, ::previewExpand) { entry ->
-            DestinyEquipmentDetailView.open(ui, entry.stack)
-        }
-        populateEquipmentRows(element(ui, "equipment_armor_slots"), previewArmor, true, {}, ::previewExpand) { entry ->
-            DestinyEquipmentDetailView.open(ui, entry.stack)
-        }
+        populateEquipmentRows(
+            element(ui, "equipment_weapon_slots"), previewWeapons, false, {}, ::previewExpand,
+            { entry -> DestinyEquipmentDetailView.open(ui, entry.stack) },
+            { entry -> previewExpand(entry, false) }
+        )
+        populateEquipmentRows(
+            element(ui, "equipment_armor_slots"), previewArmor, true, {}, ::previewExpand,
+            { entry -> DestinyEquipmentDetailView.open(ui, entry.stack) }
+        )
         bindEquipmentOrnaments(ui, Minecraft.getInstance().player, enableSubclassNavigation = false)
         bindEquipmentStatHover(ui)
         element(ui, "equipment_player_preview")?.apply {
@@ -412,7 +436,8 @@ object DestinyDirectorViewBinder {
         player: LocalPlayer,
         onSelect: (ItemStack) -> Unit,
         onExpand: (EquipmentEntry, Boolean) -> Unit,
-        onDetail: (EquipmentEntry) -> Unit
+        onDetail: (EquipmentEntry) -> Unit,
+        onWeaponHover: (EquipmentEntry) -> Unit
     ) {
         val weapons = weaponEquipment(player)
         val armor = listOf(
@@ -422,33 +447,18 @@ object DestinyDirectorViewBinder {
             EquipmentEntry("armor_feet", "靴子", player.getItemBySlot(EquipmentSlot.FEET).copy(), -1),
             EquipmentEntry("class_item", "职业物品", classItem(player).first, -1)
         )
-        populateEquipmentRows(element(ui, "equipment_weapon_slots"), weapons, false, onSelect, onExpand, onDetail)
+        populateEquipmentRows(element(ui, "equipment_weapon_slots"), weapons, false, onSelect, onExpand, onDetail, onWeaponHover)
         populateEquipmentRows(element(ui, "equipment_armor_slots"), armor, true, onSelect, onExpand, onDetail)
         text(ui, "equipment_power")?.setText("◆ ${DestinyNavigationState.currentPower}")
     }
 
     private fun weaponEquipment(player: LocalPlayer): List<EquipmentEntry> {
-        val candidates = (0 until player.inventory.containerSize).map { index ->
-            player.inventory.getItem(index) to index
+        return DestinyWeaponSlot.entries.map { slot ->
+            val stack = player.inventory.getItem(slot.hotbarIndex)
+                .takeIf { DestinyWeaponSlot.forStack(it) == slot }
+                ?.copy() ?: ItemStack.EMPTY
+            EquipmentEntry("weapon_${slot.serializedName}", slot.displayName, stack, slot.hotbarIndex)
         }
-        fun pick(type: DestinyAmmoType): Pair<ItemStack, Int> {
-            val preferred = candidates.firstOrNull { (stack, index) ->
-                index == player.inventory.selected && GearRegistry.definitionFor(stack)?.ammoType == type
-            }
-            val found = preferred ?: candidates.firstOrNull { (stack, _) ->
-                val definition = GearRegistry.definitionFor(stack)
-                definition?.category == GearCategory.WEAPON && definition.ammoType == type
-            }
-            return found?.let { it.first.copy() to it.second } ?: (ItemStack.EMPTY to -1)
-        }
-        val primary = pick(DestinyAmmoType.PRIMARY)
-        val special = pick(DestinyAmmoType.SPECIAL)
-        val heavy = pick(DestinyAmmoType.HEAVY)
-        return listOf(
-            EquipmentEntry("weapon_primary", "主武器", primary.first, primary.second),
-            EquipmentEntry("weapon_special", "特殊武器", special.first, special.second),
-            EquipmentEntry("weapon_heavy", "威能武器", heavy.first, heavy.second)
-        )
     }
 
     private fun populateEquipmentRows(
@@ -457,7 +467,8 @@ object DestinyDirectorViewBinder {
         alignRight: Boolean,
         onSelect: (ItemStack) -> Unit,
         onExpand: (EquipmentEntry, Boolean) -> Unit,
-        onDetail: (EquipmentEntry) -> Unit
+        onDetail: (EquipmentEntry) -> Unit,
+        onWeaponHover: (EquipmentEntry) -> Unit = {}
     ) {
         host ?: return
         host.clearAllChildren()
@@ -475,8 +486,10 @@ object DestinyDirectorViewBinder {
             row.addChild(equipmentItemSlot(stack, slotX, 0, size).apply {
                 addEventListener(UIEvents.CLICK) { event ->
                     if (event.button != 0) return@addEventListener
-                    if (!stack.isEmpty) onSelect(stack)
-                    onExpand(entry, alignRight)
+                    if (alignRight) {
+                        if (!stack.isEmpty) onSelect(stack)
+                        onExpand(entry, true)
+                    }
                 }
                 addEventListener(UIEvents.MOUSE_DOWN, { event ->
                     if (event.button == 1 && !stack.isEmpty) {
@@ -484,6 +497,9 @@ object DestinyDirectorViewBinder {
                         onDetail(entry)
                     }
                 }, true)
+                if (!alignRight) {
+                    addEventListener(UIEvents.MOUSE_ENTER) { onWeaponHover(entry) }
+                }
             })
             host.addChild(row)
         }
@@ -660,6 +676,26 @@ object DestinyDirectorViewBinder {
         net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("destiny2-mod", "$EQUIPMENT_ICON_ROOT/$fileName")
 
     private fun equipmentChoices(player: LocalPlayer, entry: EquipmentEntry): List<EquipmentChoice> {
+        val weaponSlot = DestinyWeaponSlot.entries.firstOrNull { entry.target == "weapon_${it.serializedName}" }
+        if (weaponSlot != null) {
+            val choices = mutableListOf<EquipmentChoice>()
+            DestinyWeaponLoadoutState.stacks(weaponSlot).forEachIndexed { reserveIndex, stack ->
+                if (!stack.isEmpty && choices.size < DestinyWeaponReserves.CAPACITY_PER_SLOT) {
+                    choices += EquipmentChoice(stack.copy(), -1, false, reserveIndex)
+                }
+            }
+            (0..35).forEach { index ->
+                if (choices.size >= DestinyWeaponReserves.CAPACITY_PER_SLOT || index == entry.sourceIndex) return@forEach
+                val stack = player.inventory.getItem(index)
+                if (!stack.isEmpty && DestinyWeaponSlot.forStack(stack) == weaponSlot) {
+                    choices += EquipmentChoice(stack.copy(), index, false)
+                }
+            }
+            while (choices.size < DestinyWeaponReserves.CAPACITY_PER_SLOT) {
+                choices += EquipmentChoice(ItemStack.EMPTY, -1, false)
+            }
+            return choices
+        }
         val result = mutableListOf<EquipmentChoice>()
         if (!entry.stack.isEmpty) result += EquipmentChoice(entry.stack.copy(), entry.sourceIndex, true)
         (0..35).forEach { index ->
@@ -672,15 +708,9 @@ object DestinyDirectorViewBinder {
     }
 
     private fun matchesEquipmentTarget(player: LocalPlayer, stack: ItemStack, target: String): Boolean = when (target) {
-        "weapon_primary" -> GearRegistry.definitionFor(stack)?.let {
-            it.category == GearCategory.WEAPON && it.ammoType == DestinyAmmoType.PRIMARY
-        } == true
-        "weapon_special" -> GearRegistry.definitionFor(stack)?.let {
-            it.category == GearCategory.WEAPON && it.ammoType == DestinyAmmoType.SPECIAL
-        } == true
-        "weapon_heavy" -> GearRegistry.definitionFor(stack)?.let {
-            it.category == GearCategory.WEAPON && it.ammoType == DestinyAmmoType.HEAVY
-        } == true
+        "weapon_kinetic" -> DestinyWeaponSlot.forStack(stack) == DestinyWeaponSlot.KINETIC
+        "weapon_energy" -> DestinyWeaponSlot.forStack(stack) == DestinyWeaponSlot.ENERGY
+        "weapon_power" -> DestinyWeaponSlot.forStack(stack) == DestinyWeaponSlot.POWER
         "armor_head" -> stack.item is ArmorItem && player.getEquipmentSlotForItem(stack) == EquipmentSlot.HEAD
         "armor_chest" -> stack.item is ArmorItem && player.getEquipmentSlotForItem(stack) == EquipmentSlot.CHEST
         "armor_legs" -> stack.item is ArmorItem && player.getEquipmentSlotForItem(stack) == EquipmentSlot.LEGS
@@ -720,18 +750,15 @@ object DestinyDirectorViewBinder {
         val gridWidth = columns * size + (columns - 1) * gap
         val gridHeight = rows * size + (rows - 1) * gap
         val slotIndex = when (entry.target) {
-            "weapon_primary", "armor_head" -> 0
-            "weapon_special", "armor_chest" -> 1
-            "weapon_heavy", "armor_legs" -> 2
+            "weapon_kinetic", "armor_head" -> 0
+            "weapon_energy", "armor_chest" -> 1
+            "weapon_power", "armor_legs" -> 2
             "armor_feet" -> 3
             "class_item" -> 4
             else -> 0
         }
         val anchorCenterY = if (alignRight) 88 + slotIndex * 64 + 25 else 132 + slotIndex * 68 + 26
         val trayTop = (anchorCenterY - gridHeight / 2).coerceIn(20, 436 - gridHeight)
-        // Armor choices grow right from the armor column. Weapon choices grow left,
-        // so anchor their right edge to the weapon column instead of pinning the
-        // tray's left edge. This keeps short rows flush with the equipped slot too.
         val trayLeft = if (alignRight) 766 else 220 - 10 - gridWidth
 
         host.layout {
@@ -758,7 +785,7 @@ object DestinyDirectorViewBinder {
                     layout { it.positionType(YogaPositionType.ABSOLUTE).left(0f).top(0f).widthPercent(100f).heightPercent(100f) }
                     style { it.overlay(ColorBorderTexture(1, DestinyNavigationTemplate.Color.PRIMARY)) }
                 })
-                addEventListener(UIEvents.CLICK) { onChoose(choice) }
+                if (!choice.stack.isEmpty) addEventListener(UIEvents.CLICK) { onChoose(choice) }
             })
         }
         host.animation().duration(0.16f).ease(Eases.CUBIC_OUT)
@@ -777,7 +804,13 @@ object DestinyDirectorViewBinder {
         }
     }
 
-    private fun equipmentItemSlot(stack: ItemStack, x: Int, y: Int, size: Int): ItemSlot {
+    private fun equipmentItemSlot(
+        stack: ItemStack,
+        x: Int,
+        y: Int,
+        size: Int,
+        enableDirectorTooltip: Boolean = true
+    ): ItemSlot {
         val definition = GearRegistry.definitionFor(stack)
         val border = when (definition?.rarity) {
             GearRarity.EXOTIC -> DestinyNavigationTemplate.Color.EXOTIC
@@ -786,11 +819,13 @@ object DestinyDirectorViewBinder {
         }
         return DestinyEquipmentTooltipSlot().apply {
             setItem(stack.copy())
-            addEventListener(UIEvents.MOUSE_ENTER) {
-                DestinyPerkTooltipController.setDirectorHoverStack(stack)
-            }
-            addEventListener(UIEvents.MOUSE_LEAVE) {
-                DestinyPerkTooltipController.clearDirectorHoverStack(stack)
+            if (enableDirectorTooltip) {
+                addEventListener(UIEvents.MOUSE_ENTER) {
+                    DestinyPerkTooltipController.setDirectorHoverStack(stack)
+                }
+                addEventListener(UIEvents.MOUSE_LEAVE) {
+                    DestinyPerkTooltipController.clearDirectorHoverStack(stack)
+                }
             }
             layout {
                 it.positionType(YogaPositionType.ABSOLUTE).left(x.toFloat()).top(y.toFloat())

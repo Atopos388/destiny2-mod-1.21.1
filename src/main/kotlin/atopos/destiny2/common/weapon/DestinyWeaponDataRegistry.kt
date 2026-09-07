@@ -73,6 +73,11 @@ object DestinyWeaponDataRegistry : SimpleSynchronousResourceReloadListener {
             precisionMultiplier = root.float("head_shot", 1.0f).coerceAtLeast(0.0f),
             magazineSize = root.int("magazine_size", 1).coerceAtLeast(1),
             reloadTicks = root.int("reload_ticks", 20).coerceAtLeast(1),
+            reserveCapacity = when (val type = DestinyAmmoType.valueOf(root.string("ammo_type", "PRIMARY").uppercase())) {
+                DestinyAmmoType.PRIMARY -> Int.MAX_VALUE
+                DestinyAmmoType.SPECIAL -> root.int("reserve_capacity", root.int("magazine_size", 1) * 4).coerceAtLeast(0)
+                DestinyAmmoType.HEAVY -> root.int("reserve_capacity", root.int("magazine_size", 1) * 3).coerceAtLeast(0)
+            },
             emptyReloadBonusTicks = root.int("empty_reload_bonus_ticks", 0).coerceAtLeast(0),
             reloadFeedFraction = root.float("reload_feed_fraction", 0.72f).coerceIn(0.05f, 0.95f),
             fireMode = WeaponFireMode.valueOf(root.string("fire_mode", "SEMI").uppercase()),

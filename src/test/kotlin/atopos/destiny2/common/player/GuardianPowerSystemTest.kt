@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Test
 class GuardianPowerSystemTest {
     @Test
     fun `mortal players do not participate in power combat`() {
-        val snapshot = GuardianPowerSystem.calculate(false, List(6) { 200 }, List(6) { 200 }, 190)
+        val snapshot = GuardianPowerSystem.calculate(false, List(8) { 200 }, List(8) { 200 }, 190)
         assertEquals(0, snapshot.current)
         assertEquals(0, snapshot.highestAvailable)
         assertEquals(1.0f, snapshot.outgoingMultiplier)
@@ -26,13 +26,13 @@ class GuardianPowerSystemTest {
     fun `equipped and highest available loadouts are calculated independently`() {
         val snapshot = GuardianPowerSystem.calculate(
             awakened = true,
-            equippedPower = listOf(175, 150, 125, 100, 100, 100),
-            highestSlotPower = listOf(200, 175, 150, 125, 100, 100),
+            equippedPower = listOf(175, 150, 125, 100, 100, 100, 100, 100),
+            highestSlotPower = listOf(200, 175, 150, 125, 100, 100, 100, 100),
             activityRecommended = 160
         )
-        assertEquals(125, snapshot.current)
-        assertEquals(142, snapshot.highestAvailable)
-        assertEquals(35, snapshot.deficit)
+        assertEquals(119, snapshot.current)
+        assertEquals(131, snapshot.highestAvailable)
+        assertEquals(41, snapshot.deficit)
         assertTrue(snapshot.suppressed)
     }
 
@@ -40,23 +40,23 @@ class GuardianPowerSystemTest {
     fun `empty equipment slots use the universal starting power not the journey stage`() {
         val snapshot = GuardianPowerSystem.calculate(
             awakened = true,
-            equippedPower = listOf(175, 0, 0, 0, 0, 0),
-            highestSlotPower = listOf(175, 0, 0, 0, 0, 0),
+            equippedPower = listOf(175, 0, 0, 0, 0, 0, 0, 0),
+            highestSlotPower = listOf(175, 0, 0, 0, 0, 0, 0, 0),
             activityRecommended = 100
         )
-        assertEquals(113, snapshot.current)
-        assertEquals(113, snapshot.highestAvailable)
+        assertEquals(109, snapshot.current)
+        assertEquals(109, snapshot.highestAvailable)
         assertFalse(snapshot.suppressed)
     }
 
     @Test
     fun `activity delta controls suppression without an overlevel damage bonus`() {
-        val under = GuardianPowerSystem.calculate(true, List(6) { 140 }, List(6) { 140 }, 160)
+        val under = GuardianPowerSystem.calculate(true, List(8) { 140 }, List(8) { 140 }, 160)
         assertEquals(0.87f, under.outgoingMultiplier, 0.0001f)
         assertEquals(1.16f, under.incomingMultiplier, 0.0001f)
         assertEquals(13, under.suppressionPercent)
 
-        val over = GuardianPowerSystem.calculate(true, List(6) { 180 }, List(6) { 180 }, 160)
+        val over = GuardianPowerSystem.calculate(true, List(8) { 180 }, List(8) { 180 }, 160)
         assertEquals(0, over.deficit)
         assertEquals(1.0f, over.outgoingMultiplier)
         assertEquals(1.0f, over.incomingMultiplier)

@@ -46,7 +46,7 @@ object DestinyLDLibEditor {
         }
         val editorWindow = EditorWindow.open(UIEditor.WINDOW_ID) { UIEditor() }
         val editor = editorWindow.currentEditor as? UIEditor ?: return
-        val view = DestinyPreviewEditorView(target)
+        val view: UIEditorView = DestinyPreviewEditorView(target)
         view.loadTemplate(template) { edited ->
             when (target) {
                 Target.ASPECT -> DestinyAspectScreen.saveVisualTemplateFromEditor(edited)
@@ -85,3 +85,4 @@ object DestinyLDLibEditor {
         }
     }
 }
+

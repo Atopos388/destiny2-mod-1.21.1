@@ -2,8 +2,7 @@
   "replace": false,
   "values": [
     "destiny2-mod:shimmering_crystal_ore",
-    "destiny2-mod:light_capacitor",
-    "destiny2-mod:glimmer_refinery",
-    "destiny2-mod:memory_foundry"
+    "destiny2-mod:tower_workbench",
+    "destiny2-mod:light_collector"
   ]
 }

@@ -22,6 +22,7 @@ import atopos.destiny2.common.weapon.WeaponHudStatus
 import atopos.destiny2.common.weapon.WeaponHudSync
 import atopos.destiny2.common.weapon.WeaponThirdPersonAction
 import atopos.destiny2.common.weapon.WeaponAnimationTimingBridge
+import atopos.destiny2.common.weapon.WeaponLoadoutRuntime
 import net.fabricmc.fabric.api.networking.v1.PlayerLookup
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking
 import net.minecraft.core.component.DataComponents
@@ -54,10 +55,11 @@ class IzanagiBurdenItem(properties: Properties) : TaczGunPackWeaponItem(properti
     ): Boolean {
         if (level.isClientSide || level !is ServerLevel || shooter.cooldowns.isOnCooldown(this)) return false
         val stack = shooter.getItemInHand(hand)
+        if (hand != InteractionHand.MAIN_HAND || !WeaponLoadoutRuntime.isEquipped(shooter, stack)) return false
         if (stack.item !== this) return false
 
         val profile = combatProfile(stack)
-        val state = WeaponAmmoState.read(stack, profile.magazineSize)
+        val state = WeaponAmmoState.read(stack, profile)
         if (state.isReloading || state.isCycling) return false
         if (state.magazine <= 0) {
             requestReload(level, shooter, stack)
@@ -85,7 +87,7 @@ class IzanagiBurdenItem(properties: Properties) : TaczGunPackWeaponItem(properti
         )
         val bullet = ForgottenNameBulletEntity(level, shooter, shotProfile, direction, forgottenTraitsEnabled = false)
         level.addFreshEntity(bullet)
-        WeaponAmmoState.consumeRound(stack, profile.magazineSize, profile.boltTicks)
+        WeaponAmmoState.consumeRound(stack, profile, profile.boltTicks)
         clearHonedEdge(stack)
         triggerAnim<IzanagiBurdenItem>(
             shooter,
@@ -128,10 +130,10 @@ class IzanagiBurdenItem(properties: Properties) : TaczGunPackWeaponItem(properti
         if (level.isClientSide) return
         val player = entity as? ServerPlayer ?: return
         val profile = combatProfile(stack)
-        if (isSelected) {
+        if (isSelected && WeaponLoadoutRuntime.isEquipped(player, stack)) {
             WeaponAmmoState.tickReload(stack, player, profile.copy(reloadTicks = reloadTicks(player, profile.reloadTicks)))
         } else {
-            WeaponAmmoState.cancelReload(stack, profile.magazineSize)
+            WeaponAmmoState.cancelReload(stack, profile)
         }
     }
 
@@ -143,20 +145,20 @@ class IzanagiBurdenItem(properties: Properties) : TaczGunPackWeaponItem(properti
     override fun requestReload(level: Level, player: ServerPlayer, stack: ItemStack): Boolean {
         if (level.isClientSide || level !is ServerLevel) return false
         val profile = combatProfile(stack)
-        val state = WeaponAmmoState.read(stack, profile.magazineSize)
+        val state = WeaponAmmoState.read(stack, profile)
         if (
             state.isReloading ||
             state.isCycling ||
             state.magazine >= profile.magazineSize ||
             WeaponAmmoState.isReloadBlocked(state, level.gameTime)
         ) return false
-        if (!player.abilities.instabuild && WeaponAmmoState.reserveCount(player, profile.ammoType) <= 0) return false
+        if (WeaponAmmoState.reserveCount(stack, profile, player.abilities.instabuild) <= 0) return false
 
         clearHonedEdge(stack)
         val duration = reloadTicks(player, profile.reloadTicks)
         val started = WeaponAmmoState.startReload(
             stack,
-            profile.magazineSize,
+            profile,
             duration,
             profile.emptyReloadBonusTicks,
             profile.reloadFeedFraction
@@ -179,7 +181,7 @@ class IzanagiBurdenItem(properties: Properties) : TaczGunPackWeaponItem(properti
     override fun requestInspect(level: Level, player: ServerPlayer, stack: ItemStack): Boolean {
         if (level.isClientSide || level !is ServerLevel) return false
         val profile = combatProfile(stack)
-        val state = WeaponAmmoState.read(stack, profile.magazineSize)
+        val state = WeaponAmmoState.read(stack, profile)
         if (state.isReloading || state.isCycling) return false
         triggerAnim<IzanagiBurdenItem>(
             player,
@@ -197,7 +199,7 @@ class IzanagiBurdenItem(properties: Properties) : TaczGunPackWeaponItem(properti
      */
     override fun cycleFireMode(player: ServerPlayer, stack: ItemStack): WeaponFireMode {
         val profile = combatProfile(stack)
-        val state = WeaponAmmoState.read(stack, profile.magazineSize)
+        val state = WeaponAmmoState.read(stack, profile)
         if (
             !state.isReloading &&
             !state.isCycling &&
@@ -205,7 +207,7 @@ class IzanagiBurdenItem(properties: Properties) : TaczGunPackWeaponItem(properti
             !player.cooldowns.isOnCooldown(this)
         ) {
             setHonedRounds(stack, state.magazine)
-            WeaponAmmoState.setMagazine(stack, profile.magazineSize, 1)
+            WeaponAmmoState.setMagazine(stack, profile, 1)
             player.cooldowns.addCooldown(this, HONED_EDGE_LOAD_TICKS)
             val level = player.level() as? ServerLevel
             if (level != null) {
@@ -229,14 +231,14 @@ class IzanagiBurdenItem(properties: Properties) : TaczGunPackWeaponItem(properti
 
     override fun weaponHudStatus(player: ServerPlayer, stack: ItemStack): WeaponHudStatus {
         val profile = combatProfile(stack)
-        val state = WeaponAmmoState.read(stack, profile.magazineSize)
+        val state = WeaponAmmoState.read(stack, profile)
         val honed = honedRounds(stack)
         return WeaponHudStatus(
             weaponId = if (honed >= 2) "伊邪那岐的重担 · 精磨利刃 ×$honed" else "伊邪那岐的重担",
             ammoType = profile.ammoType,
             magazine = state.magazine,
             capacity = profile.magazineSize,
-            reserve = WeaponAmmoState.reserveCount(player, profile.ammoType),
+            reserve = WeaponAmmoState.reserveCount(stack, profile, player.abilities.instabuild),
             reloadRemaining = state.reloadRemaining,
             reloadTotal = state.reloadTotal,
             precisionMultiplier = profile.precisionMultiplier,
@@ -282,7 +284,7 @@ class IzanagiBurdenItem(properties: Properties) : TaczGunPackWeaponItem(properti
                         val stack = state.getData(DataTickets.ITEMSTACK)
                         val stackReloadTotal = if (stack != null && stack.item === this) {
                             val profile = combatProfile(stack)
-                            WeaponAmmoState.read(stack, profile.magazineSize).reloadTotal
+                            WeaponAmmoState.read(stack, profile).reloadTotal
                         } else {
                             0
                         }

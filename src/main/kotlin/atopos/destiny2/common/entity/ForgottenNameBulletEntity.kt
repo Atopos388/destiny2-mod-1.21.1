@@ -9,6 +9,8 @@ import atopos.destiny2.common.weapon.DestinyAmmoType
 import atopos.destiny2.common.weapon.DestinyDamageElement
 import atopos.destiny2.common.weapon.DestinyElementalDamageCarrier
 import atopos.destiny2.common.weapon.DestinyWeaponDamageCarrier
+import atopos.destiny2.common.weapon.AscWeaponRuntime
+import atopos.destiny2.common.item.GenericGunPackItem
 import atopos.destiny2.common.weapon.ForgottenNameExoticRules
 import atopos.destiny2.common.weapon.ForgottenNameExoticRuntime
 import atopos.destiny2.common.weapon.MonteCarloExoticRuntime
@@ -108,6 +110,7 @@ class ForgottenNameBulletEntity : Projectile, DestinyWeaponDamageCarrier {
         super.tick()
         val motion = deltaMovement
         if (motion.lengthSqr() <= 1.0E-8) {
+            (owner as? ServerPlayer)?.let { AscWeaponRuntime.onMiss(it, sourceWeaponId) }
             discard()
             return
         }
@@ -126,6 +129,9 @@ class ForgottenNameBulletEntity : Projectile, DestinyWeaponDamageCarrier {
         val drag = (1.0f - activeFriction).coerceIn(0.0f, 1.0f).toDouble()
         deltaMovement = motion.scale(drag).add(0.0, -activeGravity.toDouble(), 0.0)
         if (!level().isClientSide && (tickCount >= lifeTicks || startPosition.distanceToSqr(position()) >= maxRange * maxRange)) {
+            if (hitEntityIds.isEmpty()) {
+                (owner as? ServerPlayer)?.let { AscWeaponRuntime.onMiss(it, sourceWeaponId) }
+            }
             discard()
         }
     }
@@ -167,6 +173,9 @@ class ForgottenNameBulletEntity : Projectile, DestinyWeaponDamageCarrier {
         }
 
         if (blockHit.type != HitResult.Type.MISS) {
+            (owner as? ServerPlayer)?.let { player ->
+                AscWeaponRuntime.onBlockImpact(level, player, sourceWeaponId, blockHit.location)
+            }
             sendFeedback(level, collisionEnd, IMPACT_BLOCK, hit = false, precision = false, killed = false)
             discard()
         }
@@ -193,9 +202,21 @@ class ForgottenNameBulletEntity : Projectile, DestinyWeaponDamageCarrier {
             1.0f
         }
         val baseAtDistance = damageAtDistance(startPosition.distanceTo(impact))
+        val sourceStack = shooter?.let { player ->
+            listOf(player.mainHandItem, player.offhandItem).firstOrNull {
+                it.item is GenericGunPackItem && GenericGunPackItem.id(it) == sourceWeaponId
+            }
+        }
+        val ascDamageMultiplier = if (
+            shooter != null && sourceStack != null && sourceWeaponId == AscWeaponRuntime.OUTBREAK
+        ) {
+            AscWeaponRuntime.outgoingDamageMultiplier(shooter, sourceStack, target)
+        } else {
+            1.0f
+        }
         val finalDamage = baseAtDistance *
             (if (precisionHit) precisionMultiplier.coerceAtLeast(0.0f) else 1.0f) *
-            precisionBonus * markedBonus
+            precisionBonus * markedBonus * ascDamageMultiplier
         val wasAlive = target.isAlive
         target.invulnerableTime = 0
         val accepted = DamageNumberRuntime.withHit(shooter, target, finalDamage, precisionHit) {
@@ -207,6 +228,9 @@ class ForgottenNameBulletEntity : Projectile, DestinyWeaponDamageCarrier {
         }
 
         val killed = wasAlive && !target.isAlive
+        if (shooter != null && sourceStack != null) {
+            AscWeaponRuntime.onHit(level, shooter, sourceStack, target, impact, precisionHit, killed)
+        }
         if (sourceWeaponId == MonteCarloExoticRuntime.ID) {
             shooter?.let { MonteCarloExoticRuntime.onWeaponHit(it, killed) }
         }

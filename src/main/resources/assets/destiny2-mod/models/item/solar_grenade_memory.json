@@ -1,6 +1,6 @@
 {
   "parent": "minecraft:item/generated",
   "textures": {
-    "layer0": "destiny2-mod:gui/hud/solar_warlock_skill_grenade"
+    "layer0": "destiny2-mod:item/solar_grenade_memory"
   }
 }

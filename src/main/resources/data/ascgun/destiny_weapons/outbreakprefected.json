@@ -1,0 +1,8 @@
+{
+  "ammo_type": "PRIMARY", "damage": 4.0, "head_shot": 1.5,
+  "magazine_size": 35, "reload_ticks": 42, "fire_mode": "BURST",
+  "supported_fire_modes": ["BURST"], "rounds_per_minute": 450, "damage_element": "KINETIC",
+  "recoil": {"pitch_min": 0.75, "pitch_max": 1.0, "yaw_min": -0.35, "yaw_max": 0.35, "kick_ms": 45, "recover_ms": 170, "aimed_multiplier": 0.75, "stability": 65, "recoil_direction": 80},
+  "accuracy": {"hip_base_degrees": 0.5, "aimed_base_degrees": 0.04, "moving_penalty_degrees": 0.15, "airborne_penalty_degrees": 1.2, "bloom_per_shot_degrees": 0.04, "max_bloom_degrees": 0.35, "settle_delay_ticks": 2, "bloom_decay_per_tick": 0.06},
+  "ballistics": {"range": 100.0, "speed": 8.0, "gravity": 0.0, "friction": 0.006, "life_ticks": 40, "pierce": 1}
+}

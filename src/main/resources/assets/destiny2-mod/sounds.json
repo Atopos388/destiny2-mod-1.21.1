@@ -1,4 +1,7 @@
 {
+  "hunter_class_activate": {
+    "sounds": [{ "name": "destiny2-mod:class/hunter_activate", "stream": true }]
+  },
   "forgotten_name_fire": {
     "subtitle": "subtitles.destiny2-mod.forgotten_name_fire",
     "sounds": [

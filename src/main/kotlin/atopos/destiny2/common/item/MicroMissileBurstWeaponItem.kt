@@ -15,6 +15,7 @@ import atopos.destiny2.common.weapon.WeaponCombatProfile
 import atopos.destiny2.common.weapon.WeaponHudStatus
 import atopos.destiny2.common.weapon.WeaponThirdPersonAction
 import atopos.destiny2.common.weapon.DestinyAmmoType
+import atopos.destiny2.common.weapon.WeaponLoadoutRuntime
 import atopos.destiny2.common.network.DestinyNetworking
 import net.minecraft.server.level.ServerPlayer
 import net.minecraft.network.chat.Component
@@ -51,7 +52,7 @@ open class MicroMissileBurstWeaponItem(properties: Properties) : Item(properties
     override fun inventoryTick(stack: ItemStack, level: Level, entity: Entity, slotId: Int, isSelected: Boolean) {
         if (level.isClientSide || entity !is LivingEntity) return
         if (entity is ServerPlayer) {
-            if (isSelected) {
+            if (isSelected && WeaponLoadoutRuntime.isEquipped(entity, stack)) {
                 if (selectedSlots.put(entity.uuid, slotId) != slotId) {
                     DestinyNetworking.broadcastWeaponThirdPersonAction(
                         entity,
@@ -120,7 +121,8 @@ open class MicroMissileBurstWeaponItem(properties: Properties) : Item(properties
         val key = RuntimeKey(player.uuid, player.inventory.selected)
         val capacity = magazineCapacity(stack, definition)
         val total = (definition.frame.reloadTicks * GearRolls.reloadTimeMultiplier(stack)).toInt().coerceAtLeast(1)
-        val reserve = definition.ammoItem?.let { WeaponAmmoState.countReserve(player, it) } ?: -1
+        val profile = combatProfile(stack)
+        val reserve = WeaponAmmoState.reserveCount(stack, profile, player.abilities.instabuild)
         return WeaponHudStatus(
             "", definition.ammoType, getMagazineAmmo(key, stack, definition), capacity, reserve,
             reloadTimer[key] ?: 0, if (isReloading(key)) total else 0, definition.precisionMultiplier
@@ -129,7 +131,9 @@ open class MicroMissileBurstWeaponItem(properties: Properties) : Item(properties
 
     fun requestFire(level: Level, player: Player, hand: InteractionHand): Boolean {
         if (level.isClientSide) return false
+        if (player !is ServerPlayer || hand != InteractionHand.MAIN_HAND) return false
         val stack = player.getItemInHand(hand)
+        if (!WeaponLoadoutRuntime.isEquipped(player, stack)) return false
         val runtimeKey = RuntimeKey(player.uuid, if (hand == InteractionHand.MAIN_HAND) player.inventory.selected else OFFHAND_SLOT)
         if ((burstRemaining[runtimeKey] ?: 0) > 0) return false
 
@@ -211,7 +215,8 @@ open class MicroMissileBurstWeaponItem(properties: Properties) : Item(properties
         if (isReloading(runtimeKey) || getMagazineAmmo(runtimeKey, stack, definition) >= reloadCapacity) {
             return false
         }
-        if (entity is Player && !hasReserveAmmo(entity, definition.ammoItem)) {
+        val profile = combatProfile(stack)
+        if (entity is Player && WeaponAmmoState.reserveCount(stack, profile, entity.abilities.instabuild) <= 0) {
             entity.displayClientMessage(Component.literal("没有可用弹药"), true)
             return false
         }
@@ -244,7 +249,7 @@ open class MicroMissileBurstWeaponItem(properties: Properties) : Item(properties
         if (needed <= 0) return
 
         val loaded = if (entity is Player) {
-            consumeAmmo(entity, definition.ammoItem, stack, needed)
+            consumeAmmo(entity, stack, combatProfile(stack), needed)
         } else {
             needed
         }
@@ -252,34 +257,16 @@ open class MicroMissileBurstWeaponItem(properties: Properties) : Item(properties
         ambitiousReloadArmed.remove(runtimeKey.playerId)
     }
 
-    private fun hasReserveAmmo(player: Player, ammoItem: Item?): Boolean {
-        if (ammoItem == null || player.abilities.instabuild) {
-            return true
-        }
-        return (player.inventory.items + player.inventory.offhand).any { stack -> stack.`is`(ammoItem) && !stack.isEmpty }
-    }
-
-    private fun consumeAmmo(player: Player, ammoItem: Item?, weaponStack: ItemStack, maxCount: Int): Int {
-        if (ammoItem == null || player.abilities.instabuild) {
-            return maxCount
-        }
+    private fun consumeAmmo(
+        player: Player,
+        weaponStack: ItemStack,
+        profile: WeaponCombatProfile,
+        maxCount: Int
+    ): Int {
         if (player.random.nextFloat() < GearRolls.ammoRefundChance(weaponStack)) {
             return maxCount
         }
-
-        var remaining = maxCount
-        var consumed = 0
-        val inventory = player.inventory
-        for (stack in inventory.items + inventory.offhand) {
-            if (remaining <= 0) break
-            if (stack.`is`(ammoItem) && !stack.isEmpty) {
-                val amount = stack.count.coerceAtMost(remaining)
-                stack.shrink(amount)
-                remaining -= amount
-                consumed += amount
-            }
-        }
-        return consumed
+        return WeaponAmmoState.consumeReserve(weaponStack, profile, maxCount, player.abilities.instabuild)
     }
 
     private fun magazineCapacity(stack: ItemStack, definition: GearDefinition): Int {
@@ -291,7 +278,12 @@ open class MicroMissileBurstWeaponItem(properties: Properties) : Item(properties
             magazineCapacity(stack, definition),
             ceil(definition.frame.magazineSize * 1.5).toInt()
         )
-        return (magazineAmmo[runtimeKey] ?: magazineCapacity(stack, definition)).coerceIn(0, capacity)
+        return WeaponAmmoState.read(
+            stack,
+            combatProfile(stack),
+            magazineLimit = capacity,
+            initialMagazine = magazineCapacity(stack, definition)
+        ).magazine
     }
 
     private fun setMagazineAmmo(runtimeKey: RuntimeKey, stack: ItemStack, definition: GearDefinition, ammo: Int) {
@@ -299,7 +291,7 @@ open class MicroMissileBurstWeaponItem(properties: Properties) : Item(properties
             magazineCapacity(stack, definition),
             ceil(definition.frame.magazineSize * 1.5).toInt()
         )
-        magazineAmmo[runtimeKey] = ammo.coerceIn(0, maximum)
+        WeaponAmmoState.setMagazine(stack, combatProfile(stack), ammo, maximum)
     }
 
     private fun reloadCapacity(runtimeKey: RuntimeKey, stack: ItemStack, definition: GearDefinition): Int {
@@ -317,7 +309,6 @@ open class MicroMissileBurstWeaponItem(properties: Properties) : Item(properties
         private const val DRAW_THIRD_PERSON_TICKS = 12
         private const val PUT_AWAY_THIRD_PERSON_TICKS = 8
         private val selectedSlots = mutableMapOf<UUID, Int>()
-        private val magazineAmmo = mutableMapOf<RuntimeKey, Int>()
         private val burstRemaining = mutableMapOf<RuntimeKey, Int>()
         private val burstTimer = mutableMapOf<RuntimeKey, Int>()
         private val reloadTimer = mutableMapOf<RuntimeKey, Int>()

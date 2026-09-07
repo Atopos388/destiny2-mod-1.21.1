@@ -34,7 +34,15 @@ import java.util.concurrent.ConcurrentHashMap
 class GenericGunPackItemRenderer private constructor() :
     BuiltinItemRendererRegistry.DynamicItemRenderer {
 
-    override fun render(
+    override fun render(stack: ItemStack, mode: ItemDisplayContext, matrices: PoseStack, vertexConsumers: MultiBufferSource, light: Int, overlay: Int) {
+        if (mode == ItemDisplayContext.GUI) {
+            GuiItemModelFit.render("GenericGunPackItemRenderer:" + stack.item.toString() + ":" + stack.components.toString(), matrices, vertexConsumers) { pose, buffers ->
+                renderUnfitted(stack, mode, pose, buffers, light, overlay)
+            }
+        } else renderUnfitted(stack, mode, matrices, vertexConsumers, light, overlay)
+    }
+
+    private fun renderUnfitted(
         stack: ItemStack,
         mode: ItemDisplayContext,
         matrices: PoseStack,
@@ -45,13 +53,18 @@ class GenericGunPackItemRenderer private constructor() :
         if (mode.firstPerson()) return
         val runtime = runtime(stack) ?: return
 
-        GenericGunAnimationClient.apply(runtime.gunId, runtime.definition.animation, runtime.model)
+        if (mode == ItemDisplayContext.GUI) {
+            GenericGunAnimationClient.applyStatic(runtime.gunId, runtime.definition.animation, runtime.model)
+        } else {
+            GenericGunAnimationClient.apply(runtime.gunId, runtime.definition.animation, runtime.model)
+        }
         matrices.pushPose()
         try {
             // Exact non-first-person origin used by TaCZ's item renderer.
             matrices.translate(0.5, 2.0, 0.5)
             matrices.scale(-1.0f, -1.0f, 1.0f)
             when (mode) {
+                ItemDisplayContext.GUI,
                 ItemDisplayContext.FIXED ->
                     runtime.model.positioningInverse(TaczGunPackResources.FIXED)?.let(matrices::mulPose)
                 ItemDisplayContext.GROUND ->
@@ -61,6 +74,15 @@ class GenericGunPackItemRenderer private constructor() :
                     runtime.model.positioningInverse(TaczGunPackResources.THIRD_PERSON_HAND)?.let(matrices::mulPose)
                 else -> Unit
             }
+            val displayScale = when (mode) {
+                ItemDisplayContext.FIXED -> runtime.definition.displayScale(TaczGunPackResources.FIXED_SCALE)
+                ItemDisplayContext.GROUND -> runtime.definition.displayScale(TaczGunPackResources.GROUND_SCALE)
+                ItemDisplayContext.THIRD_PERSON_RIGHT_HAND,
+                ItemDisplayContext.THIRD_PERSON_LEFT_HAND ->
+                    runtime.definition.displayScale(TaczGunPackResources.THIRD_PERSON_SCALE)
+                else -> null
+            }
+            displayScale?.let { matrices.scale(it.x, it.y, it.z) }
             val consumer = vertexConsumers.getBuffer(RenderType.entityCutout(runtime.texture))
             runtime.model.render(matrices, mode, consumer, light, overlay)
         } finally {

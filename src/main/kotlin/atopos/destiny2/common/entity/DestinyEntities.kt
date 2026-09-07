@@ -304,6 +304,14 @@ object DestinyEntities {
             .build()
     )
 
+    val FALLEN_SOLDIER: EntityType<FallenSoldierEntity> = Registry.register(
+        BuiltInRegistries.ENTITY_TYPE,
+        ResourceLocation.fromNamespaceAndPath("destiny2-mod", "fallen_soldier"),
+        FabricEntityTypeBuilder.create(MobCategory.MONSTER) { type, world -> FallenSoldierEntity(type, world) }
+            .dimensions(EntityDimensions.fixed(0.7f, 2.15f))
+            .trackRangeChunks(8).trackedUpdateRate(1).build()
+    )
+
     val FALLEN_CAPTAIN: EntityType<FallenCaptainEntity> = Registry.register(
         BuiltInRegistries.ENTITY_TYPE,
         ResourceLocation.fromNamespaceAndPath("destiny2-mod", "fallen_captain"),
@@ -335,6 +343,7 @@ object DestinyEntities {
     )
 
     fun register() {
+        FabricDefaultAttributeRegistry.register(FALLEN_SOLDIER, FallenSoldierEntity.createAttributes())
         FabricDefaultAttributeRegistry.register(FALLEN_CAPTAIN, FallenCaptainEntity.createAttributes())
         FabricDefaultAttributeRegistry.register(JILING, JilingEntity.createAttributes())
     }

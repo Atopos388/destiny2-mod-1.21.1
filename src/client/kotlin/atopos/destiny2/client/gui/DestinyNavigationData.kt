@@ -1,9 +1,12 @@
 package atopos.destiny2.client.gui
 
 import atopos.destiny2.common.player.GuardianJourneyStage
+import atopos.destiny2.common.weapon.DestinyWeaponReserves
+import atopos.destiny2.common.weapon.DestinyWeaponSlot
 import net.minecraft.client.Minecraft
 import net.minecraft.network.chat.Component
 import net.minecraft.world.item.Items
+import net.minecraft.world.item.ItemStack
 
 data class DestinyNavigationData(
     val location: String,
@@ -57,6 +60,35 @@ object DestinyNavigationState {
         recommendedPower = 0
         powerDeficit = 0
         suppressionPercent = 0
+    }
+}
+
+object DestinyWeaponLoadoutState {
+    private val reserves = DestinyWeaponSlot.entries.associateWith {
+        MutableList(DestinyWeaponReserves.CAPACITY_PER_SLOT) { ItemStack.EMPTY }
+    }
+    var revision: Long = 0
+        private set
+
+    fun update(kinetic: List<ItemStack>, energy: List<ItemStack>, power: List<ItemStack>) {
+        replace(DestinyWeaponSlot.KINETIC, kinetic)
+        replace(DestinyWeaponSlot.ENERGY, energy)
+        replace(DestinyWeaponSlot.POWER, power)
+        revision++
+    }
+
+    fun stacks(slot: DestinyWeaponSlot): List<ItemStack> = reserves.getValue(slot)
+
+    fun reset() {
+        DestinyWeaponSlot.entries.forEach { slot -> replace(slot, emptyList()) }
+        revision++
+    }
+
+    private fun replace(slot: DestinyWeaponSlot, incoming: List<ItemStack>) {
+        val target = reserves.getValue(slot)
+        repeat(DestinyWeaponReserves.CAPACITY_PER_SLOT) { index ->
+            target[index] = incoming.getOrNull(index)?.copy() ?: ItemStack.EMPTY
+        }
     }
 }
 

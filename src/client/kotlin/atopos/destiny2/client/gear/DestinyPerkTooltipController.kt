@@ -42,6 +42,7 @@ object DestinyPerkTooltipController {
     private var lastMouseY = 0
     private var panelX = 0
     private var panelY = 0
+    private var panelScale = 1f
 
     private var pinned = false
     private var pinnedData: PerkTooltipData? = null
@@ -221,8 +222,8 @@ object DestinyPerkTooltipController {
     fun clickPinned(mouseX: Double, mouseY: Double): Boolean {
         if (!pinned) return false
         val layout = component(pinnedData ?: return false, expanded = true).layout
-        val mx = mouseX.toInt()
-        val my = mouseY.toInt()
+        val mx = panelX + ((mouseX - panelX) / panelScale).toInt()
+        val my = panelY + ((mouseY - panelY) / panelScale).toInt()
         if (mx !in panelX until (panelX + layout.width) || my !in panelY until (panelY + layout.height)) {
             closePinned()
             return false
@@ -359,7 +360,9 @@ object DestinyPerkTooltipController {
 
     fun isMouseOverPinned(mouseX: Int, mouseY: Int): Boolean {
         val layout = cachedComponent?.layout ?: return false
-        return pinned && mouseX in panelX until (panelX + layout.width) && mouseY in panelY until (panelY + layout.height)
+        val width = (layout.width * panelScale).toInt()
+        val height = (layout.height * panelScale).toInt()
+        return pinned && mouseX in panelX until (panelX + width) && mouseY in panelY until (panelY + height)
     }
 
     fun clearInteraction() {
@@ -395,10 +398,11 @@ object DestinyPerkTooltipController {
         activateHover(data)
         hoverSnapshot = HoverSnapshot(data, -1, -1, lastActiveNanos, stack.copy())
         val component = component(data, expanded = true)
-        val position = positionFor(mouseX, mouseY, component.layout)
+        panelScale = expandedScale(component.layout)
+        val position = positionFor(mouseX, mouseY + 44, component.layout, panelScale)
         panelX = position.first
         panelY = position.second
-        renderComponent(graphics, component, panelX, panelY)
+        renderComponent(graphics, component, panelX, panelY, panelScale)
         return true
     }
 
@@ -417,6 +421,7 @@ object DestinyPerkTooltipController {
         lastMouseX = mouseX
         lastMouseY = mouseY
         val component = componentFor(stack) ?: return false
+        panelScale = 1f
         val position = positionFor(mouseX, mouseY, component.layout)
         panelX = position.first
         panelY = position.second
@@ -432,6 +437,7 @@ object DestinyPerkTooltipController {
         lastMouseX = mouseX
         lastMouseY = mouseY
         val component = componentFor(stack) ?: return false
+        panelScale = 1f
         val position = positionFor(mouseX, mouseY, component.layout)
         panelX = position.first
         panelY = position.second
@@ -447,10 +453,11 @@ object DestinyPerkTooltipController {
         refreshPinnedData()
         val data = pinnedData ?: return false
         val component = component(data, expanded = true)
-        val position = positionFor(pinMouseX, pinMouseY, component.layout)
+        panelScale = expandedScale(component.layout)
+        val position = positionFor(pinMouseX, pinMouseY, component.layout, panelScale)
         panelX = position.first
         panelY = position.second
-        renderComponent(graphics, component, panelX, panelY)
+        renderComponent(graphics, component, panelX, panelY, panelScale)
         return true
     }
 
@@ -536,29 +543,51 @@ object DestinyPerkTooltipController {
         }
     }
 
-    private fun positionFor(mouseX: Int, mouseY: Int, layout: DestinyPerkTooltipLayout): Pair<Int, Int> {
+    private fun positionFor(
+        mouseX: Int,
+        mouseY: Int,
+        layout: DestinyPerkTooltipLayout,
+        scale: Float = 1f
+    ): Pair<Int, Int> {
         val minecraft = Minecraft.getInstance()
         val margin = 4
         val cursorGap = 12
+        val width = (layout.width * scale).toInt()
+        val height = (layout.height * scale).toInt()
         var x = mouseX + cursorGap
-        if (x + layout.width + margin > minecraft.window.guiScaledWidth) x = mouseX - layout.width - cursorGap
-        x = x.coerceIn(margin, (minecraft.window.guiScaledWidth - layout.width - margin).coerceAtLeast(margin))
+        if (x + width + margin > minecraft.window.guiScaledWidth) x = mouseX - width - cursorGap
+        x = x.coerceIn(margin, (minecraft.window.guiScaledWidth - width - margin).coerceAtLeast(margin))
         var y = mouseY - 12
-        if (y + layout.height + margin > minecraft.window.guiScaledHeight) {
-            y = minecraft.window.guiScaledHeight - layout.height - margin
+        if (y + height + margin > minecraft.window.guiScaledHeight) {
+            y = minecraft.window.guiScaledHeight - height - margin
         }
         return x to y.coerceAtLeast(margin)
     }
 
-    private fun renderComponent(graphics: GuiGraphics, component: DestinyPerkTooltipComponent, x: Int, y: Int) {
-        val minecraft = Minecraft.getInstance()
+    private fun renderComponent(
+        graphics: GuiGraphics,
+        component: DestinyPerkTooltipComponent,
+        x: Int,
+        y: Int,
+        scale: Float = 1f
+    ) {
         graphics.pose().pushPose()
         try {
-            graphics.pose().translate(0f, 0f, 400f)
-            DestinyPerkClientTooltipComponent(component.layout).renderImage(DestinyPerkFont.get(), x, y, graphics)
+            graphics.pose().translate(x.toFloat(), y.toFloat(), 400f)
+            graphics.pose().scale(scale, scale, 1f)
+            DestinyPerkClientTooltipComponent(component.layout).renderImage(DestinyPerkFont.get(), 0, 0, graphics)
         } finally {
             graphics.pose().popPose()
         }
+    }
+
+    private fun expandedScale(layout: DestinyPerkTooltipLayout): Float {
+        val window = Minecraft.getInstance().window
+        return minOf(
+            1f,
+            window.guiScaledWidth * 0.62f / layout.width,
+            window.guiScaledHeight * 0.55f / layout.height
+        )
     }
 
     private fun closePinned() {

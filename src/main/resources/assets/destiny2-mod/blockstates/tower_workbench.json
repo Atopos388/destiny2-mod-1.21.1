@@ -1,0 +1,34 @@
+{
+  "variants": {
+    "facing=north,part=0": {
+      "model": "destiny2-mod:block/tower_workbench_0"
+    },
+    "facing=north,part=1": {
+      "model": "destiny2-mod:block/tower_workbench_1"
+    },
+    "facing=east,part=0": {
+      "model": "destiny2-mod:block/tower_workbench_0",
+      "y": 90
+    },
+    "facing=east,part=1": {
+      "model": "destiny2-mod:block/tower_workbench_1",
+      "y": 90
+    },
+    "facing=south,part=0": {
+      "model": "destiny2-mod:block/tower_workbench_0",
+      "y": 180
+    },
+    "facing=south,part=1": {
+      "model": "destiny2-mod:block/tower_workbench_1",
+      "y": 180
+    },
+    "facing=west,part=0": {
+      "model": "destiny2-mod:block/tower_workbench_0",
+      "y": 270
+    },
+    "facing=west,part=1": {
+      "model": "destiny2-mod:block/tower_workbench_1",
+      "y": 270
+    }
+  }
+}

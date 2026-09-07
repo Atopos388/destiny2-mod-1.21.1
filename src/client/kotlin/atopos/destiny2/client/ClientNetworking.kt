@@ -6,6 +6,7 @@ import atopos.destiny2.client.gui.DestinyPerkBuffState
 import atopos.destiny2.client.gui.DestinyWeaponHUDState
 import atopos.destiny2.client.gui.DestinyDamageNumbers
 import atopos.destiny2.client.gui.DestinyNavigationState
+import atopos.destiny2.client.gui.DestinyWeaponLoadoutState
 import atopos.destiny2.client.action.DestinyActionClient
 import atopos.destiny2.client.cinematic.CinematicCameraClient
 import atopos.destiny2.client.combat.QuickMeleeAimClient
@@ -16,6 +17,7 @@ import atopos.destiny2.client.renderer.ThunderclapGroundLiftRenderer
 import atopos.destiny2.client.renderer.ThunderclapBlastRenderer
 import atopos.destiny2.client.weapon.DestinyWeaponFeedbackClient
 import atopos.destiny2.client.weapon.DestinyWeaponThirdPersonClient
+import atopos.destiny2.client.weapon.ExternalGunPackSoundClient
 import atopos.destiny2.client.weapon.GenericGunAnimationClient
 import atopos.destiny2.common.network.DestinyNetworking
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking
@@ -91,6 +93,12 @@ object ClientNetworking {
             }
         }
 
+        ClientPlayNetworking.registerGlobalReceiver(DestinyNetworking.SyncWeaponLoadoutPayload.ID) { payload, context ->
+            context.client().execute {
+                DestinyWeaponLoadoutState.update(payload.kinetic, payload.energy, payload.power)
+            }
+        }
+
         ClientPlayNetworking.registerGlobalReceiver(DestinyNetworking.SyncStatStatePayload.ID) { payload, context ->
             context.client().execute {
                 Destiny2MODClient.clientCooldowns.remove(DestinyNetworking.ABILITY_SUPER)
@@ -124,6 +132,7 @@ object ClientNetworking {
             context.client().execute {
                 DestinyWeaponThirdPersonClient.onAction(payload)
                 GenericGunAnimationClient.onAction(payload)
+                ExternalGunPackSoundClient.onAction(payload)
             }
         }
 

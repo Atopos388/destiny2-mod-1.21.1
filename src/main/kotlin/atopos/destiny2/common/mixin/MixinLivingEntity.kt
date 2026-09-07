@@ -26,6 +26,9 @@ import atopos.destiny2.common.player.GuardianPowerSystem
 import atopos.destiny2.common.player.GuardianActivityPower
 import atopos.destiny2.common.weapon.MonteCarloExoticRuntime
 import atopos.destiny2.common.weapon.DamageNumberRuntime
+import atopos.destiny2.common.weapon.AscWeaponRuntime
+import atopos.destiny2.common.weapon.DestinyElementalDamageCarrier
+import atopos.destiny2.common.weapon.DestinyDamageElement
 import atopos.destiny2.common.gear.GearRegistry
 import atopos.destiny2.common.weapon.DestinyAmmoType
 import net.minecraft.tags.DamageTypeTags
@@ -37,6 +40,7 @@ import net.minecraft.world.entity.LivingEntity
 import net.minecraft.world.entity.monster.Monster
 import net.minecraft.world.entity.player.Player
 import net.minecraft.world.entity.projectile.Projectile
+import net.minecraft.world.entity.LightningBolt
 import net.minecraft.world.entity.boss.enderdragon.EnderDragon
 import net.minecraft.world.entity.boss.wither.WitherBoss
 import net.minecraft.world.entity.monster.warden.Warden
@@ -159,6 +163,7 @@ abstract class MixinLivingEntity : SolarScorchCarrier {
                 newAmount *= 0.85f
             }
             newAmount = GearPerkRuntime.modifyIncomingDamage(player, newAmount)
+            newAmount = AscWeaponRuntime.modifyIncomingDamage(player, source, destiny2modDamageElement(source), newAmount)
             newAmount = ArmorModRuntime.modifyIncomingDamage(player, source, newAmount)
             newAmount = ArcTitanAspectRuntime.modifyIncomingDamage(player, source, newAmount)
             newAmount = ArcTitanFragmentRuntime.modifyIncomingDamage(player, newAmount)
@@ -234,6 +239,11 @@ abstract class MixinLivingEntity : SolarScorchCarrier {
         ci: CallbackInfoReturnable<Boolean>
     ) {
         val successfulHit = ci.returnValue || destiny2modShieldAbsorbed > 0.0f
+        (self as? ServerPlayer)?.let { player ->
+            destiny2modDamageElement(source)?.let { element ->
+                AscWeaponRuntime.onArcDamageTaken(player, element, successfulHit)
+            }
+        }
         if (successfulHit) {
             val actualLoss = (destiny2modHealthBeforeDamage - self.health).coerceAtLeast(0.0f) +
                 (destiny2modAbsorptionBeforeDamage - self.absorptionAmount).coerceAtLeast(0.0f) +
@@ -275,6 +285,12 @@ abstract class MixinLivingEntity : SolarScorchCarrier {
         if (destiny2modVolatileDamage >= VOLATILE_DAMAGE_THRESHOLD) {
             destiny2modDetonateVolatile()
         }
+    }
+
+    private fun destiny2modDamageElement(source: DamageSource): DestinyDamageElement? = when (val direct = source.directEntity) {
+        is DestinyElementalDamageCarrier -> direct.destinyDamageElement
+        is LightningBolt -> DestinyDamageElement.ARC
+        else -> null
     }
 
     @Inject(method = ["die"], at = [At("HEAD")])

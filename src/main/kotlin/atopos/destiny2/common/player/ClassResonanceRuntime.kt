@@ -4,6 +4,7 @@ import atopos.destiny2.common.equipment.DestinyClassItemContainer
 import atopos.destiny2.common.item.DestinyClassItem
 import atopos.destiny2.common.item.DestinyItems
 import atopos.destiny2.common.network.DestinyNetworking
+import atopos.destiny2.common.sound.DestinySounds
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents
 import net.minecraft.core.particles.ParticleOptions
 import net.minecraft.core.particles.ParticleTypes
@@ -58,6 +59,9 @@ object ClassResonanceRuntime {
 
         val firstClass = data.unlockedClasses.isEmpty()
         unlockBasicClassOptions(data, item.requiredClass)
+        if (item.requiredClass == DestinyClassType.HUNTER) {
+            player.playNotifySound(DestinySounds.HUNTER_CLASS_ACTIVATE, SoundSource.VOICE, 1.0f, 1.0f)
+        }
         if (firstClass) {
             data.setClass(item.requiredClass)
             equipHeldClassItem(player, heldStack)
@@ -72,16 +76,6 @@ object ClassResonanceRuntime {
             SoundSource.PLAYERS,
             0.75f,
             resonancePitch(item.requiredClass)
-        )
-        player.sendSystemMessage(
-            Component.translatable(
-                if (firstClass) {
-                    "message.destiny2-mod.class_resonance.first_unlocked"
-                } else {
-                    "message.destiny2-mod.class_resonance.additional_unlocked"
-                },
-                Component.translatable("class.destiny2-mod.${item.requiredClass.id}")
-            )
         )
         DestinyNetworking.syncPlayerData(player)
         player.inventory.setChanged()
@@ -234,7 +228,6 @@ object ClassResonanceRuntime {
                     0.8f,
                     resonancePitch(effect.destinyClass)
                 )
-                player.displayClientMessage(Component.translatable("message.destiny2-mod.class_resonance.complete"), true)
                 iterator.remove()
             }
         }

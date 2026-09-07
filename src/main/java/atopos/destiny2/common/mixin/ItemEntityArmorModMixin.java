@@ -1,6 +1,7 @@
 package atopos.destiny2.common.mixin;
 
 import atopos.destiny2.common.gear.ArmorModRuntime;
+import atopos.destiny2.common.weapon.WeaponAmmoPickupSystem;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
@@ -20,9 +21,12 @@ public abstract class ItemEntityArmorModMixin {
     private void destiny2$pickupOrb(Player player, CallbackInfo ci) {
         if (player instanceof ServerPlayer serverPlayer
             && pickupDelay <= 0
-            && (target == null || target.equals(serverPlayer.getUUID()))
-            && ArmorModRuntime.INSTANCE.onItemPickup(serverPlayer, (ItemEntity)(Object)this)) {
-            ci.cancel();
+            && (target == null || target.equals(serverPlayer.getUUID()))) {
+            ItemEntity entity = (ItemEntity)(Object)this;
+            if (ArmorModRuntime.INSTANCE.onItemPickup(serverPlayer, entity)
+                || WeaponAmmoPickupSystem.INSTANCE.handlePickup(serverPlayer, entity)) {
+                ci.cancel();
+            }
         }
     }
 }

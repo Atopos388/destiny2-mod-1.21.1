@@ -6,6 +6,7 @@ import net.minecraft.resources.ResourceLocation
 import net.minecraft.sounds.SoundEvent
 
 object DestinySounds {
+    val HUNTER_CLASS_ACTIVATE = register("hunter_class_activate")
     val FORGOTTEN_NAME_FIRE = register("forgotten_name_fire")
     val FORGOTTEN_NAME_RELOAD = register("forgotten_name_reload")
     val FORGOTTEN_NAME_RELOAD_CLOSE = register("forgotten_name_reload_close")

@@ -9,6 +9,7 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents
 import atopos.destiny2.client.gui.DestinyNavigationOverlay
 import atopos.destiny2.client.gui.DestinyNavigationState
+import atopos.destiny2.client.gui.DestinyWeaponLoadoutState
 import net.minecraft.client.CameraType
 import net.minecraft.client.player.AbstractClientPlayer
 import net.minecraft.resources.ResourceLocation
@@ -21,6 +22,7 @@ object ClientPlayerLifecycle {
         ClientPlayConnectionEvents.DISCONNECT.register { _, _ ->
             DestinyNavigationOverlay.close()
             DestinyNavigationState.reset()
+            DestinyWeaponLoadoutState.reset()
         }
     }
 

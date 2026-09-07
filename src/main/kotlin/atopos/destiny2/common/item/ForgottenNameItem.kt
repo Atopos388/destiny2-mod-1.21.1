@@ -23,6 +23,7 @@ import atopos.destiny2.common.weapon.TaczWeaponAnimationContract
 import atopos.destiny2.common.weapon.WeaponFireModeState
 import atopos.destiny2.common.weapon.WeaponHudSync
 import atopos.destiny2.common.weapon.WeaponThirdPersonAction
+import atopos.destiny2.common.weapon.WeaponLoadoutRuntime
 import atopos.destiny2.common.entity.ForgottenNameBulletEntity
 import net.minecraft.server.level.ServerLevel
 import net.minecraft.server.level.ServerPlayer
@@ -57,9 +58,10 @@ class ForgottenNameItem(properties: Properties) : TaczGunPackWeaponItem(properti
         }
 
         val stack = shooter.getItemInHand(hand)
+        if (hand != InteractionHand.MAIN_HAND || !WeaponLoadoutRuntime.isEquipped(shooter, stack)) return false
         if (stack.item !== this) return false
         val profile = combatProfile(stack)
-        val state = WeaponAmmoState.read(stack, profile.magazineSize)
+        val state = WeaponAmmoState.read(stack, profile)
         if (state.isReloading || state.isCycling) return false
         if (state.magazine <= 0) {
             requestReload(level, shooter, stack)
@@ -80,7 +82,7 @@ class ForgottenNameItem(properties: Properties) : TaczGunPackWeaponItem(properti
         )
         val bullet = ForgottenNameBulletEntity(level, shooter, profile, look)
         level.addFreshEntity(bullet)
-        WeaponAmmoState.consumeRound(stack, profile.magazineSize, profile.boltTicks)
+        WeaponAmmoState.consumeRound(stack, profile, profile.boltTicks)
 
         val recoil = profile.recoil
         val recoilShot = WeaponRecoilMath.sampleShot(recoil, level.random.nextFloat(), level.random.nextFloat())
@@ -127,7 +129,7 @@ class ForgottenNameItem(properties: Properties) : TaczGunPackWeaponItem(properti
 
     override fun inventoryTick(stack: ItemStack, level: Level, entity: Entity, slotId: Int, isSelected: Boolean) {
         val profile = combatProfile(stack)
-        if (!level.isClientSide && isSelected && entity is ServerPlayer) {
+        if (!level.isClientSide && isSelected && entity is ServerPlayer && WeaponLoadoutRuntime.isEquipped(entity, stack)) {
             val animationId = GeoItem.getOrAssignId(stack, level as ServerLevel)
             if (selectedAnimationIds.put(entity.uuid, animationId) != animationId) {
                 triggerWeaponAnimation(
@@ -148,7 +150,7 @@ class ForgottenNameItem(properties: Properties) : TaczGunPackWeaponItem(properti
                 entity,
                 profile.copy(reloadTicks = armorThreeReloadTicks(entity, profile.reloadTicks))
             )
-        } else if (!level.isClientSide && !isSelected) {
+        } else if (!level.isClientSide && (!isSelected || entity is ServerPlayer && !WeaponLoadoutRuntime.isEquipped(entity, stack))) {
             if (entity is ServerPlayer) {
                 val serverLevel = level as? ServerLevel
                 if (serverLevel != null) {
@@ -169,7 +171,7 @@ class ForgottenNameItem(properties: Properties) : TaczGunPackWeaponItem(properti
                     }
                 }
             }
-            WeaponAmmoState.cancelReload(stack, profile.magazineSize)
+            WeaponAmmoState.cancelReload(stack, profile)
         }
     }
 
@@ -182,14 +184,14 @@ class ForgottenNameItem(properties: Properties) : TaczGunPackWeaponItem(properti
         if (level.isClientSide) return false
         val serverLevel = level as? ServerLevel ?: return false
         val profile = combatProfile(stack)
-        val state = WeaponAmmoState.read(stack, profile.magazineSize)
+        val state = WeaponAmmoState.read(stack, profile)
         if (
             state.isReloading ||
             state.isCycling ||
             state.magazine >= profile.magazineSize ||
             WeaponAmmoState.isReloadBlocked(state, level.gameTime)
         ) return false
-        if (!player.abilities.instabuild && WeaponAmmoState.reserveCount(player, profile.ammoType) <= 0) return false
+        if (WeaponAmmoState.reserveCount(stack, profile, player.abilities.instabuild) <= 0) return false
 
         // Assign the GeckoLib stack identity before mutating and synchronising
         // reload state. Equipment swaps can produce a fresh stack without an
@@ -199,7 +201,7 @@ class ForgottenNameItem(properties: Properties) : TaczGunPackWeaponItem(properti
         val animationId = GeoItem.getOrAssignId(stack, serverLevel)
         val started = WeaponAmmoState.startReload(
             stack,
-            profile.magazineSize,
+            profile,
             armorThreeReloadTicks(player, profile.reloadTicks),
             profile.emptyReloadBonusTicks,
             profile.reloadFeedFraction
@@ -217,7 +219,7 @@ class ForgottenNameItem(properties: Properties) : TaczGunPackWeaponItem(properti
                 nextReloadTrigger(player.uuid),
                 animationId
             )
-            val reloadDuration = WeaponAmmoState.read(stack, profile.magazineSize).reloadTotal
+            val reloadDuration = WeaponAmmoState.read(stack, profile).reloadTotal
             DestinyNetworking.broadcastWeaponThirdPersonAction(
                 player,
                 WeaponThirdPersonAction.RELOAD,
@@ -230,7 +232,7 @@ class ForgottenNameItem(properties: Properties) : TaczGunPackWeaponItem(properti
     override fun requestInspect(level: Level, player: ServerPlayer, stack: ItemStack): Boolean {
         if (level.isClientSide) return false
         val profile = combatProfile(stack)
-        val state = WeaponAmmoState.read(stack, profile.magazineSize)
+        val state = WeaponAmmoState.read(stack, profile)
         if (state.isReloading || state.isCycling) return false
         triggerWeaponAnimation(
             player,
@@ -255,10 +257,10 @@ class ForgottenNameItem(properties: Properties) : TaczGunPackWeaponItem(properti
 
     override fun weaponHudStatus(player: ServerPlayer, stack: ItemStack): WeaponHudStatus {
         val profile = combatProfile(stack)
-        val state = WeaponAmmoState.read(stack, profile.magazineSize)
+        val state = WeaponAmmoState.read(stack, profile)
         return WeaponHudStatus(
             "", profile.ammoType, state.magazine, profile.magazineSize,
-            WeaponAmmoState.reserveCount(player, profile.ammoType), state.reloadRemaining,
+            WeaponAmmoState.reserveCount(stack, profile, player.abilities.instabuild), state.reloadRemaining,
             state.reloadTotal, profile.precisionMultiplier,
             state.reloadPhase, WeaponFireModeState.current(stack, profile), state.chamberEmpty,
             state.boltRemaining, profile.crosshair
@@ -293,7 +295,7 @@ class ForgottenNameItem(properties: Properties) : TaczGunPackWeaponItem(properti
                 val stack = state.getData(DataTickets.ITEMSTACK)
                 val stackReloadTotal = if (stack != null && stack.item === this) {
                     val profile = combatProfile(stack)
-                    WeaponAmmoState.read(stack, profile.magazineSize).reloadTotal
+                    WeaponAmmoState.read(stack, profile).reloadTotal
                 } else {
                     0
                 }

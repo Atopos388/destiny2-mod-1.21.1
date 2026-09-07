@@ -1,0 +1,8 @@
+{
+  "ammo_type": "SPECIAL", "damage": 15.0, "head_shot": 1.0,
+  "magazine_size": 1, "reserve_capacity": 18, "reload_ticks": 36, "fire_mode": "SEMI",
+  "supported_fire_modes": ["SEMI"], "rounds_per_minute": 90, "damage_element": "KINETIC",
+  "recoil": {"pitch_min": 4.0, "pitch_max": 5.0, "yaw_min": -0.25, "yaw_max": 0.25, "kick_ms": 75, "recover_ms": 390, "aimed_multiplier": 0.78, "stability": 35, "recoil_direction": 62},
+  "accuracy": {"hip_base_degrees": 0.25, "aimed_base_degrees": 0.02, "moving_penalty_degrees": 0.1, "airborne_penalty_degrees": 0.15, "bloom_per_shot_degrees": 0.0, "max_bloom_degrees": 0.1, "settle_delay_ticks": 2, "bloom_decay_per_tick": 0.1},
+  "ballistics": {"range": 128.0, "speed": 5.0, "gravity": 0.0, "friction": 0.0, "life_ticks": 45, "pierce": 1}
+}

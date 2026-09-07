@@ -11,6 +11,7 @@ import com.lowdragmc.lowdraglib2.gui.ui.elements.Button
 import com.lowdragmc.lowdraglib2.gui.ui.elements.ItemSlot
 import com.lowdragmc.lowdraglib2.gui.ui.elements.TextElement
 import com.lowdragmc.lowdraglib2.gui.ui.event.UIEvents
+import atopos.destiny2.common.gear.WeaponLore
 import net.minecraft.client.Minecraft
 import org.appliedenergistics.yoga.YogaOverflow
 import org.appliedenergistics.yoga.YogaPositionType
@@ -198,7 +199,7 @@ class DestinyCollectionsView(private val ui: UI) {
         }
         addEventListener(UIEvents.CLICK) {
             if (entry.weapon != null) {
-                showWeapon(data, section, entry, 0, 0)
+                showWeapon(data, section, entry, 0, 0, 0)
             } else {
                 showArchiveEntry(data, section, entry, 0)
             }
@@ -300,7 +301,7 @@ class DestinyCollectionsView(private val ui: UI) {
         addEventListener(UIEvents.MOUSE_ENTER) { style { it.background(ColorRectTexture(DestinyNavigationTemplate.Color.HOVER)) } }
         addEventListener(UIEvents.MOUSE_LEAVE) { style { it.background(ColorRectTexture(DestinyNavigationTemplate.Color.SLOT_EMPTY)) } }
         addEventListener(UIEvents.CLICK) {
-            if (entry.weapon != null) showWeapon(data, section, entry, 0, 0)
+            if (entry.weapon != null) showWeapon(data, section, entry, 0, 0, 0)
             else showArchiveEntry(data, section, entry, 0)
         }
     }
@@ -310,7 +311,8 @@ class DestinyCollectionsView(private val ui: UI) {
         section: DestinyCollectionSection,
         entry: DestinyCollectionEntry,
         selectedSlot: Int,
-        requestedPerkPage: Int
+        requestedPerkPage: Int,
+        requestedStoryPage: Int
     ) {
         val weapon = entry.weapon ?: return
         val host = folder ?: return
@@ -318,6 +320,8 @@ class DestinyCollectionsView(private val ui: UI) {
         val column = weapon.columns[slotIndex]
         val perkPages = ceil(column.perks.size.coerceAtLeast(1) / PERKS_PER_PAGE.toDouble()).toInt().coerceAtLeast(1)
         val perkPage = requestedPerkPage.coerceIn(0, perkPages - 1)
+        val storyPages = WeaponLore.pages(entry.description)
+        val storyPage = requestedStoryPage.coerceIn(0, storyPages.lastIndex)
         host.clearAllChildren()
         host.addChild(actionButton("weapon_back", "‹  ${section.title}", 0f, 0f, 132f, 30f) {
             showSection(data, section, page)
@@ -354,22 +358,22 @@ class DestinyCollectionsView(private val ui: UI) {
             if (weapon.explosionRadius > 0f) add("爆炸半径             ${"%.2f".format(weapon.explosionRadius)}")
         }
         host.addChild(label(stats.joinToString("\n"), 16f, 188f, 250f, 134f, 9f, DestinyNavigationTemplate.Color.SECONDARY, true))
-        host.addChild(label(entry.description, 16f, 330f, 250f, 44f, 8f, DestinyNavigationTemplate.Color.MUTED, true))
+        host.addChild(label("右侧武器详情收录了这把武器的传奇故事与特性档案。", 16f, 330f, 250f, 44f, 8f, DestinyNavigationTemplate.Color.MUTED, true))
 
         host.addChild(label("PERK 槽位", 314f, 58f, 200f, 18f, 10f, DestinyNavigationTemplate.Color.MUTED))
         weapon.columns.forEachIndexed { index, perkColumn ->
             host.addChild(perkSlotButton(index, perkColumn, 314f + index * 126f, 82f, index == slotIndex) {
-                showWeapon(data, section, entry, index, 0)
+                showWeapon(data, section, entry, index, 0, storyPage)
             })
         }
         host.addChild(label("槽位 ${slotIndex + 1}  //  ${column.label}", 314f, 132f, 330f, 20f, 12f, DestinyNavigationTemplate.Color.PRIMARY))
         if (perkPages > 1) {
             host.addChild(actionButton("weapon_perk_prev", "‹", 704f, 128f, 32f, 24f) {
-                showWeapon(data, section, entry, slotIndex, Math.floorMod(perkPage - 1, perkPages))
+                showWeapon(data, section, entry, slotIndex, Math.floorMod(perkPage - 1, perkPages), storyPage)
             })
             host.addChild(label("${perkPage + 1}/$perkPages", 744f, 134f, 36f, 14f, 8f, DestinyNavigationTemplate.Color.MUTED))
             host.addChild(actionButton("weapon_perk_next", "›", 788f, 128f, 32f, 24f) {
-                showWeapon(data, section, entry, slotIndex, Math.floorMod(perkPage + 1, perkPages))
+                showWeapon(data, section, entry, slotIndex, Math.floorMod(perkPage + 1, perkPages), storyPage)
             })
         }
         host.addChild(rule(314f, 158f, 506f))
@@ -380,7 +384,6 @@ class DestinyCollectionsView(private val ui: UI) {
                 host.addChild(weaponPerkCard(perk, 314f + (index % 3) * 170f, 176f + (index / 3) * 58f))
             }
         }
-        val first = column.perks.getOrNull(perkPage * PERKS_PER_PAGE)
         host.addChild(UIElement().apply {
             setOverflow(YogaOverflow.HIDDEN)
             layout { it.positionType(YogaPositionType.ABSOLUTE).left(314f).top(304f).width(506f).height(112f) }
@@ -389,13 +392,24 @@ class DestinyCollectionsView(private val ui: UI) {
                 it.overlay(ColorBorderTexture(1, DestinyNavigationTemplate.Color.LINE))
             }
         })
-        host.addChild(label("weapon_perk_column", "槽位 ${slotIndex + 1}  //  ${column.label}", 326f, 316f, 136f, 16f, 8f, DestinyNavigationTemplate.Color.MUTED, true))
-        host.addChild(label("weapon_perk_title", first?.title ?: column.label, 326f, 340f, 136f, 62f, 11f, DestinyNavigationTemplate.Color.PRIMARY, true))
+        host.addChild(label("weapon_perk_column", "武器传奇故事  //  ${storyPage + 1}/${storyPages.size}", 326f, 316f, 136f, 16f, 8f, DestinyNavigationTemplate.Color.MUTED, true))
+        host.addChild(actionButton("weapon_lore", "武器传奇故事\n点击返回故事", 326f, 340f, 136f, 38f) {
+            text("weapon_perk_column")?.setText("武器传奇故事  //  ${storyPage + 1}/${storyPages.size}")
+            text("weapon_perk_description")?.setText(storyPages[storyPage])
+            setStoryControlsVisible(true)
+        })
+        host.addChild(actionButton("weapon_story_prev", "‹", 326f, 384f, 32f, 20f) {
+            showWeapon(data, section, entry, slotIndex, perkPage, Math.floorMod(storyPage - 1, storyPages.size))
+        })
+        host.addChild(label("weapon_story_page", "${storyPage + 1}/${storyPages.size}", 364f, 387f, 60f, 14f, 8f, DestinyNavigationTemplate.Color.MUTED))
+        host.addChild(actionButton("weapon_story_next", "›", 430f, 384f, 32f, 20f) {
+            showWeapon(data, section, entry, slotIndex, perkPage, Math.floorMod(storyPage + 1, storyPages.size))
+        })
         host.addChild(UIElement().apply {
             layout { it.positionType(YogaPositionType.ABSOLUTE).left(474f).top(316f).width(1f).height(88f) }
             style { it.background(ColorRectTexture(DestinyNavigationTemplate.Color.LINE)) }
         })
-        host.addChild(label("weapon_perk_description", first?.description ?: "暂无可用特性。", 488f, 316f, 318f, 88f, 8f, DestinyNavigationTemplate.Color.SECONDARY, true))
+        host.addChild(label("weapon_perk_description", storyPages[storyPage], 488f, 316f, 318f, 88f, 8f, DestinyNavigationTemplate.Color.SECONDARY, true))
     }
 
     private fun perkSlotButton(
@@ -441,8 +455,18 @@ class DestinyCollectionsView(private val ui: UI) {
         addEventListener(UIEvents.MOUSE_ENTER) { style { it.background(ColorRectTexture(DestinyNavigationTemplate.Color.HOVER)) } }
         addEventListener(UIEvents.MOUSE_LEAVE) { style { it.background(ColorRectTexture(DestinyNavigationTemplate.Color.SLOT_EMPTY)) } }
         addEventListener(UIEvents.CLICK) {
-            text("weapon_perk_title")?.setText(perk.title)
+            text("weapon_perk_column")?.setText("特性  //  ${perk.title}")
             text("weapon_perk_description")?.setText(perk.description)
+            setStoryControlsVisible(false)
+        }
+    }
+
+    private fun setStoryControlsVisible(visible: Boolean) {
+        listOf("weapon_story_prev", "weapon_story_page", "weapon_story_next").forEach { id ->
+            element(id)?.apply {
+                setDisplay(visible)
+                setVisible(visible)
+            }
         }
     }
 

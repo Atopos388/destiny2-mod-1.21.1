@@ -67,6 +67,13 @@ object GearRegistry {
         reloadTicks = 59
     )
 
+    private val ACE_FRAME = exoticFrame("ace_frame", "异域手炮", "黑桃 A：140 RPM，13 发弹匣。", 140, 13, 38)
+    private val OUTBREAK_FRAME = exoticFrame("outbreak_frame", "异域脉冲步枪", "全面爆发：450 RPM，35 发弹匣。", 450, 35, 42, 3)
+    private val RISKRUNNER_FRAME = exoticFrame("riskrunner_frame", "异域微型冲锋枪", "赴险者：900 RPM，42 发弹匣。", 900, 42, 52)
+    private val MOUNTAINTOP_FRAME = exoticFrame("mountaintop_frame", "微型导弹框架", "高速直线飞行、降低自伤的传奇后膛榴弹发射器。", 90, 1, 36)
+    private val WHISPER_FRAME = exoticFrame("whisper_frame", "异域重型狙击步枪", "蠕虫低语：72 RPM，3 发弹匣。", 72, 3, 55)
+    private val XENOPHAGE_FRAME = exoticFrame("xenophage_frame", "异域机枪", "异星噬菌：120 RPM，20 发弹匣。", 120, 20, 70)
+
     private val VANILLA_MELEE = WeaponFrameDefinition(id("vanilla_melee"), "原版近战框架", "保留原版剑、斧攻击节奏。")
     private val VANILLA_BOW = WeaponFrameDefinition(id("vanilla_bow"), "原版弓框架", "保留原版弓射击节奏。")
     private val VANILLA_CROSSBOW = WeaponFrameDefinition(id("vanilla_crossbow"), "原版弩框架", "保留原版弩射击节奏。")
@@ -153,6 +160,47 @@ object GearRegistry {
             maxStacks = 5
         )
 
+        val mementoMori = perk(
+            "memento_mori", "葬礼纪念",
+            "击杀后装填会装入 6 发强化弹；本模组按 Bungie 2025 PvE 调整换算为 +30% 伤害。瞄准时标记 16 格内敌人以代替敌情雷达。"
+        )
+        val aceFirefly = perk(
+            "ace_firefly", "萤火虫",
+            "精准击杀使目标产生太阳能爆炸，并使下一次装填时间缩短 25%。装填倍率是 Minecraft 平衡值。"
+        )
+        val corruptionSpreads = perk(
+            "corruption_spreads", "腐化蔓延",
+            "连续 3 次快速命中附着 SIVA 纳米虫；精准击杀会把纳米虫扩散到附近最多 3 个目标。"
+        )
+        val parasitism = perk(
+            "parasitism", "寄生",
+            "目标每有 1 层 SIVA 纳米虫，来自全面爆发的伤害提高 8%，最多 6 层、持续 10 秒。数值为 Minecraft 平衡值。"
+        )
+        val arcConductor = perk(
+            "arc_conductor", "电弧导体",
+            "持枪受到电弧伤害后过载 5 秒：武器伤害 +25%，受到的电弧伤害降低 50%；击杀刷新持续时间。"
+        )
+        val superconductor = perk(
+            "superconductor", "超导体",
+            "电弧导体生效时，命中会向附近目标连锁闪电，并有 50% 概率返还当前弹匣 1 发弹药。"
+        )
+        val microMissileFrame = perk(
+            "micro_missile_frame", "微型导弹框架",
+            "发射高速直线飞行、命中即爆炸的微型导弹；持枪移动更快，自伤降低 75%。山巅按 Bungie 官方品质保留为传奇。"
+        )
+        val whiteNail = perk(
+            "white_nail", "白色钉子",
+            "具有更高基础精准伤害；快速连续命中 3 次弱点会从独立备弹中补满弹匣。"
+        )
+        val mulligan = perk(
+            "whisper_mulligan", "蒙骗射击",
+            "射失有概率将弹药直接返还弹匣；本模组概率为 20%。"
+        )
+        val pyrotoxinRounds = perk(
+            "pyrotoxin_rounds", "热毒弹药",
+            "发射高威力太阳能爆炸弹药；爆炸不破坏方块。"
+        )
+
         registerDefinition(
             item = DestinyItems.FORGOTTEN_NAME,
             rarity = GearRarity.EXOTIC,
@@ -194,6 +242,43 @@ object GearRegistry {
             rollColumnLabels = listOf("异域内在", "异域特性"),
             definitionId = id("monte_carlo"),
             bindItem = false
+        )
+
+        registerDefinition(
+            DestinyItems.GENERIC_GUN, GearRarity.EXOTIC, GearCategory.WEAPON, ACE_FRAME,
+            baseDamage = 10.0f, ammoType = DestinyAmmoType.PRIMARY, precisionMultiplier = 1.7f,
+            fixedPerks = listOf(mementoMori, aceFirefly), rollColumnLabels = listOf("异域内在", "固有特性"),
+            definitionId = ascId("ace"), bindItem = false, damageElement = DestinyDamageElement.KINETIC
+        )
+        registerDefinition(
+            DestinyItems.GENERIC_GUN, GearRarity.EXOTIC, GearCategory.WEAPON, OUTBREAK_FRAME,
+            baseDamage = 4.0f, ammoType = DestinyAmmoType.PRIMARY, precisionMultiplier = 1.5f,
+            fixedPerks = listOf(corruptionSpreads, parasitism), rollColumnLabels = listOf("异域内在", "固有特性"),
+            definitionId = ascId("outbreakprefected"), bindItem = false, damageElement = DestinyDamageElement.KINETIC
+        )
+        registerDefinition(
+            DestinyItems.GENERIC_GUN, GearRarity.EXOTIC, GearCategory.WEAPON, RISKRUNNER_FRAME,
+            baseDamage = 3.2f, ammoType = DestinyAmmoType.PRIMARY, precisionMultiplier = 1.45f,
+            fixedPerks = listOf(arcConductor, superconductor), rollColumnLabels = listOf("异域内在", "固有特性"),
+            definitionId = ascId("riskrunner"), bindItem = false, damageElement = DestinyDamageElement.ARC
+        )
+        registerDefinition(
+            DestinyItems.GENERIC_GUN, GearRarity.LEGENDARY, GearCategory.WEAPON, MOUNTAINTOP_FRAME,
+            baseDamage = 15.0f, explosionRadius = 1.45f, ammoType = DestinyAmmoType.SPECIAL,
+            perkColumns = listOf(listOf(microMissileFrame)), rollColumnLabels = listOf("传奇内在"),
+            definitionId = ascId("summit"), bindItem = false, damageElement = DestinyDamageElement.KINETIC
+        )
+        registerDefinition(
+            DestinyItems.GENERIC_GUN, GearRarity.EXOTIC, GearCategory.WEAPON, WHISPER_FRAME,
+            baseDamage = 28.0f, ammoType = DestinyAmmoType.HEAVY, precisionMultiplier = 2.0f,
+            fixedPerks = listOf(whiteNail, mulligan), rollColumnLabels = listOf("异域内在", "固有特性"),
+            definitionId = ascId("whisper"), bindItem = false, damageElement = DestinyDamageElement.SOLAR
+        )
+        registerDefinition(
+            DestinyItems.GENERIC_GUN, GearRarity.EXOTIC, GearCategory.WEAPON, XENOPHAGE_FRAME,
+            baseDamage = 16.0f, explosionRadius = 1.65f, ammoType = DestinyAmmoType.HEAVY, precisionMultiplier = 1.0f,
+            fixedPerks = listOf(pyrotoxinRounds), rollColumnLabels = listOf("异域内在"),
+            definitionId = ascId("xeno"), bindItem = false, damageElement = DestinyDamageElement.SOLAR
         )
 
         registerDefinition(
@@ -608,6 +693,7 @@ object GearRegistry {
             rarity = rarity,
             category = category,
             frame = frame,
+            lore = WeaponLore.forId(id).orEmpty(),
             baseDamage = baseDamage,
             explosionRadius = explosionRadius,
             ammoItem = ammoItem,
@@ -674,4 +760,24 @@ object GearRegistry {
     private fun id(path: String): ResourceLocation {
         return ResourceLocation.fromNamespaceAndPath("destiny2-mod", path)
     }
+
+    private fun ascId(path: String): ResourceLocation = ResourceLocation.fromNamespaceAndPath("ascgun", path)
+
+    private fun exoticFrame(
+        path: String,
+        displayName: String,
+        description: String,
+        rpm: Int,
+        magazine: Int,
+        reloadTicks: Int,
+        burstCount: Int = 1
+    ) = WeaponFrameDefinition(
+        id(path), displayName, description,
+        burstCount = burstCount,
+        burstIntervalTicks = if (burstCount > 1) 2 else 0,
+        projectileSpeed = 8.0f,
+        cooldownTicks = (1200.0 * burstCount / rpm.coerceAtLeast(1)).toInt().coerceAtLeast(1),
+        magazineSize = magazine,
+        reloadTicks = reloadTicks
+    )
 }

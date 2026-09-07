@@ -1,5 +1,6 @@
 package atopos.destiny2.common.player
 
+import atopos.destiny2.common.weapon.DestinyWeaponReserves
 import net.minecraft.nbt.CompoundTag
 import net.minecraft.core.HolderLookup
 import net.minecraft.world.item.ItemStack
@@ -13,6 +14,8 @@ data class PlayerDestinyData(
     var subclassConfig: PlayerSubclassConfiguration = PlayerSubclassConfiguration(),
     var subclassDefaultsVersion: Int = CURRENT_SUBCLASS_DEFAULTS_VERSION,
     var classItem: ItemStack = ItemStack.EMPTY,
+    var weaponReserves: DestinyWeaponReserves = DestinyWeaponReserves(),
+    var weaponLoadoutInitialized: Boolean = false,
     var journeyStage: GuardianJourneyStage = GuardianJourneyStage.MORTAL,
     var awakeningPresentationPending: Boolean = false,
     var unlockedClasses: MutableSet<DestinyClassType> = mutableSetOf(),
@@ -64,6 +67,8 @@ data class PlayerDestinyData(
             subclassConfig = subclassConfig.copy(),
             subclassDefaultsVersion = subclassDefaultsVersion,
             classItem = classItem.copy(),
+            weaponReserves = weaponReserves.copy(),
+            weaponLoadoutInitialized = weaponLoadoutInitialized,
             journeyStage = journeyStage,
             awakeningPresentationPending = awakeningPresentationPending,
             unlockedClasses = unlockedClasses.toMutableSet(),
@@ -81,6 +86,8 @@ data class PlayerDestinyData(
         tag.put("subclass_config", subclassConfig.toTag())
         tag.putInt("subclass_defaults_version", subclassDefaultsVersion)
         if (!classItem.isEmpty) tag.put("class_item", classItem.saveOptional(registries))
+        tag.put("weapon_reserves", weaponReserves.toTag(registries))
+        tag.putBoolean("weapon_loadout_initialized", weaponLoadoutInitialized)
         tag.putString("journey_stage", journeyStage.id)
         tag.putBoolean("awakening_presentation_pending", awakeningPresentationPending)
         tag.putString("unlocked_classes", unlockedClasses.joinToString(",") { it.id })
@@ -135,6 +142,10 @@ data class PlayerDestinyData(
             val classItem = if (tag.contains("class_item")) {
                 ItemStack.parseOptional(registries, tag.getCompound("class_item"))
             } else ItemStack.EMPTY
+            val weaponReserves = if (tag.contains("weapon_reserves")) {
+                DestinyWeaponReserves.fromTag(tag.getCompound("weapon_reserves"), registries)
+            } else DestinyWeaponReserves()
+            val weaponLoadoutInitialized = tag.getBoolean("weapon_loadout_initialized")
             val journeyStage = if (tag.contains("journey_stage")) {
                 GuardianJourneyStage.fromId(tag.getString("journey_stage"))
             } else if (destinyClass != DestinyClassType.DEFAULT) {
@@ -170,6 +181,8 @@ data class PlayerDestinyData(
                 subclassConfig = subclassConfig,
                 subclassDefaultsVersion = CURRENT_SUBCLASS_DEFAULTS_VERSION,
                 classItem = classItem,
+                weaponReserves = weaponReserves,
+                weaponLoadoutInitialized = weaponLoadoutInitialized,
                 journeyStage = journeyStage,
                 awakeningPresentationPending = awakeningPresentationPending,
                 unlockedClasses = unlockedClasses,

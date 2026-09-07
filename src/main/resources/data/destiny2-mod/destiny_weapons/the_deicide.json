@@ -3,6 +3,7 @@
   "damage": 18.0,
   "head_shot": 1.0,
   "magazine_size": 7,
+  "reserve_capacity": 21,
   "reload_ticks": 46,
   "empty_reload_bonus_ticks": 0,
   "reload_feed_fraction": 0.72,

@@ -17,7 +17,6 @@ object DestinyLoot {
     private val minorCombatantPool = DestinyLootPool(
         listOf(
             DestinyLootEntry(DestinyItems.GLIMMER, 72, 1, 4),
-            DestinyLootEntry(DestinyItems.PRIMARY_AMMO, 22, 4, 10),
             DestinyLootEntry(DestinyItems.STRANGE_COIN, 5, 1, 1),
             DestinyLootEntry(DestinyItems.EXOTIC_ENGRAM, 1, 1, 1)
         )
@@ -26,7 +25,6 @@ object DestinyLoot {
     private val majorCombatantPool = DestinyLootPool(
         listOf(
             DestinyLootEntry(DestinyItems.GLIMMER, 64, 4, 10),
-            DestinyLootEntry(DestinyItems.PRIMARY_AMMO, 24, 8, 16),
             DestinyLootEntry(DestinyItems.STRANGE_COIN, 10, 1, 2),
             DestinyLootEntry(DestinyItems.EXOTIC_ENGRAM, 2, 1, 1)
         )

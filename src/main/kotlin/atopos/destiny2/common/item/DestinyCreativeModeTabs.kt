@@ -30,15 +30,25 @@ object DestinyCreativeModeTabs {
 
     fun register() {
         ItemGroupEvents.modifyEntriesEvent(DESTINY_TAB_KEY).register { content ->
-            DestinyBlocks.creativeTabItems().forEach(content::accept)
-            DestinyItems.creativeTabItems().forEach(content::accept)
+            val debugBlocks = setOf(DestinyBlocks.SPHERE_MODEL_BLOCK.asItem())
+            DestinyBlocks.creativeTabItems().filterNot { it in debugBlocks }.forEach(content::accept)
+            val weapons = listOf(DestinyItems.FORGOTTEN_NAME, DestinyItems.PERFECT_RETROGRADE, DestinyItems.STRYKERS_SURE_HAND)
+            weapons.forEach(content::accept)
             DestinyWeaponDataRegistry.ids()
                 .filterNot { it == LEGACY_FORGOTTEN_NAME }
+                .sortedBy { it.toString() }
                 .map(GenericGunPackItem::stack)
                 .forEach(content::accept)
+            val testing = setOf(DestinyItems.MICRO_MISSILE_TEST, DestinyItems.FALLEN_CAPTAIN_SPAWN_EGG,
+                DestinyItems.JILING_SPAWN_EGG, DestinyItems.VOID_BREACH)
+            val remaining = DestinyItems.creativeTabItems().filterNot { it in weapons }
+            remaining.filterNot { it in testing }.forEach(content::accept)
+            remaining.filter { it in testing }.forEach(content::accept)
+            debugBlocks.forEach(content::accept)
         }
     }
 
     private val LEGACY_FORGOTTEN_NAME =
         ResourceLocation.fromNamespaceAndPath("destiny2-mod", "forgotten_name")
 }
+

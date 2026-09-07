@@ -1,6 +1,6 @@
 {
   "parent": "minecraft:item/generated",
   "textures": {
-    "layer0": "minecraft:item/amethyst_shard"
+    "layer0": "destiny2-mod:item/light_crystal"
   }
 }

@@ -3,6 +3,7 @@ package atopos.destiny2.client.gui
 import com.mojang.brigadier.Command
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager.literal
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback
+import net.minecraft.client.Minecraft
 import net.minecraft.network.chat.Component
 
 object DestinyHUDClientCommands {
@@ -43,6 +44,13 @@ object DestinyHUDClientCommands {
                                 context.source.sendFeedback(Component.literal("导航页: ${DestinyNavigationTemplate.summary()}"))
                                 Command.SINGLE_SUCCESS
                             }
+                            .then(literal("open").executes {
+                                val client = Minecraft.getInstance()
+                                client.player?.let { player ->
+                                    client.setScreen(DestinyDirectorScreen.create(player))
+                                }
+                                Command.SINGLE_SUCCESS
+                            })
                             .then(literal("edit").executes { context ->
                                 DestinyLDLibEditor.requestOpen(DestinyLDLibEditor.Target.NAVIGATION)
                                 context.source.sendFeedback(Component.literal("正在打开 LDLib2 导航页模板编辑器。"))
@@ -58,3 +66,4 @@ object DestinyHUDClientCommands {
         }
     }
 }
+

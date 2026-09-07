@@ -6,6 +6,8 @@ data class WeaponCombatProfile(
     val precisionMultiplier: Float = 1.0f,
     val magazineSize: Int,
     val reloadTicks: Int,
+    /** Per-stack reserve. Primary weapons ignore this and always report infinite reserve. */
+    val reserveCapacity: Int = defaultReserveCapacity(ammoType, magazineSize),
     val emptyReloadBonusTicks: Int = 6,
     val reloadFeedFraction: Float = 0.72f,
     val fireMode: WeaponFireMode = WeaponFireMode.SEMI,
@@ -20,6 +22,12 @@ data class WeaponCombatProfile(
     val projectileSpreadDegrees: Float = 0.0f,
     val damageElement: DestinyDamageElement = DestinyDamageElement.KINETIC
 )
+
+private fun defaultReserveCapacity(type: DestinyAmmoType, magazineSize: Int): Int = when (type) {
+    DestinyAmmoType.PRIMARY -> Int.MAX_VALUE
+    DestinyAmmoType.SPECIAL -> (magazineSize * 4).coerceAtLeast(magazineSize)
+    DestinyAmmoType.HEAVY -> (magazineSize * 3).coerceAtLeast(magazineSize)
+}
 
 enum class DestinyDamageElement {
     KINETIC,
@@ -136,4 +144,7 @@ object WeaponAmmoMath {
 
     fun completedMagazine(magazine: Int, capacity: Int, loaded: Int): Int =
         (magazine + loaded.coerceAtLeast(0)).coerceIn(0, capacity.coerceAtLeast(0))
+
+    fun acceptedReserve(current: Int, capacity: Int, pickup: Int): Int =
+        pickup.coerceAtLeast(0).coerceAtMost((capacity - current.coerceAtLeast(0)).coerceAtLeast(0))
 }

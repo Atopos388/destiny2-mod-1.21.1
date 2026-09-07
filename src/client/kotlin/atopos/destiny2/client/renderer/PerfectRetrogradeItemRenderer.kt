@@ -19,6 +19,14 @@ class PerfectRetrogradeItemRenderer : GeoItemRenderer<PerfectRetrogradeItem>(Per
     }
 
     override fun render(stack: ItemStack, mode: ItemDisplayContext, matrices: PoseStack, vertexConsumers: MultiBufferSource, light: Int, overlay: Int) {
+        if (mode == ItemDisplayContext.GUI) {
+            GuiItemModelFit.render("PerfectRetrogradeItemRenderer:" + stack.item.toString() + ":" + stack.components.toString(), matrices, vertexConsumers) { pose, buffers ->
+                renderUnfitted(stack, mode, pose, buffers, light, overlay)
+            }
+        } else renderUnfitted(stack, mode, matrices, vertexConsumers, light, overlay)
+    }
+
+    private fun renderUnfitted(stack: ItemStack, mode: ItemDisplayContext, matrices: PoseStack, vertexConsumers: MultiBufferSource, light: Int, overlay: Int) {
         // 隐藏/显示骨骼逻辑
         // 在非第一人称视角下隐藏 "shou" 骨骼
         // 使用 getGeoModel() 获取模型实例

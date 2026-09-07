@@ -1,0 +1,28 @@
+{
+  "variants": {
+    "facing=north,half=lower": {
+      "model": "destiny2-mod:block/light_collector_empty"
+    },
+    "facing=north,half=upper": {
+      "model": "destiny2-mod:block/light_collector_empty"
+    },
+    "facing=east,half=lower": {
+      "model": "destiny2-mod:block/light_collector_empty"
+    },
+    "facing=east,half=upper": {
+      "model": "destiny2-mod:block/light_collector_empty"
+    },
+    "facing=south,half=lower": {
+      "model": "destiny2-mod:block/light_collector_empty"
+    },
+    "facing=south,half=upper": {
+      "model": "destiny2-mod:block/light_collector_empty"
+    },
+    "facing=west,half=lower": {
+      "model": "destiny2-mod:block/light_collector_empty"
+    },
+    "facing=west,half=upper": {
+      "model": "destiny2-mod:block/light_collector_empty"
+    }
+  }
+}

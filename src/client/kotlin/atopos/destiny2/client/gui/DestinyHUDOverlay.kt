@@ -36,8 +36,15 @@ class DestinyHUDOverlay : HudRenderCallback {
         drawSocket(context, layout.meleeSocket, data.melee, meleeFlash)
         drawSocket(context, layout.classSocket, data.classAbility, classFlash)
         drawWeaponSlot(context, layout.weaponSlot)
-        drawDestinyShield(context, width, height)
-        drawArmorCharge(context, width, height)
+        val shieldHeight = (3 * layout.scale).roundToInt().coerceAtLeast(1)
+        val statusGap = (3 * layout.scale).roundToInt().coerceAtLeast(2)
+        val overshieldHeight = (2 * layout.scale).roundToInt().coerceAtLeast(1)
+        val shield = DestinyAbilityHUDTemplate.Rect(
+            layout.superMeter.x, layout.superMeter.y - statusGap - shieldHeight,
+            layout.superMeter.width, shieldHeight
+        )
+        drawDestinyShield(context, shield, overshieldHeight)
+        drawArmorCharge(context, shield, layout.scale, statusGap, overshieldHeight)
         RenderSystem.setShaderColor(1f, 1f, 1f, 1f)
         RenderSystem.disableBlend()
 
@@ -153,31 +160,34 @@ class DestinyHUDOverlay : HudRenderCallback {
         }
     }
 
-    private fun drawDestinyShield(context: GuiGraphics, width: Int, height: Int) {
+    private fun drawDestinyShield(context: GuiGraphics, rect: DestinyAbilityHUDTemplate.Rect, overshieldHeight: Int) {
         val capacity = DestinyHUDState.healthShieldCapacity.coerceAtLeast(0.0f)
         if (capacity <= 0.0f) return
         val base = DestinyHUDState.healthShield.coerceIn(0.0f, capacity)
         val overshield = DestinyHUDState.classOvershield.coerceAtLeast(0.0f)
-        val barWidth = 81
-        val x = width / 2 - 91
-        val y = height - 53
-        context.fill(x, y, x + barWidth, y + 3, 0x66101620)
+        val barWidth = rect.width
+        val x = rect.x
+        val y = rect.y
+        context.fill(x, y, x + barWidth, y + rect.height, 0x66101620)
         val baseWidth = (barWidth * (base / capacity)).roundToInt().coerceIn(0, barWidth)
-        if (baseWidth > 0) context.fill(x, y, x + baseWidth, y + 3, 0xD98ADCF2.toInt())
+        if (baseWidth > 0) context.fill(x, y, x + baseWidth, y + rect.height, 0xD98ADCF2.toInt())
         if (overshield > 0.0f) {
             val extraWidth = (barWidth * (overshield / 4.0f)).roundToInt().coerceIn(1, barWidth)
-            context.fill(x, y - 2, x + extraWidth, y, 0xE7D5B4FF.toInt())
+            context.fill(x, y - overshieldHeight, x + extraWidth, y, 0xE7D5B4FF.toInt())
         }
     }
 
-    private fun drawArmorCharge(context: GuiGraphics, width: Int, height: Int) {
+    private fun drawArmorCharge(
+        context: GuiGraphics, shield: DestinyAbilityHUDTemplate.Rect,
+        scale: Float, statusGap: Int, overshieldHeight: Int
+    ) {
         val max = DestinyHUDState.armorChargeMax.coerceIn(3, 6)
         val active = DestinyHUDState.armorCharge.coerceIn(0, max)
-        val size = 5
-        val gap = 2
-        val total = max * size + (max - 1) * gap
-        val x = width / 2 - total / 2
-        val y = height - 63
+        val size = (5 * scale).roundToInt().coerceAtLeast(3)
+        val gap = (2 * scale).roundToInt().coerceAtLeast(1)
+        val x = shield.x
+        // Reserve the overshield strip even while empty, so the charge row never jumps.
+        val y = shield.y - overshieldHeight - statusGap - size
         repeat(max) { index ->
             val left = x + index * (size + gap)
             context.fill(left, y, left + size, y + size, if (index < active) 0xE8DCEBFA.toInt() else 0x663A4652)

@@ -32,8 +32,8 @@ object DestinyNavigationTemplate {
     const val DESIGN_WIDTH = 960f
     const val DESIGN_HEIGHT = 540f
     private const val FILE_NAME = "navigation_director.ui.nbt"
-    private const val TEMPLATE_VERSION_ID = "navigation_director_template_v11"
-    private const val EQUIPMENT_LAYOUT_VERSION_ID = "equipment_page_layout_v10"
+    private const val TEMPLATE_VERSION_ID = "navigation_director_template_v12"
+    private const val EQUIPMENT_LAYOUT_VERSION_ID = "equipment_page_layout_v13"
     private const val TOPLIGHT_BACKGROUND_VERSION_ID = "director_toplight_background_v2"
     private const val STAT_ALIGNMENT_VERSION_ID = "equipment_stat_alignment_v1"
     private val TOPLIGHT_BACKGROUND = ResourceLocation.fromNamespaceAndPath(
@@ -163,7 +163,7 @@ object DestinyNavigationTemplate {
         validatedModified = templateModified()
     }
 
-    fun summary(): String = "LDLib2 template=${templatePath().fileName}, canvas=960x540, v10 Director + equipment v8"
+    fun summary(): String = "LDLib2 template=${templatePath().fileName}, canvas=960x540, v11 Director weapon loadout"
 
     fun resolve(screenWidth: Int, screenHeight: Int): Layout {
         val scale = min(screenWidth.coerceAtLeast(1) / DESIGN_WIDTH, screenHeight.coerceAtLeast(1) / DESIGN_HEIGHT)
@@ -404,9 +404,6 @@ object DestinyNavigationTemplate {
             host("equipment_stat_row_super", 606f, 278f, 70f, 28f),
             host("equipment_stat_row_melee", 606f, 316f, 70f, 28f),
             host("equipment_armor_slots", 706f, 86f, 50f, 320f),
-            reserveGrid("equipment_weapon_reserve_0", 178f, 136f),
-            reserveGrid("equipment_weapon_reserve_1", 178f, 204f),
-            reserveGrid("equipment_weapon_reserve_2", 178f, 272f),
             reserveGrid("equipment_armor_reserve_0", 768f, 94f),
             reserveGrid("equipment_armor_reserve_1", 768f, 158f),
             reserveGrid("equipment_armor_reserve_2", 768f, 222f),
@@ -444,15 +441,15 @@ object DestinyNavigationTemplate {
         )
     }
 
-    private fun reserveGrid(id: String, x: Float, y: Float): UIElement = host(id, x, y, 34f, 23f).apply {
-        repeat(6) { index ->
+    private fun reserveGrid(id: String, x: Float, y: Float): UIElement = host(id, x, y, 58f, 58f).apply {
+        repeat(9) { index ->
             addChild(
                 block(
                     "${id}_cell_$index",
-                    (index % 3) * 11f,
-                    (index / 3) * 11f,
-                    10f,
-                    10f,
+                    (index % 3) * 20f,
+                    (index / 3) * 20f,
+                    18f,
+                    18f,
                     0x14707985,
                     0x22D3D5D8
                 )

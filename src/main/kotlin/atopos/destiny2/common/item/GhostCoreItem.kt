@@ -40,10 +40,7 @@ class GhostCoreItem(properties: Properties) : Item(properties) {
                 return InteractionResult.FAIL
             }
             LightCrystalRuntime.StartResult.WRONG_BLOCK -> return InteractionResult.PASS
-            LightCrystalRuntime.StartResult.STARTED -> {
-                player.displayClientMessage(Component.translatable("message.destiny2-mod.light_crystal.charging"), true)
-                return InteractionResult.CONSUME
-            }
+            LightCrystalRuntime.StartResult.STARTED -> return InteractionResult.CONSUME
         }
     }
 }

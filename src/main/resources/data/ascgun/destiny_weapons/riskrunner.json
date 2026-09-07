@@ -1,0 +1,8 @@
+{
+  "ammo_type": "PRIMARY", "damage": 3.2, "head_shot": 1.45,
+  "magazine_size": 42, "reload_ticks": 52, "fire_mode": "AUTO",
+  "supported_fire_modes": ["AUTO"], "rounds_per_minute": 900, "damage_element": "ARC",
+  "recoil": {"pitch_min": 0.5, "pitch_max": 0.8, "yaw_min": -0.65, "yaw_max": 0.65, "kick_ms": 35, "recover_ms": 140, "aimed_multiplier": 0.8, "stability": 60, "recoil_direction": 94},
+  "accuracy": {"hip_base_degrees": 0.75, "aimed_base_degrees": 0.09, "moving_penalty_degrees": 0.2, "airborne_penalty_degrees": 1.35, "bloom_per_shot_degrees": 0.035, "max_bloom_degrees": 0.45, "settle_delay_ticks": 1, "bloom_decay_per_tick": 0.05},
+  "ballistics": {"range": 75.0, "speed": 8.0, "gravity": 0.0, "friction": 0.008, "life_ticks": 35, "pierce": 1}
+}

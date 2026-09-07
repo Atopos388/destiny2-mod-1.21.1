@@ -11,6 +11,8 @@ data class GearDefinition(
     val rarity: GearRarity,
     val category: GearCategory,
     val frame: WeaponFrameDefinition,
+    /** Short flavor story shown on equipment cards and in Collections. */
+    val lore: String = "",
     val baseDamage: Float = 0.0f,
     val explosionRadius: Float = 0.0f,
     val ammoItem: Item? = null,

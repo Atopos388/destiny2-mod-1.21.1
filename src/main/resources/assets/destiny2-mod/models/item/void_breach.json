@@ -1,6 +1,6 @@
 {
   "parent": "minecraft:item/generated",
   "textures": {
-    "layer0": "destiny2-mod:gui/subclass/void_hunter/fragment_echo_of_harvest"
+    "layer0": "destiny2-mod:item/void_breach"
   }
 }

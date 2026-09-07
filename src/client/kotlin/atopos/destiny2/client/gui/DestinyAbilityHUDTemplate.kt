@@ -35,6 +35,7 @@ object DestinyAbilityHUDTemplate {
     private var cachedModified = Long.MIN_VALUE
     private var validatedModified = Long.MIN_VALUE
     private var cachedLayout: AbilityHudLayout? = null
+    private val refreshGate = HudTemplateRefreshGate()
 
     data class Rect(val x: Int, val y: Int, val width: Int, val height: Int)
 
@@ -84,6 +85,10 @@ object DestinyAbilityHUDTemplate {
     fun summary(): String = "LDLib2 template=${templatePath().fileName}, canvas=${DESIGN_WIDTH}x${DESIGN_HEIGHT}, uniform-scale"
 
     fun resolve(screenWidth: Int, screenHeight: Int): AbilityHudLayout {
+        // File metadata belongs to editor hot reload, not the per-frame rendering path.
+        cachedLayout?.takeIf {
+            cachedWidth == screenWidth && cachedHeight == screenHeight && !refreshGate.shouldCheck()
+        }?.let { return it }
         val observedModified = templateModified()
         cachedLayout?.takeIf {
             cachedWidth == screenWidth && cachedHeight == screenHeight && cachedModified == observedModified
@@ -138,6 +143,7 @@ object DestinyAbilityHUDTemplate {
     }
 
     fun invalidate() {
+        refreshGate.reset()
         cachedLayout = null
         cachedWidth = -1
         cachedHeight = -1
@@ -251,4 +257,18 @@ object DestinyAbilityHUDTemplate {
                 .recoverCatching { Files.move(legacy, backup) }
         }
     }
+}
+
+/** Render-thread gate; explicit editor saves and viewport changes bypass the cached layout. */
+class HudTemplateRefreshGate {
+    private var lastCheck: Long? = null
+
+    fun shouldCheck(now: Long = System.nanoTime()): Boolean {
+        val previous = lastCheck
+        if (previous != null && now - previous < 500_000_000L) return false
+        lastCheck = now
+        return true
+    }
+
+    fun reset() { lastCheck = null }
 }

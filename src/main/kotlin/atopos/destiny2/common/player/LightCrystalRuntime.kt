@@ -4,7 +4,6 @@ import atopos.destiny2.common.item.DestinyItems
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents
 import net.minecraft.core.BlockPos
 import net.minecraft.core.particles.ParticleTypes
-import net.minecraft.network.chat.Component
 import net.minecraft.resources.ResourceKey
 import net.minecraft.server.MinecraftServer
 import net.minecraft.server.level.ServerLevel
@@ -73,7 +72,6 @@ object LightCrystalRuntime {
             val level = server.getLevel(key.dimension)
             val player = server.playerList.getPlayer(ritual.playerId)
             if (level == null || player == null || !player.isAlive || !stillValid(level, key.pos)) {
-                player?.displayClientMessage(Component.translatable("message.destiny2-mod.light_crystal.interrupted"), true)
                 iterator.remove()
                 continue
             }
@@ -130,10 +128,7 @@ object LightCrystalRuntime {
     }
 
     private fun complete(level: ServerLevel, player: ServerPlayer, pos: BlockPos) {
-        if (!level.removeBlock(pos, false)) {
-            player.displayClientMessage(Component.translatable("message.destiny2-mod.light_crystal.interrupted"), true)
-            return
-        }
+        if (!level.removeBlock(pos, false)) return
         val crystal = ItemStack(DestinyItems.LIGHT_CRYSTAL)
         if (!player.addItem(crystal)) player.drop(crystal, false)
 
@@ -143,6 +138,5 @@ object LightCrystalRuntime {
         level.sendParticles(ParticleTypes.END_ROD, x, y, z, 28, 0.32, 0.42, 0.32, 0.035)
         level.sendParticles(ParticleTypes.WAX_ON, x, y, z, 36, 0.42, 0.5, 0.42, 0.055)
         level.playSound(null, pos, SoundEvents.BEACON_ACTIVATE, SoundSource.BLOCKS, 0.9f, 1.35f)
-        player.displayClientMessage(Component.translatable("message.destiny2-mod.light_crystal.created"), true)
     }
 }

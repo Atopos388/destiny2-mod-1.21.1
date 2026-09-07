@@ -1,7 +1,9 @@
 package atopos.destiny2.client
 
+import atopos.destiny2.client.renderer.LightCollectorRenderer
 import atopos.destiny2.client.renderer.DestinyArmorRenderer
 import atopos.destiny2.client.renderer.HealingRiftRenderer
+import atopos.destiny2.client.renderer.FallenSoldierRenderer
 import atopos.destiny2.client.renderer.FallenCaptainRenderer
 import atopos.destiny2.client.renderer.HuntingMarkRenderer
 import atopos.destiny2.client.renderer.IncineratorSnapProjectileRenderer
@@ -33,6 +35,7 @@ object ClientRenderers {
     fun register() {
         registerEntityRenderers()
         registerBlockEntityRenderers()
+        atopos.destiny2.client.renderer.GuiItemModelFit.register()
         registerItemRenderers()
     }
 
@@ -65,12 +68,17 @@ object ClientRenderers {
         EntityRendererRegistry.register(DestinyEntities.ARC_STORM_GRENADE, ::ThrownItemRenderer)
         EntityRendererRegistry.register(DestinyEntities.ARC_ABILITY_DAMAGE, ::NoopRenderer)
         EntityRendererRegistry.register(DestinyEntities.ARC_TITAN_BARRICADE, ::NoopRenderer)
+        EntityRendererRegistry.register(DestinyEntities.FALLEN_SOLDIER, ::FallenSoldierRenderer)
         EntityRendererRegistry.register(DestinyEntities.FALLEN_CAPTAIN, ::FallenCaptainRenderer)
         EntityRendererRegistry.register(DestinyEntities.FALLEN_CAPTAIN_PELLET, ::NoopRenderer)
         EntityRendererRegistry.register(DestinyEntities.JILING, ::JilingRenderer)
     }
 
     private fun registerBlockEntityRenderers() {
+        BlockEntityRendererRegistry.register(
+            DestinyBlocks.LIGHT_COLLECTOR_BLOCK_ENTITY,
+            ::LightCollectorRenderer
+        )
         BlockEntityRendererRegistry.register(
             DestinyBlocks.SHIMMERING_CRYSTAL_ORE_BLOCK_ENTITY,
             ::ShimmeringCrystalOreRenderer

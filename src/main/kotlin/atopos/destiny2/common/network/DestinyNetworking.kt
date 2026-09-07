@@ -19,6 +19,9 @@ import atopos.destiny2.common.item.IzanagiBurdenItem
 import atopos.destiny2.common.item.GenericGunPackItem
 import atopos.destiny2.common.weapon.DestinyAmmoType
 import atopos.destiny2.common.weapon.DestinyRangedWeapon
+import atopos.destiny2.common.weapon.DestinyWeaponReserves
+import atopos.destiny2.common.weapon.DestinyWeaponSlot
+import atopos.destiny2.common.weapon.WeaponLoadoutRuntime
 import atopos.destiny2.common.weapon.WeaponHudStatus
 import atopos.destiny2.common.weapon.WeaponAimRuntime
 import atopos.destiny2.common.weapon.WeaponFireMode
@@ -48,6 +51,7 @@ import net.fabricmc.fabric.api.networking.v1.PlayerLookup
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking
 import net.minecraft.network.FriendlyByteBuf
+import net.minecraft.network.RegistryFriendlyByteBuf
 import net.minecraft.network.chat.Component
 import net.minecraft.network.codec.StreamCodec
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload
@@ -56,6 +60,7 @@ import net.minecraft.server.level.ServerPlayer
 import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.world.entity.EquipmentSlot
 import net.minecraft.world.InteractionHand
+import net.minecraft.world.item.ItemStack
 import net.minecraft.world.phys.Vec3
 import java.util.UUID
 
@@ -656,6 +661,33 @@ object DestinyNetworking {
         override fun type(): CustomPacketPayload.Type<SyncNavigationStatePayload> = ID
     }
 
+    data class SyncWeaponLoadoutPayload(
+        val kinetic: List<ItemStack>,
+        val energy: List<ItemStack>,
+        val power: List<ItemStack>
+    ) : CustomPacketPayload {
+        companion object {
+            val ID = CustomPacketPayload.Type<SyncWeaponLoadoutPayload>(
+                ResourceLocation.fromNamespaceAndPath("destiny2-mod", "sync_weapon_loadout")
+            )
+            val CODEC: StreamCodec<RegistryFriendlyByteBuf, SyncWeaponLoadoutPayload> = CustomPacketPayload.codec(
+                { payload, buf ->
+                    (payload.kinetic + payload.energy + payload.power).forEach { stack ->
+                        ItemStack.OPTIONAL_STREAM_CODEC.encode(buf, stack)
+                    }
+                },
+                { buf ->
+                    fun readColumn(): List<ItemStack> = List(DestinyWeaponReserves.CAPACITY_PER_SLOT) {
+                        ItemStack.OPTIONAL_STREAM_CODEC.decode(buf)
+                    }
+                    SyncWeaponLoadoutPayload(readColumn(), readColumn(), readColumn())
+                }
+            )
+        }
+
+        override fun type(): CustomPacketPayload.Type<SyncWeaponLoadoutPayload> = ID
+    }
+
     data class SyncStatStatePayload(
         val weapons: Int,
         val health: Int,
@@ -764,6 +796,30 @@ object DestinyNetworking {
         override fun type(): CustomPacketPayload.Type<EquipDirectorItemPayload> = ID
     }
 
+    data class EquipDirectorReserveWeaponPayload(
+        val reserveIndex: Int,
+        val target: String,
+        val expectedItemId: String,
+        val expectedComponentsHash: Int
+    ) : CustomPacketPayload {
+        companion object {
+            val ID = CustomPacketPayload.Type<EquipDirectorReserveWeaponPayload>(
+                ResourceLocation.fromNamespaceAndPath("destiny2-mod", "equip_director_reserve_weapon")
+            )
+            val CODEC: StreamCodec<FriendlyByteBuf, EquipDirectorReserveWeaponPayload> = CustomPacketPayload.codec(
+                { payload, buf ->
+                    buf.writeVarInt(payload.reserveIndex)
+                    buf.writeUtf(payload.target)
+                    buf.writeUtf(payload.expectedItemId)
+                    buf.writeInt(payload.expectedComponentsHash)
+                },
+                { buf -> EquipDirectorReserveWeaponPayload(buf.readVarInt(), buf.readUtf(), buf.readUtf(), buf.readInt()) }
+            )
+        }
+
+        override fun type(): CustomPacketPayload.Type<EquipDirectorReserveWeaponPayload> = ID
+    }
+
     class ReloadWeaponPayload : CustomPacketPayload {
         companion object {
             val ID = CustomPacketPayload.Type<ReloadWeaponPayload>(
@@ -841,7 +897,9 @@ object DestinyNetworking {
         val playerId: UUID,
         val action: WeaponThirdPersonAction,
         val durationTicks: Int,
-        val sequence: Long
+        val sequence: Long,
+        val weaponId: ResourceLocation? = null,
+        val soundKey: String? = null
     ) : CustomPacketPayload {
         companion object {
             val ID = CustomPacketPayload.Type<WeaponThirdPersonActionPayload>(
@@ -853,13 +911,17 @@ object DestinyNetworking {
                     buf.writeEnum(payload.action)
                     buf.writeVarInt(payload.durationTicks)
                     buf.writeVarLong(payload.sequence)
+                    buf.writeNullable(payload.weaponId, FriendlyByteBuf::writeResourceLocation)
+                    buf.writeNullable(payload.soundKey, FriendlyByteBuf::writeUtf)
                 },
                 { buf ->
                     WeaponThirdPersonActionPayload(
                         buf.readUUID(),
                         buf.readEnum(WeaponThirdPersonAction::class.java),
                         buf.readVarInt(),
-                        buf.readVarLong()
+                        buf.readVarLong(),
+                        buf.readNullable(FriendlyByteBuf::readResourceLocation),
+                        buf.readNullable(FriendlyByteBuf::readUtf)
                     )
                 }
             )
@@ -1204,6 +1266,10 @@ object DestinyNetworking {
         PayloadTypeRegistry.playC2S().register(ConfigureGearPerkPayload.ID, ConfigureGearPerkPayload.CODEC)
         PayloadTypeRegistry.playC2S().register(EquipDirectorItemPayload.ID, EquipDirectorItemPayload.CODEC)
         PayloadTypeRegistry.playC2S().register(
+            EquipDirectorReserveWeaponPayload.ID,
+            EquipDirectorReserveWeaponPayload.CODEC
+        )
+        PayloadTypeRegistry.playC2S().register(
             BeginCinematicAnimationPayload.ID,
             BeginCinematicAnimationPayload.CODEC
         )
@@ -1220,6 +1286,7 @@ object DestinyNetworking {
         PayloadTypeRegistry.playS2C().register(StartCinematicPayload.ID, StartCinematicPayload.CODEC)
         PayloadTypeRegistry.playS2C().register(SyncPlayerDataPayload.ID, SyncPlayerDataPayload.CODEC)
         PayloadTypeRegistry.playS2C().register(SyncNavigationStatePayload.ID, SyncNavigationStatePayload.CODEC)
+        PayloadTypeRegistry.playS2C().register(SyncWeaponLoadoutPayload.ID, SyncWeaponLoadoutPayload.CODEC)
         PayloadTypeRegistry.playS2C().register(SyncStatStatePayload.ID, SyncStatStatePayload.CODEC)
         PayloadTypeRegistry.playS2C().register(SyncWeaponStatePayload.ID, SyncWeaponStatePayload.CODEC)
         PayloadTypeRegistry.playS2C().register(PrecisionHitPayload.ID, PrecisionHitPayload.CODEC)
@@ -1358,40 +1425,41 @@ object DestinyNetworking {
             context.server().execute {
                 val mainHandStack = player.mainHandItem
                 val mainHandItem = mainHandStack.item
-                if (mainHandItem is DestinyRangedWeapon && mainHandItem.requestReload(player.level(), player, mainHandStack)) {
+                if (
+                    mainHandItem is DestinyRangedWeapon &&
+                    WeaponLoadoutRuntime.isEquipped(player, mainHandStack) &&
+                    mainHandItem.requestReload(player.level(), player, mainHandStack)
+                ) {
                     return@execute
-                }
-
-                val offhandStack = player.offhandItem
-                val offhandItem = offhandStack.item
-                if (offhandItem is DestinyRangedWeapon) {
-                    offhandItem.requestReload(player.level(), player, offhandStack)
                 }
             }
         }
 
         ServerPlayNetworking.registerGlobalReceiver(InspectWeaponPayload.ID) { _, context ->
-            val player = context.player()
-            context.server().execute {
-                val stack = player.mainHandItem
-                val weapon = stack.item as? DestinyRangedWeapon ?: return@execute
-                weapon.requestInspect(player.level(), player, stack)
-            }
+                val player = context.player()
+                context.server().execute {
+                    val stack = player.mainHandItem
+                    val weapon = stack.item as? DestinyRangedWeapon ?: return@execute
+                    if (!WeaponLoadoutRuntime.isEquipped(player, stack)) return@execute
+                    weapon.requestInspect(player.level(), player, stack)
+                }
         }
 
         ServerPlayNetworking.registerGlobalReceiver(CycleFireModePayload.ID) { _, context ->
             val player = context.player()
-            context.server().execute {
-                val stack = player.mainHandItem
-                val weapon = stack.item as? DestinyRangedWeapon ?: return@execute
-                weapon.cycleFireMode(player, stack)
-            }
+                context.server().execute {
+                    val stack = player.mainHandItem
+                    val weapon = stack.item as? DestinyRangedWeapon ?: return@execute
+                    if (!WeaponLoadoutRuntime.isEquipped(player, stack)) return@execute
+                    weapon.cycleFireMode(player, stack)
+                }
         }
 
         ServerPlayNetworking.registerGlobalReceiver(SetWeaponAimPayload.ID) { payload, context ->
             val player = context.player()
             context.server().execute {
-                val aiming = WeaponAimRuntime.setAiming(player, payload.aiming)
+                val allowed = !payload.aiming || WeaponLoadoutRuntime.isEquipped(player, player.mainHandItem)
+                val aiming = WeaponAimRuntime.setAiming(player, payload.aiming && allowed)
                 val state = WeaponAimStatePayload(player.uuid, aiming)
                 ServerPlayNetworking.send(player, state)
                 PlayerLookup.tracking(player).forEach { trackingPlayer ->
@@ -1404,6 +1472,9 @@ object DestinyNetworking {
             val player = context.player()
             context.server().execute {
                 val stack = player.getItemInHand(payload.hand)
+                if (payload.hand != InteractionHand.MAIN_HAND || !WeaponLoadoutRuntime.isEquipped(player, stack)) {
+                    return@execute
+                }
                 val item = stack.item
                 if (item is MicroMissileBurstWeaponItem) {
                     item.requestFire(player.level(), player, payload.hand)
@@ -1531,12 +1602,26 @@ object DestinyNetworking {
             context.server().execute { handleEquipDirectorItem(player, payload) }
         }
 
+        ServerPlayNetworking.registerGlobalReceiver(EquipDirectorReserveWeaponPayload.ID) { payload, context ->
+            val player = context.player()
+            context.server().execute {
+                val slot = weaponSlotForTarget(payload.target) ?: return@execute
+                val stack = PlayerDestinyDataApi.get(player).weaponReserves.get(slot, payload.reserveIndex)
+                if (stack.isEmpty) return@execute
+                if (BuiltInRegistries.ITEM.getKey(stack.item).toString() != payload.expectedItemId) return@execute
+                if (stack.components.hashCode() != payload.expectedComponentsHash) return@execute
+                WeaponLoadoutRuntime.equipFromReserve(player, payload.reserveIndex, slot)
+            }
+        }
+
         ServerPlayConnectionEvents.JOIN.register { handler, _, _ ->
             syncPlayerData(handler.player)
         }
     }
 
     fun syncPlayerData(player: ServerPlayer) {
+        WeaponLoadoutRuntime.initializeLegacyLoadout(player)
+        WeaponLoadoutRuntime.collectInventoryWeapons(player)
         val data = PlayerDestinyDataApi.get(player)
         val config = DestinySubclassConfigRegistry.normalize(data.subclass, data.subclassConfig)
         data.subclassConfig = config
@@ -1559,6 +1644,7 @@ object DestinyNetworking {
             fragmentIds = config.selectedFragments.filter(data::isSubclassOptionUnlocked).joinToString(",")
         )
         ServerPlayNetworking.send(player, payload)
+        syncWeaponLoadout(player)
         syncNavigationState(player, GuardianPowerRuntime.refresh(player))
         syncStatState(player)
         syncCooldowns(player)
@@ -1592,13 +1678,17 @@ object DestinyNetworking {
     fun broadcastWeaponThirdPersonAction(
         player: ServerPlayer,
         action: WeaponThirdPersonAction,
-        durationTicks: Int
+        durationTicks: Int,
+        weaponId: ResourceLocation? = null,
+        soundKey: String? = null
     ) {
         val payload = WeaponThirdPersonActionPayload(
             player.uuid,
             action,
             durationTicks.coerceIn(1, 20 * 30),
-            player.level().gameTime
+            player.level().gameTime,
+            weaponId,
+            soundKey
         )
         ServerPlayNetworking.send(player, payload)
         PlayerLookup.tracking(player).forEach { trackingPlayer ->
@@ -1625,6 +1715,18 @@ object DestinyNetworking {
                 recommendedPower = power.activityRecommended,
                 powerDeficit = power.deficit,
                 suppressionPercent = power.suppressionPercent
+            )
+        )
+    }
+
+    fun syncWeaponLoadout(player: ServerPlayer) {
+        val reserves = PlayerDestinyDataApi.get(player).weaponReserves
+        ServerPlayNetworking.send(
+            player,
+            SyncWeaponLoadoutPayload(
+                kinetic = reserves.stacks(DestinyWeaponSlot.KINETIC).map(ItemStack::copy),
+                energy = reserves.stacks(DestinyWeaponSlot.ENERGY).map(ItemStack::copy),
+                power = reserves.stacks(DestinyWeaponSlot.POWER).map(ItemStack::copy)
             )
         )
     }
@@ -1673,25 +1775,10 @@ object DestinyNetworking {
         if (stack.components.hashCode() != payload.expectedComponentsHash) return
 
         val changed = when (payload.target) {
-            "weapon_primary", "weapon_special", "weapon_heavy" -> {
-                val expectedAmmo = when (payload.target) {
-                    "weapon_primary" -> DestinyAmmoType.PRIMARY
-                    "weapon_special" -> DestinyAmmoType.SPECIAL
-                    else -> DestinyAmmoType.HEAVY
-                }
-                val definition = GearRegistry.definitionFor(stack)
-                if (definition?.category != atopos.destiny2.common.gear.GearCategory.WEAPON || definition.ammoType != expectedAmmo) {
-                    false
-                } else {
-                    val selected = player.inventory.selected
-                    if (source != selected) {
-                        val previous = player.inventory.getItem(selected)
-                        player.inventory.setItem(selected, stack)
-                        player.inventory.setItem(source, previous)
-                    }
-                    true
-                }
-            }
+            "weapon_kinetic", "weapon_energy", "weapon_power" ->
+                weaponSlotForTarget(payload.target)?.let { slot ->
+                    WeaponLoadoutRuntime.equipFromInventory(player, source, slot)
+                } == true
             "armor_head", "armor_chest", "armor_legs", "armor_feet" -> {
                 val targetSlot = when (payload.target) {
                     "armor_head" -> EquipmentSlot.HEAD
@@ -1732,6 +1819,9 @@ object DestinyNetworking {
         syncNavigationState(player)
         syncStatState(player)
     }
+
+    private fun weaponSlotForTarget(target: String): DestinyWeaponSlot? =
+        DestinyWeaponSlot.fromSerializedName(target.removePrefix("weapon_"))
 
     private fun handleSetLoadout(player: ServerPlayer, classId: String, subclassId: String) {
         val data = PlayerDestinyDataApi.get(player)

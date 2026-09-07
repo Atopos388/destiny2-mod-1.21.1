@@ -2,7 +2,6 @@ package atopos.destiny2.common.ability
 
 import atopos.destiny2.common.player.AbilitySlot
 import net.minecraft.core.particles.ParticleTypes
-import net.minecraft.network.chat.Component
 import net.minecraft.resources.ResourceLocation
 
 class PlaceholderAbility(
@@ -34,7 +33,6 @@ class PlaceholderAbility(
             0.45,
             0.06
         )
-        player.displayClientMessage(Component.literal("$displayName 原型技能"), true)
         return true
     }
 }

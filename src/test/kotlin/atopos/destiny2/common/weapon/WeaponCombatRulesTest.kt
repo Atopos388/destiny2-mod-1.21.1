@@ -1,5 +1,6 @@
 package atopos.destiny2.common.weapon
 
+import atopos.destiny2.common.item.GenericGunPackItem
 import atopos.destiny2.common.tacz.TaczEntityHitbox
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -7,6 +8,20 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 class WeaponCombatRulesTest {
+    @Test
+    fun `fractional weapon cadence preserves configured rpm without idle drift`() {
+        val first = GenericGunPackItem.nextFireTime(0, 0.0, 750)
+        val second = GenericGunPackItem.nextFireTime(2, first, 750)
+        val third = GenericGunPackItem.nextFireTime(4, second, 750)
+        val fourth = GenericGunPackItem.nextFireTime(5, third, 750)
+
+        assertEquals(1.6, first, 0.0001)
+        assertEquals(3.2, second, 0.0001)
+        assertEquals(4.8, third, 0.0001)
+        assertEquals(6.4, fourth, 0.0001)
+        assertEquals(101.6, GenericGunPackItem.nextFireTime(100, fourth, 750), 0.0001)
+    }
+
     @Test
     fun `tacz default headshot band is eye height plus or minus quarter block`() {
         assertTrue(TaczEntityHitbox.isHeadshot(1.72, 1.62))
@@ -27,6 +42,19 @@ class WeaponCombatRulesTest {
         assertEquals(3, WeaponAmmoMath.loadAmount(2, 8, 3))
         assertEquals(5, WeaponAmmoMath.completedMagazine(2, 8, 3))
         assertEquals(8, WeaponAmmoMath.completedMagazine(7, 8, 99))
+        assertEquals(4, WeaponAmmoMath.acceptedReserve(12, 16, 9))
+        assertEquals(0, WeaponAmmoMath.acceptedReserve(16, 16, 9))
+    }
+
+    @Test
+    fun `primary reserve is infinite while special and heavy reserves are per weapon`() {
+        val primary = WeaponCombatProfile(DestinyAmmoType.PRIMARY, 1.0f, magazineSize = 8, reloadTicks = 20)
+        val special = WeaponCombatProfile(DestinyAmmoType.SPECIAL, 1.0f, magazineSize = 4, reloadTicks = 20)
+        val heavy = WeaponCombatProfile(DestinyAmmoType.HEAVY, 1.0f, magazineSize = 3, reloadTicks = 20)
+
+        assertEquals(Int.MAX_VALUE, primary.reserveCapacity)
+        assertEquals(16, special.reserveCapacity)
+        assertEquals(9, heavy.reserveCapacity)
     }
 
     @Test

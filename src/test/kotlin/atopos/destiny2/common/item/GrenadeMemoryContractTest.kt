@@ -33,7 +33,20 @@ class GrenadeMemoryContractTest {
     fun `universal grenade memory has one neutral model`() {
         val model = readJson(assets.resolve(Path.of("models", "item", "grenade_memory.json")))
         assertEquals("minecraft:item/generated", model.get("parent").asString)
-        assertEquals("minecraft:item/echo_shard", model.getAsJsonObject("textures").get("layer0").asString)
+        assertEquals("destiny2-mod:item/grenade_memory", model.getAsJsonObject("textures").get("layer0").asString)
+    }
+
+    @Test
+    fun `element memories are passive beacon materials and only one grenade item remains`() {
+        val source = Files.readString(Path.of("src/main/kotlin/atopos/destiny2/common/item/DestinyItems.kt"))
+        assertEquals(1, source.split("GrenadeMemoryItem(").size - 1)
+        for (id in listOf("void_grenade_memory", "arc_grenade_memory", "solar_grenade_memory", "combat_memory")) {
+            org.junit.jupiter.api.Assertions.assertTrue(source.contains("""register("$id", Item("""))
+        }
+        val model = readJson(assets.resolve("models/item/combat_memory.json"))
+        assertEquals("destiny2-mod:item/combat_memory", model.getAsJsonObject("textures").get("layer0").asString)
+        val image = javax.imageio.ImageIO.read(assets.resolve("textures/item/combat_memory.png").toFile())
+        assertEquals(32, image.width); assertEquals(32, image.height)
     }
 
     private fun assertRecipe(id: String, expectedIngredients: Map<String, Int>) {
